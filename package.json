@@ -1,5 +1,5 @@
 {
-  "name": "my-app",
+  "name": "Storex LDRB",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -24,12 +24,12 @@
 	"recharts": "^2.0.0",
 	"swr": "^2.2.0"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
+	"scripts": {
+	  "build": "react-scripts build",
+	  "start": "react-scripts start",
+	  "vercel-build": "react-scripts build",
+	  "vercel-start": "react-scripts start"
+	},
   "eslintConfig": {
     "extends": "react-app"
   },
