@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import * as React from 'react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
