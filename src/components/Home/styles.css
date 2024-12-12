@@ -1,8 +1,0 @@
-.links {
-  display: flex;
-  flex-direction: column;
-}
-
-.links > :first-child {
-  margin-bottom: 10px;
-}

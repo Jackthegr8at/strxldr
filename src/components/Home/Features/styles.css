@@ -1,9 +1,0 @@
-.features > * {
-  padding-bottom: 15px;
-}
-
-.routingLinks {
-  display: flex;
-  flex-direction: column;
-  padding: 10px 0;
-}
