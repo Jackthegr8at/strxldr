@@ -1,52 +1,35 @@
 {
-  "name": "collection-manager",
-  "version": "0.2.0",
+  "name": "landingpage-react-template",
   "private": true,
-  "scripts": {
-  "build": "vercel build",
-  "deploy": "vercel deploy",
-  "start": "vercel dev"
-  },
   "dependencies": {
-    "@eosdacio/ual-wax": "^1.9.0",
-    "@alienworlds/ual-wax": "^1.6.1",
-    "@google/model-viewer": "3.4.0",
-    "@headlessui/react": "^1.7.4",
-    "@headlessui/tailwindcss": "^0.1.1",
-    "@hookform/resolvers": "^2.9.10",
-    "@types/react-beautiful-dnd": "^13.1.3",
-    "@proton/ual-webauth": "^0.1.18",
-    "@types/three": "^0.149.0",
-    "@vercel/node": "^2.9.7",
-    "@waxio/waxjs": "^1.1.0",
-    "@fortawesome/fontawesome-common-types": "^6.4.0",
-    "@fortawesome/free-solid-svg-icons": "^6.4.0",
-    "@fortawesome/fontawesome-svg-core": "^6.4.0",
-    "@fortawesome/react-fontawesome": "^0.2.0",
-    "axios": "^1.1.3",
-    "eosjs": "^22.1.0",
-    "framer-motion": "^9.0.3",
-    "is-ipfs": "^7.0.3",
-    "next": "^13.2.3",
-    "papaparse": "^5.4.1",
-    "clsx": "^1.2.1",
-    "eventsource-parser": "^0.1.0",
-    "react-cookie": "^4.1.1",
-    "react-wrap-balancer": "^0.1.5",
-    "phosphor-react": "^1.4.1",
-    "react": "18.2.0",
-    "react-beautiful-dnd": "^13.1.1",
-    "react-dom": "18.2.0",
-    "react-hook-form": "^7.39.4",
-    "react-swipeable": "^7.0.0",
-    "sharp": "^0.31.3",
-    "three": "^0.160.0",
-    "ual-anchor": "^1.3.0",
-    "ual-reactjs-renderer": "^0.3.1",
-    "yup": "^0.32.11",
-    "openai": "^3.2.1",
-    "react-slick": "^0.29.0",
-    "slick-carousel": "^1.8.1",
-    "dotenv": "^10.0.0"    
+    "@testing-library/jest-dom": "^4.2.4",
+    "@testing-library/react": "^9.3.2",
+    "@testing-library/user-event": "^7.1.2",
+    "emailjs-com": "^2.6.4",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "react-scripts": "^5.0.1",
+    "smooth-scroll": "^16.1.3"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
