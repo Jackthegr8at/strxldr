@@ -1,0 +1,5 @@
+"scripts": {
+  "build": "vercel build",
+  "deploy": "vercel deploy",
+  "start": "vercel dev"
+}
