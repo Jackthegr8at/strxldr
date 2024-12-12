@@ -1,5 +1,7 @@
-"scripts": {
-  "build": "vercel build",
-  "deploy": "vercel deploy",
-  "start": "vercel dev"
+{
+    "scripts": {
+    "build": "vercel build",
+    "deploy": "vercel deploy",
+    "start": "vercel dev"
+  }
 }
