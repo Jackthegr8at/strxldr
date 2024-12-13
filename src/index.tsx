@@ -110,6 +110,37 @@ function Leaderboard() {
     return Number(stakesStr.split(' ')[0]);
   }, [blockchainData]);
 
+  // Calculate statistics
+  const statistics = useMemo(() => {
+    if (!processedData.length) return null;
+
+    const totalUsers = processedData.length;
+    const totalStaked = processedData.reduce((sum, item) => sum + item.amount, 0);
+    
+    // Calculate median
+    const sortedAmounts = [...processedData].sort((a, b) => a.amount - b.amount);
+    const midPoint = Math.floor(sortedAmounts.length / 2);
+    const median = sortedAmounts.length % 2 === 0
+      ? (sortedAmounts[midPoint - 1].amount + sortedAmounts[midPoint].amount) / 2
+      : sortedAmounts[midPoint].amount;
+
+    // Calculate average
+    const average = totalStaked / totalUsers;
+
+    // Get min and max stakes
+    const minStake = sortedAmounts[0].amount;
+    const maxStake = sortedAmounts[sortedAmounts.length - 1].amount;
+
+    return {
+      totalUsers,
+      totalStaked,
+      median,
+      average,
+      minStake,
+      maxStake
+    };
+  }, [processedData]);
+
   if (error) {
     return (
       <div className="min-h-screen bg-white p-8">
@@ -125,18 +156,69 @@ function Leaderboard() {
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-purple-700">STRX Staking Leaderboard</h1>
-          <div className="text-lg text-gray-600 text-right">
-            <div>
-              Total Staked (API): {totalStakes.toLocaleString(undefined, {
+        <h1 className="text-3xl font-bold text-purple-700 mb-6">STRX Staking Leaderboard</h1>
+        
+        {/* Statistics Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <div className="text-sm text-gray-500 mb-1">Total Stakers</div>
+            <div className="text-xl font-semibold text-purple-700">
+              {statistics?.totalUsers.toLocaleString()}
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <div className="text-sm text-gray-500 mb-1">Total Staked (API)</div>
+            <div className="text-xl font-semibold text-purple-700">
+              {statistics?.totalStaked.toLocaleString(undefined, {
                 minimumFractionDigits: 4,
                 maximumFractionDigits: 4,
                 useGrouping: true,
               })}
             </div>
-            <div>
-              Global Staked: {globalStaked.toLocaleString(undefined, {
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <div className="text-sm text-gray-500 mb-1">Global Staked</div>
+            <div className="text-xl font-semibold text-purple-700">
+              {globalStaked.toLocaleString(undefined, {
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4,
+                useGrouping: true,
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <div className="text-sm text-gray-500 mb-1">Average Stake</div>
+            <div className="text-xl font-semibold text-purple-700">
+              {statistics?.average.toLocaleString(undefined, {
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4,
+                useGrouping: true,
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <div className="text-sm text-gray-500 mb-1">Median Stake</div>
+            <div className="text-xl font-semibold text-purple-700">
+              {statistics?.median.toLocaleString(undefined, {
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4,
+                useGrouping: true,
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <div className="text-sm text-gray-500 mb-1">Stake Range</div>
+            <div className="text-xl font-semibold text-purple-700">
+              {statistics?.minStake.toLocaleString(undefined, {
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4,
+                useGrouping: true,
+              })} - {statistics?.maxStake.toLocaleString(undefined, {
                 minimumFractionDigits: 4,
                 maximumFractionDigits: 4,
                 useGrouping: true,
@@ -155,7 +237,7 @@ function Leaderboard() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 15 Holders Distribution</h2>
               <div className="h-64 w-full">
                 <ResponsiveContainer>
-                  <BarChart data={topHolders} margin={{ left: 70, right: 20, top: 20, bottom: 20 }}>
+                  <BarChart data={topHolders} margin={{ left: 50, right: 20, top: 20, bottom: 20 }}>
                     <XAxis dataKey="username" />
                     <YAxis 
                       tickFormatter={formatLargeNumber}
