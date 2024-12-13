@@ -72,6 +72,7 @@ function Leaderboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTier, setSelectedTier] = useState<StakingTier | null>(null);
 
   // Reset page when search term changes
   React.useEffect(() => {
@@ -87,11 +88,27 @@ function Leaderboard() {
         username,
         amount: Number(amount),
       }))
-      .filter((item) => item.amount > 0)
+      .filter((item) => {
+        // First filter out zero amounts
+        if (item.amount <= 0) return false;
+        
+        // If no tier is selected, show all
+        if (!selectedTier) return true;
+        
+        // Get the next higher tier
+        const tierIndex = STAKING_TIERS.findIndex(t => t.name === selectedTier.name);
+        const nextTier = STAKING_TIERS[tierIndex - 1];
+        
+        // Apply tier filtering
+        if (!nextTier) {
+          return item.amount >= selectedTier.minimum;
+        }
+        return item.amount >= selectedTier.minimum && item.amount < nextTier.minimum;
+      })
       .sort((a, b) =>
         sortOrder === 'desc' ? b.amount - a.amount : a.amount - b.amount
       );
-  }, [data, sortOrder, searchTerm]);
+  }, [data, sortOrder, searchTerm, selectedTier]);
 
   const totalPages = Math.ceil(processedData.length / ITEMS_PER_PAGE);
   const currentData = processedData.slice(
@@ -269,7 +286,15 @@ function Leaderboard() {
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Staking Tiers Distribution</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {tierStatistics?.map((tier) => (
-              <div key={tier.name} className="bg-white p-4 rounded-lg shadow border border-purple-100">
+              <div
+                key={tier.name}
+                onClick={() => setSelectedTier(selectedTier?.name === tier.name ? null : tier)}
+                className={`bg-white p-4 rounded-lg shadow border cursor-pointer transition-colors ${
+                  selectedTier?.name === tier.name 
+                    ? 'border-purple-500 bg-purple-50' 
+                    : 'border-purple-100 hover:bg-purple-50'
+                }`}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-2xl">{tier.emoji}</span>
                   <span className="text-sm text-gray-500">{tier.name}</span>
