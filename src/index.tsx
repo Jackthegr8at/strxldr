@@ -18,7 +18,7 @@ function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
     fetcher,
-    { refreshInterval: 30000 } // Refresh every 30 seconds
+    { refreshInterval: 120000 } // Refresh every 2 minutes
   );
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -46,7 +46,7 @@ function Leaderboard() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const topHolders = processedData.slice(0, 5);
+  const topHolders = processedData.slice(0, 20);
 
   if (error) {
     return (
@@ -72,13 +72,27 @@ function Leaderboard() {
         ) : (
           <>
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 5 Holders Distribution</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 20 Holders Distribution</h2>
               <div className="h-64 w-full">
                 <ResponsiveContainer>
                   <BarChart data={topHolders}>
                     <XAxis dataKey="username" />
-                    <YAxis />
-                    <Tooltip />
+                    <YAxis 
+                      tickFormatter={(value) => value.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                        useGrouping: true,
+                      })}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => 
+                        value.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                          useGrouping: true,
+                        })
+                      }
+                    />
                     <Bar dataKey="amount" fill="#7C63CC" />
                   </BarChart>
                 </ResponsiveContainer>
