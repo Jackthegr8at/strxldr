@@ -14,8 +14,16 @@ type StakeData = {
 
 type BlockchainResponse = {
   rows: [{
-    total_staked: string;
-    // Add other fields if needed
+    stakes: string;
+    rewards: string;
+    rewards_sec: string;
+    pool_duration_months: number;
+    unstake_period_secs: number;
+    stake_plans: any[];
+    spare1: number;
+    spare2: number;
+    spare3: number;
+    suspended: number;
   }];
 };
 
@@ -97,8 +105,9 @@ function Leaderboard() {
 
   // Get global staked amount
   const globalStaked = useMemo(() => {
-    if (!blockchainData?.rows?.[0]?.total_staked) return 0;
-    return Number(blockchainData.rows[0].total_staked);
+    if (!blockchainData?.rows?.[0]?.stakes) return 0;
+    const stakesStr = blockchainData.rows[0].stakes;
+    return Number(stakesStr.split(' ')[0]);
   }, [blockchainData]);
 
   if (error) {
