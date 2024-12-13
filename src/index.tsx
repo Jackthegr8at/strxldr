@@ -322,15 +322,15 @@ function Leaderboard() {
               </table>
             </div>
 
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-600">
+            <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="text-sm text-gray-600 text-center md:text-left">
                 Page Total: {currentPageTotal.toLocaleString(undefined, {
                   minimumFractionDigits: 4,
                   maximumFractionDigits: 4,
                   useGrouping: true,
                 })}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-center md:justify-end">
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
