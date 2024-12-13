@@ -25,6 +25,11 @@ function Leaderboard() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Reset page when search term changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const processedData = useMemo(() => {
     if (!data) return [];
 
@@ -47,6 +52,18 @@ function Leaderboard() {
   );
 
   const topHolders = processedData.slice(0, 20);
+
+  // Format large numbers (in millions)
+  const formatLargeNumber = (value: number) => {
+    return (value / 1000000).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: true,
+    }) + 'M';
+  };
+
+  // Calculate total tokens for current page
+  const currentPageTotal = currentData.reduce((sum, item) => sum + item.amount, 0);
 
   if (error) {
     return (
@@ -75,23 +92,20 @@ function Leaderboard() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 20 Holders Distribution</h2>
               <div className="h-64 w-full">
                 <ResponsiveContainer>
-                  <BarChart data={topHolders}>
+                  <BarChart data={topHolders} margin={{ left: 70, right: 20, top: 20, bottom: 20 }}>
                     <XAxis dataKey="username" />
                     <YAxis 
-                      tickFormatter={(value) => value.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                        useGrouping: true,
-                      })}
+                      tickFormatter={formatLargeNumber}
                     />
                     <Tooltip 
-                      formatter={(value: number) => 
+                      formatter={(value: number) => [
                         value.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                           useGrouping: true,
-                        })
-                      }
+                        }),
+                        "Amount"
+                      ]}
                     />
                     <Bar dataKey="amount" fill="#7C63CC" />
                   </BarChart>
@@ -154,23 +168,32 @@ function Leaderboard() {
             </div>
 
             <div className="mt-4 flex items-center justify-between">
-              <button
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-              >
-                Next
-              </button>
+              <div className="text-sm text-gray-600">
+                Page Total: {currentPageTotal.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                  useGrouping: true,
+                })}
+              </div>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </>
         )}
