@@ -1,9 +1,9 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
 import { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import * as React from 'react';
+import ReactDOM from 'react-dom/client';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -13,7 +13,7 @@ type StakeData = {
 
 const ITEMS_PER_PAGE = 10;
 
-export default function Leaderboard() {
+function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
     fetcher,
