@@ -4,6 +4,7 @@ import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon } from '@heroicons/reac
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
+import './index.css';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
