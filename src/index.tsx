@@ -159,10 +159,21 @@ function Leaderboard() {
   const tierStatistics = useMemo(() => {
     if (!processedData.length) return null;
 
-    const tiers = STAKING_TIERS.map(tier => ({
-      ...tier,
-      count: processedData.filter(user => user.amount >= tier.minimum).length
-    }));
+    const tiers = STAKING_TIERS.map((tier, index) => {
+      const nextTier = STAKING_TIERS[index - 1]; // Get the next higher tier
+      return {
+        ...tier,
+        count: processedData.filter(user => {
+          const amount = user.amount;
+          // If this is the highest tier, only check minimum
+          if (!nextTier) {
+            return amount >= tier.minimum;
+          }
+          // Otherwise, check if amount is between this tier's minimum and next tier's minimum
+          return amount >= tier.minimum && amount < nextTier.minimum;
+        }).length
+      };
+    });
 
     return tiers;
   }, [processedData]);
