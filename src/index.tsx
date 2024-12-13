@@ -89,8 +89,8 @@ function Leaderboard() {
           <h1 className="text-3xl font-bold text-purple-700">STRX Staking Leaderboard</h1>
           <div className="text-lg text-gray-600">
             Total Staked: {totalStakes.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
+              minimumFractionDigits: 4,
+              maximumFractionDigits: 4,
               useGrouping: true,
             })}
           </div>
@@ -114,8 +114,8 @@ function Leaderboard() {
                     <Tooltip 
                       formatter={(value: number) => [
                         value.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
+                          minimumFractionDigits: 4,
+                          maximumFractionDigits: 4,
                           useGrouping: true,
                         }),
                         "Amount"
@@ -180,8 +180,8 @@ function Leaderboard() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {item.amount.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
+                          minimumFractionDigits: 4,
+                          maximumFractionDigits: 4,
                           useGrouping: true,
                         })}
                       </td>
@@ -194,8 +194,8 @@ function Leaderboard() {
             <div className="mt-4 flex items-center justify-between">
               <div className="text-sm text-gray-600">
                 Page Total: {currentPageTotal.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
+                  minimumFractionDigits: 4,
+                  maximumFractionDigits: 4,
                   useGrouping: true,
                 })}
               </div>
