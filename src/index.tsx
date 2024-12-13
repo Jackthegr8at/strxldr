@@ -51,7 +51,7 @@ function Leaderboard() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const topHolders = processedData.slice(0, 20);
+  const topHolders = processedData.slice(0, 15);
 
   // Format large numbers (in millions)
   const formatLargeNumber = (value: number) => {
@@ -64,6 +64,11 @@ function Leaderboard() {
 
   // Calculate total tokens for current page
   const currentPageTotal = currentData.reduce((sum, item) => sum + item.amount, 0);
+
+  // Calculate total of all stakes
+  const totalStakes = useMemo(() => {
+    return processedData.reduce((sum, item) => sum + item.amount, 0);
+  }, [processedData]);
 
   if (error) {
     return (
@@ -80,7 +85,16 @@ function Leaderboard() {
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-purple-700 mb-8">STRX Staking Leaderboard</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-purple-700">STRX Staking Leaderboard</h1>
+          <div className="text-lg text-gray-600">
+            Total Staked: {totalStakes.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+              useGrouping: true,
+            })}
+          </div>
+        </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
@@ -89,7 +103,7 @@ function Leaderboard() {
         ) : (
           <>
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 20 Holders Distribution</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 15 Holders Distribution</h2>
               <div className="h-64 w-full">
                 <ResponsiveContainer>
                   <BarChart data={topHolders} margin={{ left: 70, right: 20, top: 20, bottom: 20 }}>
@@ -154,11 +168,21 @@ function Leaderboard() {
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{item.username}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        <a 
+                          href={`https://explorer.xprnetwork.org/account/${item.username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-purple-600 hover:text-purple-800 hover:underline"
+                        >
+                          {item.username}
+                        </a>
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {item.amount.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
+                          useGrouping: true,
                         })}
                       </td>
                     </tr>
