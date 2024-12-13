@@ -330,7 +330,14 @@ function Leaderboard() {
                   useGrouping: true,
                 })}
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                >
+                  First
+                </button>
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
@@ -338,7 +345,7 @@ function Leaderboard() {
                 >
                   Previous
                 </button>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 px-2">
                   Page {currentPage} of {totalPages}
                 </span>
                 <button
@@ -347,6 +354,13 @@ function Leaderboard() {
                   className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
                 >
                   Next
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                >
+                  Last
                 </button>
               </div>
             </div>
