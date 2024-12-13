@@ -29,6 +29,21 @@ type BlockchainResponse = {
 
 const ITEMS_PER_PAGE = 10;
 
+type StakingTier = {
+  name: string;
+  minimum: number;
+  emoji: string;
+};
+
+const STAKING_TIERS: StakingTier[] = [
+  { name: 'Whale', minimum: 20000000, emoji: '🐋' },
+  { name: 'Shark', minimum: 10000000, emoji: '🦈' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
+  { name: 'Fish', minimum: 1000000, emoji: '🐟' },
+  { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
+  { name: 'Free', minimum: 0, emoji: '🆓' },
+];
+
 function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
@@ -141,6 +156,17 @@ function Leaderboard() {
     };
   }, [processedData]);
 
+  const tierStatistics = useMemo(() => {
+    if (!processedData.length) return null;
+
+    const tiers = STAKING_TIERS.map(tier => ({
+      ...tier,
+      count: processedData.filter(user => user.amount >= tier.minimum).length
+    }));
+
+    return tiers;
+  }, [processedData]);
+
   if (error) {
     return (
       <div className="min-h-screen bg-white p-8">
@@ -224,6 +250,27 @@ function Leaderboard() {
                 useGrouping: true,
               })}
             </div>
+          </div>
+        </div>
+
+        {/* Staking Tiers Dashboard */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Staking Tiers Distribution</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {tierStatistics?.map((tier) => (
+              <div key={tier.name} className="bg-white p-4 rounded-lg shadow border border-purple-100">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-2xl">{tier.emoji}</span>
+                  <span className="text-sm text-gray-500">{tier.name}</span>
+                </div>
+                <div className="text-xl font-semibold text-purple-700">
+                  {tier.count.toLocaleString()}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {tier.minimum.toLocaleString()}+ STRX
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
