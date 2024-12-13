@@ -12,12 +12,37 @@ type StakeData = {
   [key: string]: number;
 };
 
+type BlockchainResponse = {
+  rows: [{
+    total_staked: string;
+    // Add other fields if needed
+  }];
+};
+
 const ITEMS_PER_PAGE = 10;
 
 function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
     fetcher,
+    { refreshInterval: 120000 } // Refresh every 2 minutes
+  );
+
+  const { data: blockchainData } = useSWR<BlockchainResponse>(
+    'https://proton.eosusa.io/v1/chain/get_table_rows',
+    (url) => fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=UTF-8',
+      },
+      body: JSON.stringify({
+        json: true,
+        code: "storexstake",
+        scope: "storexstake",
+        table: "config",
+        limit: 10
+      })
+    }).then(res => res.json()),
     { refreshInterval: 120000 } // Refresh every 2 minutes
   );
 
@@ -70,6 +95,12 @@ function Leaderboard() {
     return processedData.reduce((sum, item) => sum + item.amount, 0);
   }, [processedData]);
 
+  // Get global staked amount
+  const globalStaked = useMemo(() => {
+    if (!blockchainData?.rows?.[0]?.total_staked) return 0;
+    return Number(blockchainData.rows[0].total_staked);
+  }, [blockchainData]);
+
   if (error) {
     return (
       <div className="min-h-screen bg-white p-8">
@@ -87,12 +118,21 @@ function Leaderboard() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-purple-700">STRX Staking Leaderboard</h1>
-          <div className="text-lg text-gray-600">
-            Total Staked: {totalStakes.toLocaleString(undefined, {
-              minimumFractionDigits: 4,
-              maximumFractionDigits: 4,
-              useGrouping: true,
-            })}
+          <div className="text-lg text-gray-600 text-right">
+            <div>
+              Total Staked (API): {totalStakes.toLocaleString(undefined, {
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4,
+                useGrouping: true,
+              })}
+            </div>
+            <div>
+              Global Staked: {globalStaked.toLocaleString(undefined, {
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4,
+                useGrouping: true,
+              })}
+            </div>
           </div>
         </div>
 
