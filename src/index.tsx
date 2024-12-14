@@ -44,6 +44,14 @@ const STAKING_TIERS: StakingTier[] = [
   { name: 'Free', minimum: 0, emoji: '🆓' },
 ];
 
+// Add this type for the price response
+type PriceResponse = {
+  rows: [{
+    sym: string;
+    quantity: string;
+  }];
+};
+
 function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
@@ -64,6 +72,25 @@ function Leaderboard() {
         scope: "storexstake",
         table: "config",
         limit: 10
+      })
+    }).then(res => res.json()),
+    { refreshInterval: 120000 } // Refresh every 2 minutes
+  );
+
+  // Add new SWR call for price data
+  const { data: priceData } = useSWR<PriceResponse>(
+    'https://proton.eosusa.io/v1/chain/get_table_rows',
+    (url) => fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=UTF-8',
+      },
+      body: JSON.stringify({
+        json: true,
+        code: "strxoracle",
+        scope: "strxoracle",
+        table: "prices",
+        limit: 9999
       })
     }).then(res => res.json()),
     { refreshInterval: 120000 } // Refresh every 2 minutes
@@ -197,6 +224,13 @@ function Leaderboard() {
     return tiers;
   }, [processedData]);
 
+  // Get STRX price
+  const strxPrice = useMemo(() => {
+    if (!priceData?.rows) return 0;
+    const strxRow = priceData.rows.find(row => row.sym === '4,STRX');
+    return strxRow ? parseFloat(strxRow.quantity.split(' ')[0]) : 0;
+  }, [priceData]);
+
   const handleEasterEgg = (tier: StakingTier | null, username?: string) => {
     // Remove any existing animations
     document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
@@ -324,6 +358,13 @@ function Leaderboard() {
               })}
             </div>
           </div>
+
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <div className="text-sm text-gray-500 mb-1">STRX Price (USD)</div>
+            <div className="text-xl font-semibold text-purple-700">
+              ${strxPrice.toFixed(6)}
+            </div>
+          </div>
         </div>
 
         {/* Staking Tiers Dashboard */}
@@ -432,6 +473,7 @@ function Leaderboard() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Rank</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Staked Amount</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -458,14 +500,18 @@ function Leaderboard() {
                       </td>
                       <td 
                         className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                        onClick={() => {
-                          console.log('Amount clicked for:', item.username);
-                          handleEasterEgg(null, item.username);
-                        }}
+                        onClick={() => handleEasterEgg(null, item.username)}
                       >
                         {item.amount.toLocaleString(undefined, {
                           minimumFractionDigits: 4,
                           maximumFractionDigits: 4,
+                          useGrouping: true,
+                        })}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        ${(item.amount * strxPrice).toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
                           useGrouping: true,
                         })}
                       </td>
