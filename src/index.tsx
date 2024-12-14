@@ -210,6 +210,13 @@ function Leaderboard() {
     // Remove any existing animations
     document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
     
+    // Check for special usernames
+    if (username && ['jordanhinks', 'jackthegreat'].includes(username.toLowerCase())) {
+      setPageTitle("Future Billionaires List 🚀");
+      document.body.classList.add('bounce-animation');
+      return;
+    }
+    
     // Different effects based on tier or username
     if (tier?.name === 'Free') {
       setPageTitle("NGMI Leaderboard 😢");
@@ -442,7 +449,10 @@ function Leaderboard() {
                           )}
                         </a>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
+                      <td 
+                        className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                        onClick={() => handleEasterEgg(null, item.username)}
+                      >
                         {item.amount.toLocaleString(undefined, {
                           minimumFractionDigits: 4,
                           maximumFractionDigits: 4,
