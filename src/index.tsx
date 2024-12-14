@@ -200,6 +200,9 @@ function Leaderboard() {
   const handleEasterEgg = (tier: StakingTier | null, username?: string) => {
     setIsEasterEggActive(true);
     
+    // Remove any existing animations
+    document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
+    
     // Different effects based on tier or username
     if (tier?.name === 'Free') {
       setPageTitle("NGMI Leaderboard 😢");
@@ -210,13 +213,15 @@ function Leaderboard() {
     } else if (tier?.name === 'Shrimp') {
       setPageTitle("Shrimps Together Strong 🦐");
       document.body.classList.add('bounce-animation');
+    } else {
+      // Reset to default if clicking elsewhere
+      setIsEasterEggActive(false);
+      setPageTitle("STRX Staking Leaderboard");
     }
     
-    // Reset animations after 1 second
+    // Only remove the animation effect after 1 second
     setTimeout(() => {
-      setIsEasterEggActive(false);
       document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
-      setPageTitle("STRX Staking Leaderboard");
     }, 1000);
   };
 
@@ -420,9 +425,14 @@ function Leaderboard() {
                           href={`https://explorer.xprnetwork.org/account/${item.username}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-purple-600 hover:text-purple-800 hover:underline cursor-pointer"
+                          className="text-purple-600 hover:text-purple-800 hover:underline cursor-pointer flex items-center gap-2"
                         >
                           {item.username}
+                          {(currentPage === 1 && index < 3) && (
+                            <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
+                              {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                            </span>
+                          )}
                         </a>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
