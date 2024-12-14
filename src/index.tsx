@@ -190,21 +190,21 @@ function Leaderboard() {
     if (!processedData.length) return null;
 
     const totalUsers = processedData.length;
-    const totalStaked = processedData.reduce((sum, item) => sum + item.total, 0);
+    const totalStaked = processedData.reduce((sum, item) => sum + item.staked, 0);
     
-    // Calculate median
-    const sortedAmounts = [...processedData].sort((a, b) => a.total - b.total);
+    // Calculate median of staked amounts
+    const sortedAmounts = [...processedData].sort((a, b) => a.staked - b.staked);
     const midPoint = Math.floor(sortedAmounts.length / 2);
     const median = sortedAmounts.length % 2 === 0
-      ? (sortedAmounts[midPoint - 1].total + sortedAmounts[midPoint].total) / 2
-      : sortedAmounts[midPoint].total;
+      ? (sortedAmounts[midPoint - 1].staked + sortedAmounts[midPoint].staked) / 2
+      : sortedAmounts[midPoint].staked;
 
-    // Calculate average
+    // Calculate average of staked amounts
     const average = totalStaked / totalUsers;
 
     // Get min and max stakes
-    const minStake = sortedAmounts[0].total;
-    const maxStake = sortedAmounts[sortedAmounts.length - 1].total;
+    const minStake = sortedAmounts[0].staked;
+    const maxStake = sortedAmounts[sortedAmounts.length - 1].staked;
 
     return {
       totalUsers,
