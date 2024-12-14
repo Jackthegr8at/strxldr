@@ -9,7 +9,10 @@ import './index.css';
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type StakeData = {
-  [key: string]: number;
+  [key: string]: {
+    staked: number;
+    unstaked: number;
+  };
 };
 
 type BlockchainResponse = {
@@ -113,36 +116,40 @@ function Leaderboard() {
     setCurrentPage(1);
   }, [searchTerm]);
 
+  // Add sort type
+  type SortField = 'staked' | 'unstaked' | 'total';
+  const [sortField, setSortField] = useState<SortField>('staked');
+
+  // Update processedData to handle new structure
   const processedData = useMemo(() => {
     if (!data) return [];
 
     return Object.entries(data)
       .filter(([username]) => username.toLowerCase().includes(searchTerm.toLowerCase()))
-      .map(([username, amount]) => ({
+      .map(([username, amounts]) => ({
         username,
-        amount: Number(amount),
+        staked: amounts.staked,
+        unstaked: amounts.unstaked,
+        total: amounts.staked + amounts.unstaked
       }))
       .filter((item) => {
-        // First filter out zero amounts
-        if (item.amount <= 0) return false;
+        if (item.staked <= 0 && item.unstaked <= 0) return false;
         
-        // If no tier is selected, show all
         if (!selectedTier) return true;
         
-        // Get the next higher tier
         const tierIndex = STAKING_TIERS.findIndex(t => t.name === selectedTier.name);
         const nextTier = STAKING_TIERS[tierIndex - 1];
         
-        // Apply tier filtering
         if (!nextTier) {
-          return item.amount >= selectedTier.minimum;
+          return item.total >= selectedTier.minimum;
         }
-        return item.amount >= selectedTier.minimum && item.amount < nextTier.minimum;
+        return item.total >= selectedTier.minimum && item.total < nextTier.minimum;
       })
-      .sort((a, b) =>
-        sortOrder === 'desc' ? b.amount - a.amount : a.amount - b.amount
-      );
-  }, [data, sortOrder, searchTerm, selectedTier]);
+      .sort((a, b) => {
+        const compareValue = sortOrder === 'desc' ? -1 : 1;
+        return (a[sortField] - b[sortField]) * compareValue;
+      });
+  }, [data, sortOrder, searchTerm, selectedTier, sortField]);
 
   const totalPages = Math.ceil(processedData.length / ITEMS_PER_PAGE);
   const currentData = processedData.slice(
@@ -162,11 +169,11 @@ function Leaderboard() {
   };
 
   // Calculate total tokens for current page
-  const currentPageTotal = currentData.reduce((sum, item) => sum + item.amount, 0);
+  const currentPageTotal = currentData.reduce((sum, item) => sum + item.total, 0);
 
   // Calculate total of all stakes
   const totalStakes = useMemo(() => {
-    return processedData.reduce((sum, item) => sum + item.amount, 0);
+    return processedData.reduce((sum, item) => sum + item.total, 0);
   }, [processedData]);
 
   // Get global staked amount
@@ -181,21 +188,21 @@ function Leaderboard() {
     if (!processedData.length) return null;
 
     const totalUsers = processedData.length;
-    const totalStaked = processedData.reduce((sum, item) => sum + item.amount, 0);
+    const totalStaked = processedData.reduce((sum, item) => sum + item.total, 0);
     
     // Calculate median
-    const sortedAmounts = [...processedData].sort((a, b) => a.amount - b.amount);
+    const sortedAmounts = [...processedData].sort((a, b) => a.total - b.total);
     const midPoint = Math.floor(sortedAmounts.length / 2);
     const median = sortedAmounts.length % 2 === 0
-      ? (sortedAmounts[midPoint - 1].amount + sortedAmounts[midPoint].amount) / 2
-      : sortedAmounts[midPoint].amount;
+      ? (sortedAmounts[midPoint - 1].total + sortedAmounts[midPoint].total) / 2
+      : sortedAmounts[midPoint].total;
 
     // Calculate average
     const average = totalStaked / totalUsers;
 
     // Get min and max stakes
-    const minStake = sortedAmounts[0].amount;
-    const maxStake = sortedAmounts[sortedAmounts.length - 1].amount;
+    const minStake = sortedAmounts[0].total;
+    const maxStake = sortedAmounts[sortedAmounts.length - 1].total;
 
     return {
       totalUsers,
@@ -215,7 +222,7 @@ function Leaderboard() {
       return {
         ...tier,
         count: processedData.filter(user => {
-          const amount = user.amount;
+          const amount = user.total;
           // If this is the highest tier, only check minimum
           if (!nextTier) {
             return amount >= tier.minimum;
@@ -306,7 +313,7 @@ function Leaderboard() {
           </div>
           
           <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
-            <div className="text-sm text-gray-500 mb-1">Total Staked (API)</div>
+            <div className="text-sm text-gray-500 mb-1">Total Staked (Cleos Call)</div>
             <div className="text-xl font-semibold text-purple-700">
               {statistics?.totalStaked.toLocaleString(undefined, {
                 minimumFractionDigits: 4,
@@ -317,7 +324,7 @@ function Leaderboard() {
           </div>
 
           <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
-            <div className="text-sm text-gray-500 mb-1">Global Staked</div>
+            <div className="text-sm text-gray-500 mb-1">Global Staked (API)</div>
             <div className="text-xl font-semibold text-purple-700">
               {globalStaked.toLocaleString(undefined, {
                 minimumFractionDigits: 4,
@@ -457,7 +464,16 @@ function Leaderboard() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-gray-600">Sort by amount:</span>
+                <span className="text-gray-600">Sort by:</span>
+                <select
+                  value={sortField}
+                  onChange={(e) => setSortField(e.target.value as SortField)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="staked">Staked Amount</option>
+                  <option value="unstaked">Unstaked Amount</option>
+                  <option value="total">Total Amount</option>
+                </select>
                 <button
                   onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
                   className="flex items-center gap-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
@@ -478,6 +494,8 @@ function Leaderboard() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Rank</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Staked Amount</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Unstaked Amount</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Total Amount</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
                   </tr>
                 </thead>
@@ -503,18 +521,29 @@ function Leaderboard() {
                           )}
                         </a>
                       </td>
-                      <td 
-                        className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                        onClick={() => handleEasterEgg(null, item.username)}
-                      >
-                        {item.amount.toLocaleString(undefined, {
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {item.staked.toLocaleString(undefined, {
                           minimumFractionDigits: 4,
                           maximumFractionDigits: 4,
                           useGrouping: true,
                         })}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        ${(item.amount * strxPrice).toLocaleString(undefined, {
+                        {item.unstaked.toLocaleString(undefined, {
+                          minimumFractionDigits: 4,
+                          maximumFractionDigits: 4,
+                          useGrouping: true,
+                        })}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {item.total.toLocaleString(undefined, {
+                          minimumFractionDigits: 4,
+                          maximumFractionDigits: 4,
+                          useGrouping: true,
+                        })}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        ${(item.total * strxPrice).toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                           useGrouping: true,
