@@ -90,11 +90,16 @@ function Leaderboard() {
         code: "strxoracle",
         scope: "strxoracle",
         table: "prices",
-        limit: 9999
+        limit: 9999,
+        reverse: false,
+        show_payer: false
       })
     }).then(res => res.json()),
     { refreshInterval: 120000 } // Refresh every 2 minutes
   );
+
+  // Add console.log to debug
+  console.log('Price data:', priceData);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
