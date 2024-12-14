@@ -217,7 +217,7 @@ function Leaderboard() {
       return;
     }
     
-    // Different effects based on tier or username
+    // Different effects based on tier
     if (tier?.name === 'Free') {
       setPageTitle("NGMI Leaderboard 😢");
       document.body.classList.add('shake-animation');
@@ -227,10 +227,6 @@ function Leaderboard() {
     } else if (tier?.name === 'Shrimp') {
       setPageTitle("Shrimps Together Strong 🦐");
       document.body.classList.add('bounce-animation');
-    } else {
-      // Reset to default if clicking elsewhere
-      setIsEasterEggActive(false);
-      setPageTitle("STRX Staking Leaderboard");
     }
     
     // Only remove the animation effect after 1 second
@@ -444,7 +440,7 @@ function Leaderboard() {
                           {item.username}
                           {(currentPage === 1 && index < 3) && (
                             <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                              {index === 0 ? '👑' : index === 1 ? '��' : '🥉'}
+                              {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
                             </span>
                           )}
                         </a>
