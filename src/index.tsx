@@ -444,14 +444,17 @@ function Leaderboard() {
                           {item.username}
                           {(currentPage === 1 && index < 3) && (
                             <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                              {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                              {index === 0 ? '👑' : index === 1 ? '��' : '🥉'}
                             </span>
                           )}
                         </a>
                       </td>
                       <td 
                         className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                        onClick={() => handleEasterEgg(null, item.username)}
+                        onClick={() => {
+                          console.log('Amount clicked for:', item.username);
+                          handleEasterEgg(null, item.username);
+                        }}
                       >
                         {item.amount.toLocaleString(undefined, {
                           minimumFractionDigits: 4,
