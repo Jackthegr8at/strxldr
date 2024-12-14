@@ -73,6 +73,8 @@ function Leaderboard() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTier, setSelectedTier] = useState<StakingTier | null>(null);
+  const [pageTitle, setPageTitle] = useState("STRX Staking Leaderboard");
+  const [isEasterEggActive, setIsEasterEggActive] = useState(false);
 
   // Reset page when search term changes
   React.useEffect(() => {
@@ -195,6 +197,29 @@ function Leaderboard() {
     return tiers;
   }, [processedData]);
 
+  const handleEasterEgg = (tier: StakingTier | null, username?: string) => {
+    setIsEasterEggActive(true);
+    
+    // Different effects based on tier or username
+    if (tier?.name === 'Free') {
+      setPageTitle("NGMI Leaderboard 😢");
+      document.body.classList.add('shake-animation');
+    } else if (tier?.name === 'Whale') {
+      setPageTitle("🐋 Whale Alert! 🚨");
+      document.body.classList.add('splash-animation');
+    } else if (tier?.name === 'Shrimp') {
+      setPageTitle("Shrimps Together Strong 🦐");
+      document.body.classList.add('bounce-animation');
+    }
+    
+    // Reset animations after 1 second
+    setTimeout(() => {
+      setIsEasterEggActive(false);
+      document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
+      setPageTitle("STRX Staking Leaderboard");
+    }, 1000);
+  };
+
   if (error) {
     return (
       <div className="min-h-screen bg-white p-8">
@@ -210,7 +235,11 @@ function Leaderboard() {
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-purple-700 mb-6">STRX Staking Leaderboard</h1>
+        <h1 className={`text-3xl font-bold text-purple-700 mb-6 transition-all duration-300 ${
+          isEasterEggActive ? 'rainbow-text' : ''
+        }`}>
+          {pageTitle}
+        </h1>
         
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -288,8 +317,11 @@ function Leaderboard() {
             {tierStatistics?.map((tier) => (
               <div
                 key={tier.name}
-                onClick={() => setSelectedTier(selectedTier?.name === tier.name ? null : tier)}
-                className={`bg-white p-4 rounded-lg shadow border cursor-pointer transition-colors ${
+                onClick={() => {
+                  setSelectedTier(selectedTier?.name === tier.name ? null : tier);
+                  handleEasterEgg(tier);
+                }}
+                className={`tier-card bg-white p-4 rounded-lg shadow border cursor-pointer transition-colors ${
                   selectedTier?.name === tier.name 
                     ? 'border-purple-500 bg-purple-50' 
                     : 'border-purple-100 hover:bg-purple-50'
@@ -384,10 +416,11 @@ function Leaderboard() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         <a 
+                          onClick={() => handleEasterEgg(null, item.username)}
                           href={`https://explorer.xprnetwork.org/account/${item.username}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-purple-600 hover:text-purple-800 hover:underline"
+                          className="text-purple-600 hover:text-purple-800 hover:underline cursor-pointer"
                         >
                           {item.username}
                         </a>
