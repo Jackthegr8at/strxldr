@@ -200,7 +200,22 @@ function Leaderboard() {
   const handleEasterEgg = (tier: StakingTier | null, username?: string) => {
     console.log('handleEasterEgg called with:', { tier, username }); // Debug log
     
-    // If clicking the same tier again (unselecting), just reset without animation
+    // Remove any existing animations
+    document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
+    
+    // Check for special usernames with more detailed logging
+    console.log('Username lowercase:', username?.toLowerCase());
+    console.log('Includes check:', ['jordanhinks', 'jackthegreat'].includes(username?.toLowerCase() || ''));
+    
+    // Simplified check for testing
+    if (username === 'jordanhinks' || username === 'jackthegreat') {
+      console.log('Special username match found!'); // Debug log
+      setPageTitle("Future Billionaires List 🚀");
+      document.body.classList.add('bounce-animation');
+      return;
+    }
+    
+    // If no match, continue with tier checks
     if (selectedTier?.name === tier?.name) {
       setIsEasterEggActive(false);
       setPageTitle("STRX Staking Leaderboard");
@@ -209,22 +224,6 @@ function Leaderboard() {
     
     setIsEasterEggActive(true);
     
-    // Remove any existing animations
-    document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
-    
-    // Check for special usernames with more detailed logging
-    console.log('Username lowercase:', username?.toLowerCase());
-    console.log('Includes check:', ['jordanhinks', 'jackthegreat'].includes(username?.toLowerCase() || ''));
-    
-    if (username?.toLowerCase() === 'jordanhinks' || username?.toLowerCase() === 'jackthegreat') {
-      console.log('Special username match found!'); // Debug log
-      setPageTitle("Future Billionaires List 🚀");
-      document.body.classList.add('bounce-animation');
-      return;
-    }
-    
-    
-    // Different effects based on tier
     if (tier?.name === 'Free') {
       setPageTitle("NGMI Leaderboard 😢");
       document.body.classList.add('shake-animation');
@@ -236,7 +235,6 @@ function Leaderboard() {
       document.body.classList.add('bounce-animation');
     }
     
-    // Only remove the animation effect after 1 second
     setTimeout(() => {
       document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
     }, 1000);
