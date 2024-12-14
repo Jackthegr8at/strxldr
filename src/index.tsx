@@ -198,6 +198,13 @@ function Leaderboard() {
   }, [processedData]);
 
   const handleEasterEgg = (tier: StakingTier | null, username?: string) => {
+    // If clicking the same tier again (unselecting), just reset without animation
+    if (selectedTier?.name === tier?.name) {
+      setIsEasterEggActive(false);
+      setPageTitle("STRX Staking Leaderboard");
+      return;
+    }
+    
     setIsEasterEggActive(true);
     
     // Remove any existing animations
