@@ -198,6 +198,8 @@ function Leaderboard() {
   }, [processedData]);
 
   const handleEasterEgg = (tier: StakingTier | null, username?: string) => {
+    console.log('handleEasterEgg called with:', { tier, username }); // Debug log
+    
     // If clicking the same tier again (unselecting), just reset without animation
     if (selectedTier?.name === tier?.name) {
       setIsEasterEggActive(false);
@@ -211,7 +213,9 @@ function Leaderboard() {
     document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
     
     // Check for special usernames
+    console.log('Checking username:', username); // Debug log
     if (username && ['jordanhinks', 'jackthegreat'].includes(username.toLowerCase())) {
+      console.log('Special username match found!'); // Debug log
       setPageTitle("Future Billionaires List 🚀");
       document.body.classList.add('bounce-animation');
       return;
