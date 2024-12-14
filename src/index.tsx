@@ -157,7 +157,9 @@ function Leaderboard() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const topHolders = processedData.slice(0, 15);
+  const topHolders = useMemo(() => {
+    return processedData.slice(0, 15);
+  }, [processedData]);
 
   // Format large numbers (in millions)
   const formatLargeNumber = (value: number) => {
@@ -433,10 +435,10 @@ function Leaderboard() {
                           maximumFractionDigits: 4,
                           useGrouping: true,
                         }),
-                        "Amount"
+                        sortField.charAt(0).toUpperCase() + sortField.slice(1) // Capitalize first letter
                       ]}
                     />
-                    <Bar dataKey="total" fill="#7C63CC" />
+                    <Bar dataKey={sortField} fill="#7C63CC" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
