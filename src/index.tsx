@@ -523,7 +523,10 @@ function Leaderboard() {
                           )}
                         </a>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
+                      <td 
+                        className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                        onClick={() => handleEasterEgg(null, item.username)}
+                      >
                         {item.staked.toLocaleString(undefined, {
                           minimumFractionDigits: 4,
                           maximumFractionDigits: 4,
