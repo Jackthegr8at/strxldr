@@ -198,18 +198,11 @@ function Leaderboard() {
   }, [processedData]);
 
   const handleEasterEgg = (tier: StakingTier | null, username?: string) => {
-    console.log('handleEasterEgg called with:', { tier, username }); // Debug log
-    
     // Remove any existing animations
     document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
     
-    // Check for special usernames with more detailed logging
-    console.log('Username lowercase:', username?.toLowerCase());
-    console.log('Includes check:', ['jordanhinks', 'jackthegreat'].includes(username?.toLowerCase() || ''));
-    
     // Simplified check for testing
     if (username === 'jordanhinks' || username === 'jackthegreat') {
-      console.log('Special username match found!'); // Debug log
       setPageTitle("Future Billionaires List 🚀");
       document.body.classList.add('bounce-animation');
       return;
@@ -401,11 +394,21 @@ function Leaderboard() {
                 <input
                   type="text"
                   placeholder="Search by username..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-gray-600">Sort by amount:</span>
