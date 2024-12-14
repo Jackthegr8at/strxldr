@@ -436,7 +436,7 @@ function Leaderboard() {
                         "Amount"
                       ]}
                     />
-                    <Bar dataKey="amount" fill="#7C63CC" />
+                    <Bar dataKey="total" fill="#7C63CC" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
