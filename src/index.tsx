@@ -77,10 +77,10 @@ function Leaderboard() {
     { refreshInterval: 120000 } // Refresh every 2 minutes
   );
 
-  // Add new SWR call for price data
+  // Add new SWR call for price data with a unique key
   const { data: priceData } = useSWR<PriceResponse>(
-    'https://proton.eosusa.io/v1/chain/get_table_rows',
-    (url) => fetch(url, {
+    'strx_price_data', // Unique key
+    () => fetch('https://proton.eosusa.io/v1/chain/get_table_rows', {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=UTF-8',
