@@ -212,9 +212,11 @@ function Leaderboard() {
     // Remove any existing animations
     document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
     
-    // Check for special usernames
-    console.log('Checking username:', username); // Debug log
-    if (username && ['jordanhinks', 'jackthegreat'].includes(username.toLowerCase())) {
+    // Check for special usernames with more detailed logging
+    console.log('Username lowercase:', username?.toLowerCase());
+    console.log('Includes check:', ['jordanhinks', 'jackthegreat'].includes(username?.toLowerCase() || ''));
+    
+    if (username?.toLowerCase() === 'jordanhinks' || username?.toLowerCase() === 'jackthegreat') {
       console.log('Special username match found!'); // Debug log
       setPageTitle("Future Billionaires List 🚀");
       document.body.classList.add('bounce-animation');
