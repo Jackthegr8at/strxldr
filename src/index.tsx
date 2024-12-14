@@ -233,6 +233,9 @@ function Leaderboard() {
     } else if (tier?.name === 'Shrimp') {
       setPageTitle("Shrimps Together Strong 🦐");
       document.body.classList.add('bounce-animation');
+    } else if (tier) {
+      // Reset title for any other tier
+      setPageTitle("STRX Staking Leaderboard");
     }
     
     setTimeout(() => {
