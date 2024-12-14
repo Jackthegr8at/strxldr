@@ -223,6 +223,7 @@ function Leaderboard() {
       return;
     }
     
+    
     // Different effects based on tier
     if (tier?.name === 'Free') {
       setPageTitle("NGMI Leaderboard 😢");
