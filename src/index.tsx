@@ -41,7 +41,7 @@ type StakingTier = {
 const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '����' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
   { name: 'Free', minimum: 0, emoji: '🆓' },
@@ -214,7 +214,7 @@ type ActionResponse = {
 };
 
 // Add this component for the recent actions dashboard
-const RecentActions: React.FC = () => {
+const RecentActions: React.FC<{ strxPrice: number }> = ({ strxPrice }) => {
   const { data: actionsData } = useSWR<ActionResponse>(
     'recent_actions',
     () => fetch('https://proton.greymass.com/v1/history/get_actions', {
@@ -784,7 +784,7 @@ function Leaderboard() {
         </div>
 
         {/* Add the recent actions dashboard */}
-        <RecentActions />
+        <RecentActions strxPrice={strxPrice} />
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
