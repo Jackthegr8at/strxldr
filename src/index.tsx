@@ -224,8 +224,8 @@ const RecentActions: React.FC<{ strxPrice: number }> = ({ strxPrice }) => {
       },
       body: JSON.stringify({
         account_name: "storexstake",
-        pos: -1,
-        offset: -30
+        pos: 1,
+        offset: 30
       })
     }).then(res => res.json()),
     { refreshInterval: 30000 }
@@ -238,10 +238,11 @@ const RecentActions: React.FC<{ strxPrice: number }> = ({ strxPrice }) => {
     const uniqueActions = new Map();
     
     actionsData.actions
-      .filter(action => 
-        action.action_trace.act.data.memo === "add stake" || 
-        action.action_trace.act.data.memo === "withdraw stake"
-      )
+      .filter(action => {
+        const data = action.action_trace.act.data;
+        return (data.memo === "add stake" || data.memo === "withdraw stake") &&
+               action.action_trace.receiver === data.to;
+      })
       .forEach(action => {
         // Only add if this transaction ID hasn't been seen yet
         if (!uniqueActions.has(action.action_trace.trx_id)) {
