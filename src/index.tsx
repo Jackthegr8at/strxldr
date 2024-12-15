@@ -41,7 +41,7 @@ type StakingTier = {
 const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '����' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
   { name: 'Free', minimum: 0, emoji: '🆓' },
@@ -191,6 +191,9 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
 
 // Add this type for the display mode
 type AmountDisplay = 'strx' | 'usd';
+
+// Add this constant at the top of your file
+const TOTAL_SUPPLY = 2000000000; // 2 billion STRX
 
 function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
@@ -537,6 +540,9 @@ function Leaderboard() {
                 statistics?.totalStaked || 0,
                 amountDisplays['statistics-totalStaked'] || 'strx'
               )}
+              <span className="text-xs text-gray-500 ml-1">
+                ({((statistics?.totalStaked || 0) / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
+              </span>
             </div>
           </div>
 
@@ -550,6 +556,9 @@ function Leaderboard() {
                 globalStaked,
                 amountDisplays['statistics-globalStaked'] || 'strx'
               )}
+              <span className="text-xs text-gray-500 ml-1">
+                ({(globalStaked / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
+              </span>
             </div>
           </div>
 
@@ -812,6 +821,9 @@ function Leaderboard() {
                             item.total, 
                             amountDisplays[`${item.username}-total`] || 'strx'
                           )}
+                          <span className="text-xs text-gray-500 ml-1">
+                            ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                          </span>
                         </td>
                       )}
                       {visibleColumns.usdValue && (
