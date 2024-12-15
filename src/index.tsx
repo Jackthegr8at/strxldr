@@ -217,7 +217,7 @@ type ActionResponse = {
 // Add this component for the recent actions dashboard
 const RecentActions: React.FC<{ 
   strxPrice: number;
-  stakersData: StakeData;
+  stakersData?: StakeData;
 }> = ({ strxPrice, stakersData }) => {
   const { data: actionsData } = useSWR<ActionResponse>(
     'recent_actions',
@@ -236,7 +236,7 @@ const RecentActions: React.FC<{
   );
 
   const recentActions = useMemo(() => {
-    if (!actionsData?.actions || !stakersData) return [];
+    if (!actionsData?.actions) return [];
     
     return actionsData.actions
       .filter(action => {
@@ -251,8 +251,9 @@ const RecentActions: React.FC<{
           ? action.action_trace.act.data.to 
           : action.action_trace.act.data.from;
         
-        // Check if this is a new staker
-        const isNewStaker = action.action_trace.act.data.memo === "add stake" && 
+        // Check if this is a new staker, but only if we have stakersData
+        const isNewStaker = stakersData && 
+                           action.action_trace.act.data.memo === "add stake" && 
                            !stakersData[username];
 
         return {
