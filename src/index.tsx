@@ -41,7 +41,7 @@ type StakingTier = {
 const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '����' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
   { name: 'Free', minimum: 0, emoji: '🆓' },
@@ -870,20 +870,34 @@ function Leaderboard() {
 
           <StatisticCard
             title="Total Staked (Cleos Call)"
-            value={formatAmount(
-              statistics?.totalStaked || 0,
-              amountDisplays['statistics-totalStaked'] || 'strx'
-            )}
+            value={
+              <div className="flex flex-col">
+                {formatAmount(
+                  statistics?.totalStaked || 0,
+                  amountDisplays['statistics-totalStaked'] || 'strx'
+                )}
+                <span className="text-xs text-gray-500">
+                  ({((statistics?.totalStaked || 0) / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
+                </span>
+              </div>
+            }
             tooltip="Total amount of STRX tokens currently staked in the protocol. Click to toggle between STRX and USD values."
             onClick={() => toggleAmountDisplay('statistics', 'totalStaked')}
           />
 
           <StatisticCard
             title="Global Staked (API)"
-            value={formatAmount(
-              globalStaked,
-              amountDisplays['statistics-globalStaked'] || 'strx'
-            )}
+            value={
+              <div className="flex flex-col">
+                {formatAmount(
+                  globalStaked,
+                  amountDisplays['statistics-globalStaked'] || 'strx'
+                )}
+                <span className="text-xs text-gray-500">
+                  ({(globalStaked / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
+                </span>
+              </div>
+            }
             tooltip="Total staked amount reported by the blockchain API. May differ slightly from Cleos call due to timing differences."
             onClick={() => toggleAmountDisplay('statistics', 'globalStaked')}
           />
@@ -1104,7 +1118,7 @@ function Leaderboard() {
                             {item.username}
                             {(currentPage === 1 && index < 3) && (
                               <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                                {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                                {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
                               </span>
                             )}
                           </a>
