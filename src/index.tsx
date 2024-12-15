@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
 import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -71,37 +71,63 @@ type ColumnSelectorProps = {
 };
 
 // Add this component
-const ColumnSelector: React.FC<ColumnSelectorProps> = ({ visibleColumns, setVisibleColumns }) => (
-  <div className="mb-4">
-    <label className="block text-sm text-gray-600 mb-1">Show columns:</label>
-    <select
-      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-      multiple={true}
-      value={Object.keys(visibleColumns).filter(key => visibleColumns[key as keyof VisibleColumns])}
-      onChange={(e) => {
-        const selected = Array.from(e.target.selectedOptions, option => option.value);
-        const newVisibleColumns = {
-          ...visibleColumns,
-          ...Object.keys(visibleColumns).reduce((acc, key) => ({
-            ...acc,
-            [key]: selected.includes(key)
-          }), {}) as VisibleColumns
-        };
-        // Ensure at least username and one value column are always visible
-        if (selected.includes('username') && selected.length > 1) {
+const ColumnSelector: React.FC<ColumnSelectorProps> = ({ visibleColumns, setVisibleColumns }) => {
+  // Check if we're on mobile
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Add resize listener
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return (
+    <div className="mb-4">
+      <label className="block text-sm text-gray-600 mb-1">
+        {isMobile ? 'Select additional column:' : 'Show additional columns:'}
+      </label>
+      <select
+        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+        multiple={!isMobile}
+        value={Object.entries(visibleColumns)
+          .filter(([key]) => !['rank', 'username'].includes(key)) // Exclude rank and username
+          .filter(([_, value]) => value)
+          .map(([key]) => key)}
+        onChange={(e) => {
+          const selected = isMobile 
+            ? [e.target.value] // Single selection for mobile
+            : Array.from(e.target.selectedOptions, option => option.value);
+
+          const newVisibleColumns = {
+            ...visibleColumns,
+            rank: true, // Always true
+            username: true, // Always true
+            staked: selected.includes('staked'),
+            unstaked: selected.includes('unstaked'),
+            total: selected.includes('total'),
+            usdValue: selected.includes('usdValue'),
+          };
+          
           setVisibleColumns(newVisibleColumns);
-        }
-      }}
-    >
-      <option value="rank">Rank</option>
-      <option value="username">Username</option>
-      <option value="staked">Staked Amount</option>
-      <option value="unstaked">Unstaked Amount</option>
-      <option value="total">Total Amount</option>
-      <option value="usdValue">USD Value</option>
-    </select>
-  </div>
-);
+        }}
+      >
+        <option value="staked">Staked Amount</option>
+        <option value="unstaked">Unstaked Amount</option>
+        <option value="total">Total Amount</option>
+        <option value="usdValue">USD Value</option>
+      </select>
+      {isMobile && (
+        <p className="text-xs text-gray-500 mt-1">
+          Rank and Username are always visible
+        </p>
+      )}
+    </div>
+  );
+};
 
 function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
