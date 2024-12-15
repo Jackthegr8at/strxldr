@@ -180,10 +180,8 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
             <li>Toggle between STRX and USD values by clicking on amounts</li>
             <li>Live staking activity dashboard showing recent stakes and withdrawals</li>
             <li>New staker detection and highlighting</li>
-            <li>Local timezone conversion for all timestamps</li>
             <li>Percentage of total supply for staked amounts</li>
             <li>Sortable leaderboard with search functionality</li>
-            <li>Direct links to blockchain explorer for transactions and accounts</li>
             <li>Find some easter eggs</li>
           </ul>
           <p>
