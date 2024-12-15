@@ -68,10 +68,15 @@ type VisibleColumns = {
 type ColumnSelectorProps = {
   visibleColumns: VisibleColumns;
   setVisibleColumns: React.Dispatch<React.SetStateAction<VisibleColumns>>;
+  setSortField: React.Dispatch<React.SetStateAction<SortField>>;
 };
 
 // Add this component
-const ColumnSelector: React.FC<ColumnSelectorProps> = ({ visibleColumns, setVisibleColumns }) => {
+const ColumnSelector: React.FC<ColumnSelectorProps> = ({ 
+  visibleColumns, 
+  setVisibleColumns,
+  setSortField
+}) => {
   // Check if we're on mobile
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -85,34 +90,43 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ visibleColumns, setVisi
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Only render on mobile
+  if (!isMobile) {
+    return null;
+  }
+
   return (
     <div className="mb-4">
       <label className="block text-sm text-gray-600 mb-1">
-        {isMobile ? 'Select additional column:' : 'Show additional columns:'}
+        Select additional column:
       </label>
       <select
         className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-        multiple={!isMobile}
         value={Object.entries(visibleColumns)
-          .filter(([key]) => !['rank', 'username'].includes(key)) // Exclude rank and username
+          .filter(([key]) => !['rank', 'username'].includes(key))
           .filter(([_, value]) => value)
-          .map(([key]) => key)}
+          .map(([key]) => key)[0]}
         onChange={(e) => {
-          const selected = isMobile 
-            ? [e.target.value] // Single selection for mobile
-            : Array.from(e.target.selectedOptions, option => option.value);
+          const selected = e.target.value;
 
+          // Update visible columns
           const newVisibleColumns = {
-            ...visibleColumns,
-            rank: true, // Always true
-            username: true, // Always true
-            staked: selected.includes('staked'),
-            unstaked: selected.includes('unstaked'),
-            total: selected.includes('total'),
-            usdValue: selected.includes('usdValue'),
+            rank: true,
+            username: true,
+            staked: selected === 'staked',
+            unstaked: selected === 'unstaked',
+            total: selected === 'total',
+            usdValue: selected === 'usdValue',
           };
           
           setVisibleColumns(newVisibleColumns);
+
+          // Update sort field based on selection
+          if (selected === 'usdValue') {
+            setSortField('total'); // Sort by total amount when USD is selected
+          } else {
+            setSortField(selected as SortField); // Sort by the selected column
+          }
         }}
       >
         <option value="staked">Staked Amount</option>
@@ -120,13 +134,18 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({ visibleColumns, setVisi
         <option value="total">Total Amount</option>
         <option value="usdValue">USD Value</option>
       </select>
-      {isMobile && (
-        <p className="text-xs text-gray-500 mt-1">
-          Rank and Username are always visible
-        </p>
-      )}
+      <p className="text-xs text-gray-500 mt-1">
+        Rank and Username are always visible
+      </p>
     </div>
   );
+};
+
+// Update the type definition
+type ColumnSelectorProps = {
+  visibleColumns: VisibleColumns;
+  setVisibleColumns: React.Dispatch<React.SetStateAction<VisibleColumns>>;
+  setSortField: React.Dispatch<React.SetStateAction<SortField>>;
 };
 
 function Leaderboard() {
@@ -368,6 +387,27 @@ function Leaderboard() {
     }, 1000);
   };
 
+  // Update visibleColumns state based on screen size
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        // Show all columns on desktop
+        setVisibleColumns({
+          rank: true,
+          username: true,
+          staked: true,
+          unstaked: true,
+          total: true,
+          usdValue: true,
+        });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Call once on mount
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (error) {
     return (
       <div className="min-h-screen bg-white p-8">
@@ -553,8 +593,9 @@ function Leaderboard() {
                 <ColumnSelector 
                   visibleColumns={visibleColumns} 
                   setVisibleColumns={setVisibleColumns}
+                  setSortField={setSortField}
                 />
-                <div className="flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-2">
                   <span className="text-gray-600">Sort by:</span>
                   <select
                     value={sortField}
