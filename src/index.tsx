@@ -251,18 +251,19 @@ const RecentActions: React.FC<{
           ? action.action_trace.act.data.to 
           : action.action_trace.act.data.from;
         
-        // Check if this is a new staker, but only if we have stakersData
-        const isNewStaker = stakersData && 
-                           action.action_trace.act.data.memo === "add stake" && 
-                           !stakersData[username];
-
+        // Convert UTC time to local time
+        const utcTime = new Date(action.action_trace.block_time);
+        const localTime = new Date(utcTime.getTime() - (utcTime.getTimezoneOffset() * 60000));
+        
         return {
-          time: new Date(action.action_trace.block_time),
+          time: localTime,
           username,
           amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
           type: action.action_trace.act.data.memo,
           trxId: action.action_trace.trx_id,
-          isNewStaker
+          isNewStaker: stakersData && 
+                      action.action_trace.act.data.memo === "add stake" && 
+                      !stakersData[username]
         };
       });
   }, [actionsData, stakersData]);
@@ -288,7 +289,15 @@ const RecentActions: React.FC<{
                   action.isNewStaker ? 'bg-green-50' : ''
                 }`}>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {action.time.toLocaleTimeString()}
+                    {action.time.toLocaleString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: true
+                    })}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <div className="flex items-center gap-2">
