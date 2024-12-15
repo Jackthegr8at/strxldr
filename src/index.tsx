@@ -215,7 +215,10 @@ type ActionResponse = {
 };
 
 // Add this component for the recent actions dashboard
-const RecentActions: React.FC<{ strxPrice: number }> = ({ strxPrice }) => {
+const RecentActions: React.FC<{ 
+  strxPrice: number;
+  stakersData: StakeData;
+}> = ({ strxPrice, stakersData }) => {
   const { data: actionsData } = useSWR<ActionResponse>(
     'recent_actions',
     () => fetch('https://proton.greymass.com/v1/history/get_actions', {
@@ -233,7 +236,7 @@ const RecentActions: React.FC<{ strxPrice: number }> = ({ strxPrice }) => {
   );
 
   const recentActions = useMemo(() => {
-    if (!actionsData?.actions) return [];
+    if (!actionsData?.actions || !stakersData) return [];
     
     return actionsData.actions
       .filter(action => {
@@ -243,16 +246,25 @@ const RecentActions: React.FC<{ strxPrice: number }> = ({ strxPrice }) => {
       })
       .slice(0, 15)
       .reverse()
-      .map(action => ({
-        time: new Date(action.action_trace.block_time),
-        username: action.action_trace.act.data.memo === "withdraw stake" 
+      .map(action => {
+        const username = action.action_trace.act.data.memo === "withdraw stake" 
           ? action.action_trace.act.data.to 
-          : action.action_trace.act.data.from,
-        amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
-        type: action.action_trace.act.data.memo,
-        trxId: action.action_trace.trx_id
-      }));
-  }, [actionsData]);
+          : action.action_trace.act.data.from;
+        
+        // Check if this is a new staker
+        const isNewStaker = action.action_trace.act.data.memo === "add stake" && 
+                           !stakersData[username];
+
+        return {
+          time: new Date(action.action_trace.block_time),
+          username,
+          amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
+          type: action.action_trace.act.data.memo,
+          trxId: action.action_trace.trx_id,
+          isNewStaker
+        };
+      });
+  }, [actionsData, stakersData]);
 
   return (
     <div className="mb-8">
@@ -271,19 +283,28 @@ const RecentActions: React.FC<{ strxPrice: number }> = ({ strxPrice }) => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {recentActions.map((action, index) => (
-                <tr key={index} className="hover:bg-purple-50">
+                <tr key={index} className={`hover:bg-purple-50 ${
+                  action.isNewStaker ? 'bg-green-50' : ''
+                }`}>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {action.time.toLocaleTimeString()}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    <a 
-                      href={`https://explorer.xprnetwork.org/account/${action.username}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-purple-600 hover:text-purple-800 hover:underline"
-                    >
-                      {action.username}
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a 
+                        href={`https://explorer.xprnetwork.org/account/${action.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-600 hover:text-purple-800 hover:underline"
+                      >
+                        {action.username}
+                      </a>
+                      {action.isNewStaker && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                          New Staker! 🎉
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {action.amount.toLocaleString(undefined, {
@@ -787,7 +808,7 @@ function Leaderboard() {
         </div>
 
         {/* Add the recent actions dashboard */}
-        <RecentActions strxPrice={strxPrice} />
+        <RecentActions strxPrice={strxPrice} stakersData={data} />
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
