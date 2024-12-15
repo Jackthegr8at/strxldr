@@ -400,109 +400,6 @@ type NewStaker = {
 // Add this type for the new stakers response
 type NewStakersResponse = NewStaker[];
 
-// Add new SWR fetch for new stakers
-const { data: newStakersData } = useSWR<NewStakersResponse>(
-  'https://nfts.jessytremblay.com/STRX/newstakers.json',
-  fetcher,
-  { refreshInterval: 120000 }
-);
-
-const processedNewStakers = useMemo(() => {
-  if (!newStakersData) return [];
-
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  
-  const oneDayAgo = new Date();
-  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-
-  return newStakersData
-    .filter(staker => {
-      const stakerDate = new Date(staker.date);
-      return stakerDate >= oneWeekAgo;
-    })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .reduce((acc, staker) => {
-      const stakerDate = new Date(staker.date);
-      // Include all stakers from last 24 hours
-      if (stakerDate >= oneDayAgo) {
-        return [...acc, staker];
-      }
-      // Only include up to 10 stakers total
-      if (acc.length < 10) {
-        return [...acc, staker];
-      }
-      return acc;
-    }, [] as NewStaker[]);
-}, [newStakersData]);
-
-const NewStakersPanel: React.FC<{ 
-  newStakers: NewStaker[];
-  strxPrice: number;
-}> = ({ newStakers, strxPrice }) => {
-  if (!newStakers.length) return null;
-
-  return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">
-        New Stakers 🎉
-      </h2>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-purple-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Initial Stake</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {newStakers.map((staker, index) => {
-                const stakerDate = new Date(staker.date);
-                const isLast24Hours = (new Date().getTime() - stakerDate.getTime()) < 24 * 60 * 60 * 1000;
-
-                return (
-                  <tr key={index} className={`hover:bg-purple-50 ${
-                    isLast24Hours ? 'bg-green-50' : ''
-                  }`}>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {stakerDate.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      <a 
-                        href={`https://explorer.xprnetwork.org/account/${staker.username}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-purple-600 hover:text-purple-800 hover:underline"
-                      >
-                        {staker.username}
-                      </a>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {staker.total_balance.toLocaleString(undefined, {
-                        minimumFractionDigits: 4,
-                        maximumFractionDigits: 4
-                      })} STRX
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      ${(staker.total_balance * strxPrice).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                      })}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
@@ -818,6 +715,43 @@ function Leaderboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Add new SWR fetch for new stakers inside the Leaderboard function
+  const { data: newStakersData } = useSWR<NewStakersResponse>(
+    'https://nfts.jessytremblay.com/STRX/newstakers.json',
+    fetcher,
+    { refreshInterval: 120000 }
+  );
+
+  // Move processedNewStakers inside the Leaderboard function
+  const processedNewStakers = useMemo(() => {
+    if (!newStakersData) return [];
+
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+    return newStakersData
+      .filter(staker => {
+        const stakerDate = new Date(staker.date);
+        return stakerDate >= oneWeekAgo;
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .reduce((acc, staker) => {
+        const stakerDate = new Date(staker.date);
+        // Include all stakers from last 24 hours
+        if (stakerDate >= oneDayAgo) {
+          return [...acc, staker];
+        }
+        // Only include up to 10 stakers total
+        if (acc.length < 10) {
+          return [...acc, staker];
+        }
+        return acc;
+      }, [] as NewStaker[]);
+  }, [newStakersData]);
+
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
@@ -942,7 +876,7 @@ function Leaderboard() {
         {/* Add the recent actions dashboard */}
         <RecentActions strxPrice={strxPrice} stakersData={response?.data} />
 
-        {/* Add the new stakers panel */}
+        {/* Add the new stakers panel before the leaderboard table */}
         <NewStakersPanel 
           newStakers={processedNewStakers}
           strxPrice={strxPrice}
