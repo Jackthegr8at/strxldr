@@ -41,7 +41,7 @@ type StakingTier = {
 const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '����' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
   { name: 'Free', minimum: 0, emoji: '🆓' },
@@ -235,32 +235,22 @@ const RecentActions: React.FC<{ strxPrice: number }> = ({ strxPrice }) => {
   const recentActions = useMemo(() => {
     if (!actionsData?.actions) return [];
     
-    // Create a Map to store unique transactions using trx_id as key
-    const uniqueActions = new Map();
-    
-    actionsData.actions
+    return actionsData.actions
       .filter(action => {
         const data = action.action_trace.act.data;
         return (data.memo === "add stake" || data.memo === "withdraw stake") &&
                action.action_trace.receiver === data.to;
       })
-      .forEach(action => {
-        // Only add if this transaction ID hasn't been seen yet
-        if (!uniqueActions.has(action.action_trace.trx_id)) {
-          uniqueActions.set(action.action_trace.trx_id, {
-            time: new Date(action.action_trace.block_time),
-            username: action.action_trace.act.data.memo === "withdraw stake" 
-              ? action.action_trace.act.data.to 
-              : action.action_trace.act.data.from,
-            amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
-            type: action.action_trace.act.data.memo,
-            trxId: action.action_trace.trx_id
-          });
-        }
-      });
-    
-    // Convert Map to array and take the last 15 actions
-    return Array.from(uniqueActions.values()).slice(0, 15);
+      .slice(0, 15)
+      .map(action => ({
+        time: new Date(action.action_trace.block_time),
+        username: action.action_trace.act.data.memo === "withdraw stake" 
+          ? action.action_trace.act.data.to 
+          : action.action_trace.act.data.from,
+        amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
+        type: action.action_trace.act.data.memo,
+        trxId: action.action_trace.trx_id
+      }));
   }, [actionsData]);
 
   return (
