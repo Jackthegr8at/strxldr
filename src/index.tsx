@@ -41,7 +41,7 @@ type StakingTier = {
 const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '����' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
   { name: 'Free', minimum: 0, emoji: '🆓' },
@@ -242,6 +242,7 @@ const RecentActions: React.FC<{ strxPrice: number }> = ({ strxPrice }) => {
                action.action_trace.receiver === data.to;
       })
       .slice(0, 15)
+      .reverse()
       .map(action => ({
         time: new Date(action.action_trace.block_time),
         username: action.action_trace.act.data.memo === "withdraw stake" 
