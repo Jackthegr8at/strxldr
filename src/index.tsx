@@ -351,12 +351,44 @@ const RecentActions: React.FC<{
   );
 };
 
+// Add this type for the fetch response
+type FetchResponse = {
+  data: StakeData;
+  lastModified: string;
+};
+
 function Leaderboard() {
-  const { data, error, isLoading } = useSWR<StakeData>(
+  // Update the SWR fetcher to include last-modified time
+  const fetcher = async (url: string): Promise<FetchResponse> => {
+    const response = await fetch(url);
+    const lastModified = response.headers.get('last-modified');
+    const data = await response.json();
+    return {
+      data,
+      lastModified: lastModified || new Date().toUTCString()
+    };
+  };
+
+  // Update the SWR hook to use the new response type
+  const { data: response, error, isLoading } = useSWR<FetchResponse>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
     fetcher,
-    { refreshInterval: 120000 } // Refresh every 2 minutes
+    { refreshInterval: 120000 }
   );
+
+  // Function to format the time difference
+  const formatTimeDiff = (lastModified: string) => {
+    const diff = Date.now() - new Date(lastModified).getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    
+    if (minutes < 1) return 'just now';
+    if (minutes === 1) return '1 minute ago';
+    if (minutes < 60) return `${minutes} minutes ago`;
+    if (hours === 1) return '1 hour ago';
+    if (hours < 24) return `${hours} hours ago`;
+    return 'more than a day ago';
+  };
 
   const { data: blockchainData } = useSWR<BlockchainResponse>(
     'https://proton.eosusa.io/v1/chain/get_table_rows',
@@ -457,9 +489,9 @@ function Leaderboard() {
 
   // Update processedData to handle new structure
   const processedData = useMemo(() => {
-    if (!data) return [];
+    if (!response?.data) return [];
 
-    return Object.entries(data)
+    return Object.entries(response.data)
       .filter(([username]) => username.toLowerCase().includes(searchTerm.toLowerCase()))
       .map(([username, amounts]) => ({
         username,
@@ -484,7 +516,7 @@ function Leaderboard() {
         const compareValue = sortOrder === 'desc' ? -1 : 1;
         return (a[sortField] - b[sortField]) * compareValue;
       });
-  }, [data, sortOrder, searchTerm, selectedTier, sortField]);
+  }, [response?.data, sortOrder, searchTerm, selectedTier, sortField]);
 
   const totalPages = Math.ceil(processedData.length / ITEMS_PER_PAGE);
   const currentData = processedData.slice(
@@ -640,18 +672,6 @@ function Leaderboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-white p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-            <p className="text-red-700">Error loading data. Please try again later.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
@@ -675,6 +695,13 @@ function Leaderboard() {
           isOpen={isInfoModalOpen} 
           onClose={() => setIsInfoModalOpen(false)} 
         />
+
+        {/* Add the last update time */}
+        {response?.lastModified && (
+          <div className="text-sm text-gray-500 mb-4 italic">
+            Last updated {formatTimeDiff(response.lastModified)}
+          </div>
+        )}
 
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -809,11 +836,15 @@ function Leaderboard() {
         </div>
 
         {/* Add the recent actions dashboard */}
-        <RecentActions strxPrice={strxPrice} stakersData={data} />
+        <RecentActions strxPrice={strxPrice} stakersData={response?.data} />
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-700 border-t-transparent"></div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+            <p className="text-red-700">Error loading data. Please try again later.</p>
           </div>
         ) : (
           <>
