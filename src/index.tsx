@@ -288,12 +288,14 @@ const RecentActions: React.FC<{
                   action.isNewStaker ? 'bg-green-50' : ''
                 }`}>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {action.time.toLocaleTimeString(undefined, {
+                    {action.time.toLocaleString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit',
                       second: '2-digit',
-                      hour12: true,
-                      timeZoneName: 'short'
+                      hour12: true
                     })}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
