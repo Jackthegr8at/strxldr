@@ -195,6 +195,121 @@ type AmountDisplay = 'strx' | 'usd';
 // Add this constant at the top of your file
 const TOTAL_SUPPLY = 2000000000; // 2 billion STRX
 
+// Add these types for the actions API
+type ActionResponse = {
+  actions: Array<{
+    action_trace: {
+      act: {
+        data: {
+          from: string;
+          memo: string;
+          quantity: string;
+          to: string;
+        };
+      };
+      block_time: string;
+    };
+  }>;
+};
+
+// Add this component for the recent actions dashboard
+const RecentActions: React.FC = () => {
+  const { data: actionsData } = useSWR<ActionResponse>(
+    'recent_actions',
+    () => fetch('https://proton.greymass.com/v1/history/get_actions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=UTF-8',
+      },
+      body: JSON.stringify({
+        account_name: "storexstake",
+        pos: -1,
+        offset: -30
+      })
+    }).then(res => res.json()),
+    { refreshInterval: 30000 } // Refresh every 30 seconds
+  );
+
+  const recentActions = useMemo(() => {
+    if (!actionsData?.actions) return [];
+    
+    return actionsData.actions
+      .filter(action => 
+        action.action_trace.act.data.memo === "add stake" || 
+        action.action_trace.act.data.memo === "withdraw stake"
+      )
+      .slice(0, 15) // Get only the last 15 actions
+      .map(action => ({
+        time: new Date(action.action_trace.block_time),
+        username: action.action_trace.act.data.from,
+        amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
+        type: action.action_trace.act.data.memo
+      }));
+  }, [actionsData]);
+
+  return (
+    <div className="mb-8">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Staking Activity</h2>
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead className="bg-purple-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {recentActions.map((action, index) => (
+                <tr key={index} className="hover:bg-purple-50">
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {action.time.toLocaleTimeString()}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    <a 
+                      href={`https://explorer.xprnetwork.org/account/${action.username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-600 hover:text-purple-800 hover:underline"
+                    >
+                      {action.username}
+                    </a>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {action.amount.toLocaleString(undefined, {
+                      minimumFractionDigits: 4,
+                      maximumFractionDigits: 4
+                    })} STRX
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    <span className={`inline-flex items-center gap-1 ${
+                      action.type === 'add stake' 
+                        ? 'text-green-600' 
+                        : 'text-red-600'
+                    }`}>
+                      {action.type === 'add stake' ? (
+                        <>
+                          <span>👍</span> Add Stake
+                        </>
+                      ) : (
+                        <>
+                          <span>👎</span> Withdraw
+                        </>
+                      )}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
@@ -651,6 +766,9 @@ function Leaderboard() {
             ))}
           </div>
         </div>
+
+        {/* Add the recent actions dashboard */}
+        <RecentActions />
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
