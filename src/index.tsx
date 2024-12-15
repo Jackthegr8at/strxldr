@@ -251,19 +251,18 @@ const RecentActions: React.FC<{
           ? action.action_trace.act.data.to 
           : action.action_trace.act.data.from;
         
-        // Convert UTC time to local time
-        const utcTime = new Date(action.action_trace.block_time);
-        const localTime = new Date(utcTime.getTime() - (utcTime.getTimezoneOffset() * 60000));
-        
+        // Check if this is a new staker, but only if we have stakersData
+        const isNewStaker = stakersData && 
+                           action.action_trace.act.data.memo === "add stake" && 
+                           !stakersData[username];
+
         return {
-          time: localTime,
+          time: new Date(action.action_trace.block_time),
           username,
           amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
           type: action.action_trace.act.data.memo,
           trxId: action.action_trace.trx_id,
-          isNewStaker: stakersData && 
-                      action.action_trace.act.data.memo === "add stake" && 
-                      !stakersData[username]
+          isNewStaker
         };
       });
   }, [actionsData, stakersData]);
@@ -289,15 +288,7 @@ const RecentActions: React.FC<{
                   action.isNewStaker ? 'bg-green-50' : ''
                 }`}>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {action.time.toLocaleString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit',
-                      hour12: true
-                    })}
+                    {action.time.toLocaleTimeString()}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <div className="flex items-center gap-2">
@@ -795,8 +786,15 @@ function Leaderboard() {
 
           <StatisticCard
             title="Stake Range"
-            value={`${formatAmount(statistics?.minStake || 0, 'strx')} - ${formatAmount(statistics?.maxStake || 0, 'strx')}`}
-            tooltip="The range between the smallest and largest stake amounts in the system"
+            value={`${formatAmount(
+              statistics?.minStake || 0,
+              amountDisplays['statistics-range'] || 'strx'
+            )} - ${formatAmount(
+              statistics?.maxStake || 0,
+              amountDisplays['statistics-range'] || 'strx'
+            )}`}
+            tooltip="The range between the smallest and largest stake amounts in the system. Click to toggle between STRX and USD values."
+            onClick={() => toggleAmountDisplay('statistics', 'range')}
           />
 
           <StatisticCard
