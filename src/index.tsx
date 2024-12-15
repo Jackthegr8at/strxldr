@@ -55,6 +55,9 @@ type PriceResponse = {
   }];
 };
 
+// Add this type definition
+type SortField = 'staked' | 'unstaked' | 'total';
+
 // Add these types at the top of your file
 type VisibleColumns = {
   rank: boolean;
@@ -203,7 +206,6 @@ function Leaderboard() {
   }, [searchTerm]);
 
   // Add sort type
-  type SortField = 'staked' | 'unstaked' | 'total';
   const [sortField, setSortField] = useState<SortField>('staked');
 
   // Add this state near your other useState declarations
