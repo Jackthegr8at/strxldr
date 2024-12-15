@@ -55,6 +55,22 @@ type PriceResponse = {
   }];
 };
 
+// First, define the type for the visible columns state
+type VisibleColumns = {
+  rank: boolean;
+  username: boolean;
+  staked: boolean;
+  unstaked: boolean;
+  total: boolean;
+  usdValue: boolean;
+};
+
+// Then, define the props type for the ColumnSelector component
+type ColumnSelectorProps = {
+  visibleColumns: VisibleColumns;
+  setVisibleColumns: React.Dispatch<React.SetStateAction<VisibleColumns>>;
+};
+
 function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
@@ -121,7 +137,7 @@ function Leaderboard() {
   const [sortField, setSortField] = useState<SortField>('staked');
 
   // Add this state for column visibility
-  const [visibleColumns, setVisibleColumns] = useState({
+  const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>({
     rank: true,
     username: true,
     staked: true,
@@ -130,37 +146,37 @@ function Leaderboard() {
     usdValue: false,
   });
 
-  // Add this component for the column selector
-  const ColumnSelector = ({ visibleColumns, setVisibleColumns }) => (
-    <div className="mb-4">
-      <select
-        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-        multiple={true}
-        value={Object.keys(visibleColumns).filter(key => visibleColumns[key])}
-        onChange={(e) => {
-          const selected = Array.from(e.target.selectedOptions, option => option.value);
-          const newVisibleColumns = {
-            ...visibleColumns,
-            ...Object.keys(visibleColumns).reduce((acc, key) => ({
-              ...acc,
-              [key]: selected.includes(key)
-            }), {})
-          };
-          // Ensure at least one column is always visible
-          if (selected.length > 0) {
-            setVisibleColumns(newVisibleColumns);
-          }
-        }}
-      >
-        <option value="rank">Rank</option>
-        <option value="username">Username</option>
-        <option value="staked">Staked Amount</option>
-        <option value="unstaked">Unstaked Amount</option>
-        <option value="total">Total Amount</option>
-        <option value="usdValue">USD Value</option>
-      </select>
-    </div>
-  );
+  // Update the ColumnSelector component with the types
+  const ColumnSelector: React.FC<ColumnSelectorProps> = ({ visibleColumns, setVisibleColumns }) => (
+  <div className="mb-4">
+    <select
+      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+      multiple={true}
+      value={Object.keys(visibleColumns).filter(key => visibleColumns[key as keyof VisibleColumns])}
+      onChange={(e) => {
+        const selected = Array.from(e.target.selectedOptions, option => option.value);
+        const newVisibleColumns = {
+          ...visibleColumns,
+          ...Object.keys(visibleColumns).reduce((acc, key) => ({
+            ...acc,
+            [key]: selected.includes(key)
+          }), {}) as VisibleColumns
+        };
+        // Ensure at least one column is always visible
+        if (selected.length > 0) {
+          setVisibleColumns(newVisibleColumns);
+        }
+      }}
+    >
+      <option value="rank">Rank</option>
+      <option value="username">Username</option>
+      <option value="staked">Staked Amount</option>
+      <option value="unstaked">Unstaked Amount</option>
+      <option value="total">Total Amount</option>
+      <option value="usdValue">USD Value</option>
+    </select>
+  </div>
+);
 
   // Update processedData to handle new structure
   const processedData = useMemo(() => {
