@@ -41,7 +41,7 @@ type StakingTier = {
 const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '����' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
   { name: 'Free', minimum: 0, emoji: '🆓' },
@@ -763,7 +763,10 @@ function Leaderboard() {
                       {visibleColumns.staked && (
                         <td 
                           className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => toggleAmountDisplay(item.username, 'staked')}
+                          onClick={() => {
+                            toggleAmountDisplay(item.username, 'staked');
+                            handleEasterEgg(null, item.username);
+                          }}
                         >
                           {formatAmount(
                             item.staked, 
@@ -774,7 +777,10 @@ function Leaderboard() {
                       {visibleColumns.unstaked && (
                         <td 
                           className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => toggleAmountDisplay(item.username, 'unstaked')}
+                          onClick={() => {
+                            toggleAmountDisplay(item.username, 'unstaked');
+                            handleEasterEgg(null, item.username);
+                          }}
                         >
                           {formatAmount(
                             item.unstaked, 
@@ -785,7 +791,10 @@ function Leaderboard() {
                       {visibleColumns.total && (
                         <td 
                           className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => toggleAmountDisplay(item.username, 'total')}
+                          onClick={() => {
+                            toggleAmountDisplay(item.username, 'total');
+                            handleEasterEgg(null, item.username);
+                          }}
                         >
                           {formatAmount(
                             item.total, 
@@ -796,11 +805,14 @@ function Leaderboard() {
                       {visibleColumns.usdValue && (
                         <td 
                           className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => toggleAmountDisplay(item.username, 'usdValue')}
+                          onClick={() => {
+                            toggleAmountDisplay(item.username, 'usdValue');
+                            handleEasterEgg(null, item.username);
+                          }}
                         >
                           {formatAmount(
-                            item.total, // Using total amount for USD value
-                            amountDisplays[`${item.username}-usdValue`] || 'usd' // Default to USD display
+                            item.total,
+                            amountDisplays[`${item.username}-usdValue`] || 'usd'
                           )}
                         </td>
                       )}
