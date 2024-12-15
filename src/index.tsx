@@ -225,8 +225,8 @@ const RecentActions: React.FC<{ strxPrice: number }> = ({ strxPrice }) => {
       },
       body: JSON.stringify({
         account_name: "storexstake",
-        pos: 1,
-        offset: 30
+        pos: -1,
+        offset: -30
       })
     }).then(res => res.json()),
     { refreshInterval: 30000 }
