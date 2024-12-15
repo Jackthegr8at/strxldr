@@ -141,13 +141,6 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
   );
 };
 
-// Update the type definition
-type ColumnSelectorProps = {
-  visibleColumns: VisibleColumns;
-  setVisibleColumns: React.Dispatch<React.SetStateAction<VisibleColumns>>;
-  setSortField: React.Dispatch<React.SetStateAction<SortField>>;
-};
-
 function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
