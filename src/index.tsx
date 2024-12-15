@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
-import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -144,6 +144,50 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
   );
 };
 
+// Add this type
+type InfoModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+// Add this component
+const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-lg w-full p-6 relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+        >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <h2 className="text-2xl font-bold text-purple-700 mb-4">About STRX Staking Leaderboard</h2>
+        <div className="prose text-gray-600 space-y-4">
+          <p>
+            Welcome to the STRX Staking Leaderboard! This platform provides real-time tracking of STRX token staking positions across the community.
+          </p>
+          <p>
+            Here you can:
+          </p>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>View detailed staking statistics and distribution</li>
+            <li>Track top holders and their staking positions</li>
+            <li>Monitor global staking metrics</li>
+            <li>Check current STRX price and USD values</li>
+          </ul>
+          <p>
+            The leaderboard updates every 2 minutes to provide the most current staking data. Users are categorized into tiers (Whale, Shark, Dolphin, etc.) based on their total STRX holdings.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
@@ -217,6 +261,9 @@ function Leaderboard() {
     total: false,
     usdValue: false,
   });
+
+  // Add this state
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   // Update processedData to handle new structure
   const processedData = useMemo(() => {
@@ -418,12 +465,27 @@ function Leaderboard() {
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className={`text-3xl font-bold text-purple-700 mb-6 transition-all duration-300 ${
-          isEasterEggActive ? 'rainbow-text' : ''
-        }`}>
-          {pageTitle}
-        </h1>
-        
+        <div className="flex justify-between items-center mb-6">
+          <h1 className={`text-3xl font-bold text-purple-700 ${
+            isEasterEggActive ? 'rainbow-text' : ''
+          }`}>
+            {pageTitle}
+          </h1>
+          <button
+            onClick={() => setIsInfoModalOpen(true)}
+            className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
+            aria-label="Information"
+          >
+            <QuestionMarkCircleIcon className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Add the modal component */}
+        <InfoModal 
+          isOpen={isInfoModalOpen} 
+          onClose={() => setIsInfoModalOpen(false)} 
+        />
+
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
