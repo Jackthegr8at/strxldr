@@ -357,6 +357,39 @@ type FetchResponse = {
   lastModified: string;
 };
 
+// Add this component for the tooltip
+const StatisticCard: React.FC<{
+  title: string;
+  value: React.ReactNode;
+  tooltip: string;
+  onClick?: () => void;
+}> = ({ title, value, tooltip, onClick }) => (
+  <div 
+    className={`bg-white p-4 rounded-lg shadow border border-purple-100 relative ${
+      onClick ? 'cursor-pointer' : ''
+    }`}
+    onClick={onClick}
+  >
+    <div className="flex justify-between items-start mb-1">
+      <div className="text-sm text-gray-500">{title}</div>
+      <div 
+        className="group relative"
+        title={tooltip}
+      >
+        <QuestionMarkCircleIcon 
+          className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
+        />
+        <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+          {tooltip}
+        </div>
+      </div>
+    </div>
+    <div className="text-xl font-semibold text-purple-700">
+      {value}
+    </div>
+  </div>
+);
+
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
@@ -705,102 +738,60 @@ function Leaderboard() {
 
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <StatisticCard
+            title="STRX Price"
+            value={`$${strxPrice.toLocaleString(undefined, {
+              minimumFractionDigits: 4,
+              maximumFractionDigits: 4,
+            })}`}
+            tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
+          />
 
-          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
-            <div className="text-sm text-gray-500 mb-1">Total Stakers</div>
-            <div className="text-xl font-semibold text-purple-700">
-              {statistics?.totalUsers.toLocaleString()}
-            </div>
-          </div>
-          
-          <div 
-            className="bg-white p-4 rounded-lg shadow border border-purple-100 cursor-pointer"
+          <StatisticCard
+            title="Total Stakers"
+            value={statistics?.totalUsers.toLocaleString()}
+            tooltip="Total number of unique addresses that currently have STRX tokens staked"
+          />
+
+          <StatisticCard
+            title="Total Staked (Cleos Call)"
+            value={formatAmount(
+              statistics?.totalStaked || 0,
+              amountDisplays['statistics-totalStaked'] || 'strx'
+            )}
+            tooltip="Total amount of STRX tokens currently staked in the protocol. Click to toggle between STRX and USD values."
             onClick={() => toggleAmountDisplay('statistics', 'totalStaked')}
-          >
-            <div className="text-sm text-gray-500 mb-1">Total Staked (Cleos Call)</div>
-            <div className="flex flex-col">
-              <div className="text-xl font-semibold text-purple-700">
-                {formatAmount(
-                  statistics?.totalStaked || 0,
-                  amountDisplays['statistics-totalStaked'] || 'strx'
-                )}
-              </div>
-              <span className="text-xs text-gray-500">
-                ({((statistics?.totalStaked || 0) / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
-              </span>
-            </div>
-          </div>
+          />
 
-          <div 
-            className="bg-white p-4 rounded-lg shadow border border-purple-100 cursor-pointer"
+          <StatisticCard
+            title="Global Staked (API)"
+            value={formatAmount(
+              globalStaked,
+              amountDisplays['statistics-globalStaked'] || 'strx'
+            )}
+            tooltip="Total staked amount reported by the blockchain API. May differ slightly from Cleos call due to timing differences."
             onClick={() => toggleAmountDisplay('statistics', 'globalStaked')}
-          >
-            <div className="text-sm text-gray-500 mb-1">Global Staked (API)</div>
-            <div className="flex flex-col">
-              <div className="text-xl font-semibold text-purple-700">
-                {formatAmount(
-                  globalStaked,
-                  amountDisplays['statistics-globalStaked'] || 'strx'
-                )}
-              </div>
-              <span className="text-xs text-gray-500">
-                ({(globalStaked / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
-              </span>
-            </div>
-          </div>
+          />
 
-          <div 
-            className="bg-white p-4 rounded-lg shadow border border-purple-100 cursor-pointer"
+          <StatisticCard
+            title="Average Stake"
+            value={formatAmount(
+              statistics?.average || 0,
+              amountDisplays['statistics-average'] || 'strx'
+            )}
+            tooltip="Average amount of STRX tokens staked per user. Click to toggle between STRX and USD values."
             onClick={() => toggleAmountDisplay('statistics', 'average')}
-          >
-            <div className="text-sm text-gray-500 mb-1">Average Stake</div>
-            <div className="text-xl font-semibold text-purple-700">
-              {formatAmount(
-                statistics?.average || 0,
-                amountDisplays['statistics-average'] || 'strx'
-              )}
-            </div>
-          </div>
+          />
 
-          <div 
-            className="bg-white p-4 rounded-lg shadow border border-purple-100 cursor-pointer"
+          <StatisticCard
+            title="Median Stake"
+            value={formatAmount(
+              statistics?.median || 0,
+              amountDisplays['statistics-median'] || 'strx'
+            )}
+            tooltip="The middle value of all stake amounts. 50% of stakers have more than this amount, 50% have less."
             onClick={() => toggleAmountDisplay('statistics', 'median')}
-          >
-            <div className="text-sm text-gray-500 mb-1">Median Stake</div>
-            <div className="text-xl font-semibold text-purple-700">
-              {formatAmount(
-                statistics?.median || 0,
-                amountDisplays['statistics-median'] || 'strx'
-              )}
-            </div>
-          </div>
-
-          <div 
-            className="bg-white p-4 rounded-lg shadow border border-purple-100 cursor-pointer"
-            onClick={() => toggleAmountDisplay('statistics', 'range')}
-          >
-            <div className="text-sm text-gray-500 mb-1">Stake Range</div>
-            <div className="text-xl font-semibold text-purple-700">
-              {formatAmount(
-                statistics?.minStake || 0,
-                amountDisplays['statistics-range'] || 'strx'
-              )} - {formatAmount(
-                statistics?.maxStake || 0,
-                amountDisplays['statistics-range'] || 'strx'
-              )}
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
-            <div className="text-sm text-gray-500 mb-1">STRX Price</div>
-            <div className="text-xl font-semibold text-purple-700">
-              ${strxPrice.toLocaleString(undefined, {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4,
-                useGrouping: true,
-              })}
-            </div>
-          </div>
+          />
         </div>
 
         {/* Staking Tiers Dashboard */}
