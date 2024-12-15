@@ -41,7 +41,7 @@ type StakingTier = {
 const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '����' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
   { name: 'Free', minimum: 0, emoji: '🆓' },
@@ -168,7 +168,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
         <h2 className="text-2xl font-bold text-purple-700 mb-4">About STRX Staking Leaderboard</h2>
         <div className="prose text-gray-600 space-y-4">
           <p>
-            Welcome to the STRX Staking Leaderboard! This platform provides real-time tracking of STRX token staking positions across the community.
+            Welcome to the STRX Staking Leaderboard! This platform provides real-time tracking of STOREX token staking positions across the community.
           </p>
           <p>
             Here you can:
@@ -178,15 +178,19 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
             <li>Track top holders and their staking positions</li>
             <li>Monitor global staking metrics</li>
             <li>Check current STRX price and USD values</li>
+            <li>Find some easter eggs</li>
           </ul>
           <p>
-            The leaderboard updates every 2 minutes to provide the most current staking data. Users are categorized into tiers (Whale, Shark, Dolphin, etc.) based on their total STRX holdings.
+            The leaderboard updates every 60 minutes to provide the most current staking data. USD price is updated every 2 minutes. Users are categorized into tiers (Whale, Shark, Dolphin, etc.) based on their total STRX holdings.
           </p>
         </div>
       </div>
     </div>
   );
 };
+
+// Add this type for the display mode
+type AmountDisplay = 'strx' | 'usd';
 
 function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
@@ -210,7 +214,7 @@ function Leaderboard() {
         limit: 10
       })
     }).then(res => res.json()),
-    { refreshInterval: 120000 } // Refresh every 2 minutes
+    { refreshInterval: 60000 } // Refresh every 60 minutes
   );
 
   // Add new SWR call for price data with a unique key
@@ -264,6 +268,33 @@ function Leaderboard() {
 
   // Add this state
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+
+  // Add this state to track display mode for each cell
+  const [amountDisplays, setAmountDisplays] = useState<{ [key: string]: AmountDisplay }>({});
+
+  // Add this helper function to toggle display mode for a specific cell
+  const toggleAmountDisplay = (username: string, field: string) => {
+    setAmountDisplays(prev => ({
+      ...prev,
+      [`${username}-${field}`]: prev[`${username}-${field}`] === 'usd' ? 'strx' : 'usd'
+    }));
+  };
+
+  // Add this helper function to format amounts
+  const formatAmount = (amount: number, displayMode: AmountDisplay) => {
+    if (displayMode === 'usd') {
+      return `$${(amount * strxPrice).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+        useGrouping: true,
+      })}`;
+    }
+    return amount.toLocaleString(undefined, {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+      useGrouping: true,
+    });
+  };
 
   // Update processedData to handle new structure
   const processedData = useMemo(() => {
@@ -730,40 +761,34 @@ function Leaderboard() {
                       {visibleColumns.staked && (
                         <td 
                           className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => handleEasterEgg(null, item.username)}
+                          onClick={() => toggleAmountDisplay(item.username, 'staked')}
                         >
-                          {item.staked.toLocaleString(undefined, {
-                            minimumFractionDigits: 4,
-                            maximumFractionDigits: 4,
-                            useGrouping: true,
-                          })}
+                          {formatAmount(
+                            item.staked, 
+                            amountDisplays[`${item.username}-staked`] || 'strx'
+                          )}
                         </td>
                       )}
                       {visibleColumns.unstaked && (
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {item.unstaked.toLocaleString(undefined, {
-                            minimumFractionDigits: 4,
-                            maximumFractionDigits: 4,
-                            useGrouping: true,
-                          })}
+                        <td 
+                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                          onClick={() => toggleAmountDisplay(item.username, 'unstaked')}
+                        >
+                          {formatAmount(
+                            item.unstaked, 
+                            amountDisplays[`${item.username}-unstaked`] || 'strx'
+                          )}
                         </td>
                       )}
                       {visibleColumns.total && (
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {item.total.toLocaleString(undefined, {
-                            minimumFractionDigits: 4,
-                            maximumFractionDigits: 4,
-                            useGrouping: true,
-                          })}
-                        </td>
-                      )}
-                      {visibleColumns.usdValue && (
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          ${(item.total * strxPrice).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                            useGrouping: true,
-                          })}
+                        <td 
+                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                          onClick={() => toggleAmountDisplay(item.username, 'total')}
+                        >
+                          {formatAmount(
+                            item.total, 
+                            amountDisplays[`${item.username}-total`] || 'strx'
+                          )}
                         </td>
                       )}
                     </tr>
