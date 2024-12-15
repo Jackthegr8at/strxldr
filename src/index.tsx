@@ -535,12 +535,14 @@ function Leaderboard() {
             onClick={() => toggleAmountDisplay('statistics', 'totalStaked')}
           >
             <div className="text-sm text-gray-500 mb-1">Total Staked (Cleos Call)</div>
-            <div className="text-xl font-semibold text-purple-700">
-              {formatAmount(
-                statistics?.totalStaked || 0,
-                amountDisplays['statistics-totalStaked'] || 'strx'
-              )}
-              <span className="text-xs text-gray-500 ml-1">
+            <div className="flex flex-col">
+              <div className="text-xl font-semibold text-purple-700">
+                {formatAmount(
+                  statistics?.totalStaked || 0,
+                  amountDisplays['statistics-totalStaked'] || 'strx'
+                )}
+              </div>
+              <span className="text-xs text-gray-500">
                 ({((statistics?.totalStaked || 0) / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
               </span>
             </div>
@@ -551,12 +553,14 @@ function Leaderboard() {
             onClick={() => toggleAmountDisplay('statistics', 'globalStaked')}
           >
             <div className="text-sm text-gray-500 mb-1">Global Staked (API)</div>
-            <div className="text-xl font-semibold text-purple-700">
-              {formatAmount(
-                globalStaked,
-                amountDisplays['statistics-globalStaked'] || 'strx'
-              )}
-              <span className="text-xs text-gray-500 ml-1">
+            <div className="flex flex-col">
+              <div className="text-xl font-semibold text-purple-700">
+                {formatAmount(
+                  globalStaked,
+                  amountDisplays['statistics-globalStaked'] || 'strx'
+                )}
+              </div>
+              <span className="text-xs text-gray-500">
                 ({(globalStaked / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
               </span>
             </div>
@@ -775,7 +779,7 @@ function Leaderboard() {
                             {item.username}
                             {(currentPage === 1 && index < 3) && (
                               <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                                {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                                {index === 0 ? '���' : index === 1 ? '🥈' : '🥉'}
                               </span>
                             )}
                           </a>
