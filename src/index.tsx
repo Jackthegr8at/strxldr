@@ -251,19 +251,18 @@ const RecentActions: React.FC<{
           ? action.action_trace.act.data.to 
           : action.action_trace.act.data.from;
         
-        // Convert UTC time to local time
-        const utcTime = new Date(action.action_trace.block_time);
-        const localTime = new Date(utcTime.getTime() - (utcTime.getTimezoneOffset() * 60000));
-        
+        // Check if this is a new staker, but only if we have stakersData
+        const isNewStaker = stakersData && 
+                           action.action_trace.act.data.memo === "add stake" && 
+                           !stakersData[username];
+
         return {
-          time: localTime,
+          time: new Date(action.action_trace.block_time),
           username,
           amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
           type: action.action_trace.act.data.memo,
           trxId: action.action_trace.trx_id,
-          isNewStaker: stakersData && 
-                      action.action_trace.act.data.memo === "add stake" && 
-                      !stakersData[username]
+          isNewStaker
         };
       });
   }, [actionsData, stakersData]);
@@ -289,15 +288,7 @@ const RecentActions: React.FC<{
                   action.isNewStaker ? 'bg-green-50' : ''
                 }`}>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {action.time.toLocaleString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit',
-                      hour12: true
-                    })}
+                    {action.time.toLocaleTimeString()}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <div className="flex items-center gap-2">
@@ -398,6 +389,119 @@ const StatisticCard: React.FC<{
     </div>
   </div>
 );
+
+// Add this type for new stakers
+type NewStaker = {
+  username: string;
+  total_balance: number;
+  date: string;
+};
+
+// Add this type for the new stakers response
+type NewStakersResponse = NewStaker[];
+
+// Add new SWR fetch for new stakers
+const { data: newStakersData } = useSWR<NewStakersResponse>(
+  'https://nfts.jessytremblay.com/STRX/newstakers.json',
+  fetcher,
+  { refreshInterval: 120000 }
+);
+
+const processedNewStakers = useMemo(() => {
+  if (!newStakersData) return [];
+
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  
+  const oneDayAgo = new Date();
+  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+  return newStakersData
+    .filter(staker => {
+      const stakerDate = new Date(staker.date);
+      return stakerDate >= oneWeekAgo;
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .reduce((acc, staker) => {
+      const stakerDate = new Date(staker.date);
+      // Include all stakers from last 24 hours
+      if (stakerDate >= oneDayAgo) {
+        return [...acc, staker];
+      }
+      // Only include up to 10 stakers total
+      if (acc.length < 10) {
+        return [...acc, staker];
+      }
+      return acc;
+    }, [] as NewStaker[]);
+}, [newStakersData]);
+
+const NewStakersPanel: React.FC<{ 
+  newStakers: NewStaker[];
+  strxPrice: number;
+}> = ({ newStakers, strxPrice }) => {
+  if (!newStakers.length) return null;
+
+  return (
+    <div className="mb-8">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">
+        New Stakers 🎉
+      </h2>
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead className="bg-purple-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Initial Stake</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {newStakers.map((staker, index) => {
+                const stakerDate = new Date(staker.date);
+                const isLast24Hours = (new Date().getTime() - stakerDate.getTime()) < 24 * 60 * 60 * 1000;
+
+                return (
+                  <tr key={index} className={`hover:bg-purple-50 ${
+                    isLast24Hours ? 'bg-green-50' : ''
+                  }`}>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {stakerDate.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <a 
+                        href={`https://explorer.xprnetwork.org/account/${staker.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-600 hover:text-purple-800 hover:underline"
+                      >
+                        {staker.username}
+                      </a>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {staker.total_balance.toLocaleString(undefined, {
+                        minimumFractionDigits: 4,
+                        maximumFractionDigits: 4
+                      })} STRX
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      ${(staker.total_balance * strxPrice).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      })}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
@@ -748,6 +852,15 @@ function Leaderboard() {
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <StatisticCard
+            title="STRX Price"
+            value={`$${strxPrice.toLocaleString(undefined, {
+              minimumFractionDigits: 4,
+              maximumFractionDigits: 4,
+            })}`}
+            tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
+          />
+
+          <StatisticCard
             title="Total Stakers"
             value={statistics?.totalUsers.toLocaleString()}
             tooltip="Total number of unique addresses that currently have STRX tokens staked"
@@ -792,29 +905,6 @@ function Leaderboard() {
             tooltip="The middle value of all stake amounts. 50% of stakers have more than this amount, 50% have less."
             onClick={() => toggleAmountDisplay('statistics', 'median')}
           />
-
-          <StatisticCard
-            title="Stake Range"
-            value={`${formatAmount(
-              statistics?.minStake || 0,
-              amountDisplays['statistics-range'] || 'strx'
-            )} - ${formatAmount(
-              statistics?.maxStake || 0,
-              amountDisplays['statistics-range'] || 'strx'
-            )}`}
-            tooltip="The range between the smallest and largest stake amounts in the system. Click to toggle between STRX and USD values."
-            onClick={() => toggleAmountDisplay('statistics', 'range')}
-          />
-
-          <StatisticCard
-            title="STRX Price"
-            value={`$${strxPrice.toLocaleString(undefined, {
-              minimumFractionDigits: 4,
-              maximumFractionDigits: 4,
-              useGrouping: true,
-            })}`}
-            tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
-          />
         </div>
 
         {/* Staking Tiers Dashboard */}
@@ -851,6 +941,12 @@ function Leaderboard() {
 
         {/* Add the recent actions dashboard */}
         <RecentActions strxPrice={strxPrice} stakersData={response?.data} />
+
+        {/* Add the new stakers panel */}
+        <NewStakersPanel 
+          newStakers={processedNewStakers}
+          strxPrice={strxPrice}
+        />
 
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
