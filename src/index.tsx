@@ -520,6 +520,17 @@ function Leaderboard() {
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <div className="text-sm text-gray-500 mb-1">STRX Price</div>
+            <div className="text-xl font-semibold text-purple-700">
+              ${strxPrice.toLocaleString(undefined, {
+                minimumFractionDigits: 4,
+                maximumFractionDigits: 4,
+                useGrouping: true,
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
             <div className="text-sm text-gray-500 mb-1">Total Stakers</div>
             <div className="text-xl font-semibold text-purple-700">
               {statistics?.totalUsers.toLocaleString()}
