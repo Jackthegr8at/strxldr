@@ -526,69 +526,71 @@ function Leaderboard() {
             </div>
           </div>
           
-          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+          <div 
+            className="bg-white p-4 rounded-lg shadow border border-purple-100 cursor-pointer"
+            onClick={() => toggleAmountDisplay('statistics', 'totalStaked')}
+          >
             <div className="text-sm text-gray-500 mb-1">Total Staked (Cleos Call)</div>
             <div className="text-xl font-semibold text-purple-700">
-              {statistics?.totalStaked.toLocaleString(undefined, {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4,
-                useGrouping: true,
-              })}
+              {formatAmount(
+                statistics?.totalStaked || 0,
+                amountDisplays['statistics-totalStaked'] || 'strx'
+              )}
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+          <div 
+            className="bg-white p-4 rounded-lg shadow border border-purple-100 cursor-pointer"
+            onClick={() => toggleAmountDisplay('statistics', 'globalStaked')}
+          >
             <div className="text-sm text-gray-500 mb-1">Global Staked (API)</div>
             <div className="text-xl font-semibold text-purple-700">
-              {globalStaked.toLocaleString(undefined, {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4,
-                useGrouping: true,
-              })}
+              {formatAmount(
+                globalStaked,
+                amountDisplays['statistics-globalStaked'] || 'strx'
+              )}
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+          <div 
+            className="bg-white p-4 rounded-lg shadow border border-purple-100 cursor-pointer"
+            onClick={() => toggleAmountDisplay('statistics', 'average')}
+          >
             <div className="text-sm text-gray-500 mb-1">Average Stake</div>
             <div className="text-xl font-semibold text-purple-700">
-              {statistics?.average.toLocaleString(undefined, {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4,
-                useGrouping: true,
-              })}
+              {formatAmount(
+                statistics?.average || 0,
+                amountDisplays['statistics-average'] || 'strx'
+              )}
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+          <div 
+            className="bg-white p-4 rounded-lg shadow border border-purple-100 cursor-pointer"
+            onClick={() => toggleAmountDisplay('statistics', 'median')}
+          >
             <div className="text-sm text-gray-500 mb-1">Median Stake</div>
             <div className="text-xl font-semibold text-purple-700">
-              {statistics?.median.toLocaleString(undefined, {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4,
-                useGrouping: true,
-              })}
+              {formatAmount(
+                statistics?.median || 0,
+                amountDisplays['statistics-median'] || 'strx'
+              )}
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+          <div 
+            className="bg-white p-4 rounded-lg shadow border border-purple-100 cursor-pointer"
+            onClick={() => toggleAmountDisplay('statistics', 'range')}
+          >
             <div className="text-sm text-gray-500 mb-1">Stake Range</div>
             <div className="text-xl font-semibold text-purple-700">
-              {statistics?.minStake.toLocaleString(undefined, {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4,
-                useGrouping: true,
-              })} - {statistics?.maxStake.toLocaleString(undefined, {
-                minimumFractionDigits: 4,
-                maximumFractionDigits: 4,
-                useGrouping: true,
-              })}
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
-            <div className="text-sm text-gray-500 mb-1">STRX Price (USD)</div>
-            <div className="text-xl font-semibold text-purple-700">
-              ${strxPrice.toFixed(6)}
+              {formatAmount(
+                statistics?.minStake || 0,
+                amountDisplays['statistics-range'] || 'strx'
+              )} - {formatAmount(
+                statistics?.maxStake || 0,
+                amountDisplays['statistics-range'] || 'strx'
+              )}
             </div>
           </div>
         </div>
