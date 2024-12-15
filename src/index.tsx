@@ -251,18 +251,19 @@ const RecentActions: React.FC<{
           ? action.action_trace.act.data.to 
           : action.action_trace.act.data.from;
         
-        // Check if this is a new staker, but only if we have stakersData
-        const isNewStaker = stakersData && 
-                           action.action_trace.act.data.memo === "add stake" && 
-                           !stakersData[username];
-
+        // Convert UTC time to local time
+        const utcTime = new Date(action.action_trace.block_time);
+        const localTime = new Date(utcTime.getTime() - (utcTime.getTimezoneOffset() * 60000));
+        
         return {
-          time: new Date(action.action_trace.block_time),
+          time: localTime,
           username,
           amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
           type: action.action_trace.act.data.memo,
           trxId: action.action_trace.trx_id,
-          isNewStaker
+          isNewStaker: stakersData && 
+                      action.action_trace.act.data.memo === "add stake" && 
+                      !stakersData[username]
         };
       });
   }, [actionsData, stakersData]);
@@ -288,7 +289,15 @@ const RecentActions: React.FC<{
                   action.isNewStaker ? 'bg-green-50' : ''
                 }`}>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {action.time.toLocaleTimeString()}
+                    {action.time.toLocaleString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: true
+                    })}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <div className="flex items-center gap-2">
@@ -782,6 +791,29 @@ function Leaderboard() {
             )}
             tooltip="The middle value of all stake amounts. 50% of stakers have more than this amount, 50% have less."
             onClick={() => toggleAmountDisplay('statistics', 'median')}
+          />
+
+          <StatisticCard
+            title="Stake Range"
+            value={`${formatAmount(
+              statistics?.minStake || 0,
+              amountDisplays['statistics-range'] || 'strx'
+            )} - ${formatAmount(
+              statistics?.maxStake || 0,
+              amountDisplays['statistics-range'] || 'strx'
+            )}`}
+            tooltip="The range between the smallest and largest stake amounts in the system. Click to toggle between STRX and USD values."
+            onClick={() => toggleAmountDisplay('statistics', 'range')}
+          />
+
+          <StatisticCard
+            title="STRX Price"
+            value={`$${strxPrice.toLocaleString(undefined, {
+              minimumFractionDigits: 4,
+              maximumFractionDigits: 4,
+              useGrouping: true,
+            })}`}
+            tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
           />
         </div>
 
