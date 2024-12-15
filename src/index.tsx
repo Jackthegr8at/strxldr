@@ -402,7 +402,7 @@ const StatisticCard: React.FC<{
 // Add this type for new stakers
 type NewStaker = {
   username: string;
-  total_balance: number;
+  total_staked: number;
   date: string;
 };
 
@@ -455,13 +455,13 @@ const NewStakersPanel: React.FC<{
                       </a>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {staker.total_balance.toLocaleString(undefined, {
+                      {staker.total_staked.toLocaleString(undefined, {
                         minimumFractionDigits: 4,
                         maximumFractionDigits: 4
                       })} STRX
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      ${(staker.total_balance * strxPrice).toLocaleString(undefined, {
+                      ${(staker.total_staked * strxPrice).toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                       })}
