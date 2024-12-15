@@ -41,7 +41,7 @@ type StakingTier = {
 const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '����' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
   { name: 'Free', minimum: 0, emoji: '🆓' },
@@ -789,10 +789,15 @@ function Leaderboard() {
                             handleEasterEgg(null, item.username);
                           }}
                         >
-                          {formatAmount(
-                            item.staked, 
-                            amountDisplays[`${item.username}-staked`] || 'strx'
-                          )}
+                          <div className="flex flex-col">
+                            {formatAmount(
+                              item.staked, 
+                              amountDisplays[`${item.username}-staked`] || 'strx'
+                            )}
+                            <span className="text-xs text-gray-500">
+                              ({(item.staked / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                            </span>
+                          </div>
                         </td>
                       )}
                       {visibleColumns.unstaked && (
@@ -803,10 +808,15 @@ function Leaderboard() {
                             handleEasterEgg(null, item.username);
                           }}
                         >
-                          {formatAmount(
-                            item.unstaked, 
-                            amountDisplays[`${item.username}-unstaked`] || 'strx'
-                          )}
+                          <div className="flex flex-col">
+                            {formatAmount(
+                              item.unstaked, 
+                              amountDisplays[`${item.username}-unstaked`] || 'strx'
+                            )}
+                            <span className="text-xs text-gray-500">
+                              ({(item.unstaked / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                            </span>
+                          </div>
                         </td>
                       )}
                       {visibleColumns.total && (
@@ -817,13 +827,15 @@ function Leaderboard() {
                             handleEasterEgg(null, item.username);
                           }}
                         >
-                          {formatAmount(
-                            item.total, 
-                            amountDisplays[`${item.username}-total`] || 'strx'
-                          )}
-                          <span className="text-xs text-gray-500 ml-1">
-                            ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                          </span>
+                          <div className="flex flex-col">
+                            {formatAmount(
+                              item.total, 
+                              amountDisplays[`${item.username}-total`] || 'strx'
+                            )}
+                            <span className="text-xs text-gray-500">
+                              ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                            </span>
+                          </div>
                         </td>
                       )}
                       {visibleColumns.usdValue && (
