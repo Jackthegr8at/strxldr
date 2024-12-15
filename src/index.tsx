@@ -55,6 +55,54 @@ type PriceResponse = {
   }];
 };
 
+// Add these types at the top of your file
+type VisibleColumns = {
+  rank: boolean;
+  username: boolean;
+  staked: boolean;
+  unstaked: boolean;
+  total: boolean;
+  usdValue: boolean;
+};
+
+type ColumnSelectorProps = {
+  visibleColumns: VisibleColumns;
+  setVisibleColumns: React.Dispatch<React.SetStateAction<VisibleColumns>>;
+};
+
+// Add this component
+const ColumnSelector: React.FC<ColumnSelectorProps> = ({ visibleColumns, setVisibleColumns }) => (
+  <div className="mb-4">
+    <label className="block text-sm text-gray-600 mb-1">Show columns:</label>
+    <select
+      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+      multiple={true}
+      value={Object.keys(visibleColumns).filter(key => visibleColumns[key as keyof VisibleColumns])}
+      onChange={(e) => {
+        const selected = Array.from(e.target.selectedOptions, option => option.value);
+        const newVisibleColumns = {
+          ...visibleColumns,
+          ...Object.keys(visibleColumns).reduce((acc, key) => ({
+            ...acc,
+            [key]: selected.includes(key)
+          }), {}) as VisibleColumns
+        };
+        // Ensure at least username and one value column are always visible
+        if (selected.includes('username') && selected.length > 1) {
+          setVisibleColumns(newVisibleColumns);
+        }
+      }}
+    >
+      <option value="rank">Rank</option>
+      <option value="username">Username</option>
+      <option value="staked">Staked Amount</option>
+      <option value="unstaked">Unstaked Amount</option>
+      <option value="total">Total Amount</option>
+      <option value="usdValue">USD Value</option>
+    </select>
+  </div>
+);
+
 function Leaderboard() {
   const { data, error, isLoading } = useSWR<StakeData>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
@@ -119,6 +167,16 @@ function Leaderboard() {
   // Add sort type
   type SortField = 'staked' | 'unstaked' | 'total';
   const [sortField, setSortField] = useState<SortField>('staked');
+
+  // Add this state near your other useState declarations
+  const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>({
+    rank: true,
+    username: true,
+    staked: true,
+    unstaked: false,
+    total: false,
+    usdValue: false,
+  });
 
   // Update processedData to handle new structure
   const processedData = useMemo(() => {
@@ -465,27 +523,33 @@ function Leaderboard() {
                   </button>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600">Sort by:</span>
-                <select
-                  value={sortField}
-                  onChange={(e) => setSortField(e.target.value as SortField)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="staked">Staked Amount</option>
-                  <option value="unstaked">Unstaked Amount</option>
-                  <option value="total">Total Amount</option>
-                </select>
-                <button
-                  onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                  className="flex items-center gap-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
-                >
-                  {sortOrder === 'desc' ? (
-                    <ArrowDownIcon className="h-4 w-4" />
-                  ) : (
-                    <ArrowUpIcon className="h-4 w-4" />
-                  )}
-                </button>
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
+                <ColumnSelector 
+                  visibleColumns={visibleColumns} 
+                  setVisibleColumns={setVisibleColumns}
+                />
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600">Sort by:</span>
+                  <select
+                    value={sortField}
+                    onChange={(e) => setSortField(e.target.value as SortField)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="staked">Staked Amount</option>
+                    <option value="unstaked">Unstaked Amount</option>
+                    <option value="total">Total Amount</option>
+                  </select>
+                  <button
+                    onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                    className="flex items-center gap-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
+                  >
+                    {sortOrder === 'desc' ? (
+                      <ArrowDownIcon className="h-4 w-4" />
+                    ) : (
+                      <ArrowUpIcon className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -493,67 +557,91 @@ function Leaderboard() {
               <table className="w-full">
                 <thead className="bg-purple-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Rank</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Staked Amount</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Unstaked Amount</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Total Amount</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
+                    {visibleColumns.rank && (
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Rank</th>
+                    )}
+                    {visibleColumns.username && (
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
+                    )}
+                    {visibleColumns.staked && (
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Staked Amount</th>
+                    )}
+                    {visibleColumns.unstaked && (
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Unstaked Amount</th>
+                    )}
+                    {visibleColumns.total && (
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Total Amount</th>
+                    )}
+                    {visibleColumns.usdValue && (
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {currentData.map((item, index) => (
                     <tr key={item.username} className="hover:bg-purple-50">
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        <a 
+                      {visibleColumns.rank && (
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                        </td>
+                      )}
+                      {visibleColumns.username && (
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          <a 
+                            onClick={() => handleEasterEgg(null, item.username)}
+                            href={`https://explorer.xprnetwork.org/account/${item.username}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-purple-600 hover:text-purple-800 hover:underline cursor-pointer flex items-center gap-2"
+                          >
+                            {item.username}
+                            {(currentPage === 1 && index < 3) && (
+                              <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
+                                {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                              </span>
+                            )}
+                          </a>
+                        </td>
+                      )}
+                      {visibleColumns.staked && (
+                        <td 
+                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
                           onClick={() => handleEasterEgg(null, item.username)}
-                          href={`https://explorer.xprnetwork.org/account/${item.username}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-purple-600 hover:text-purple-800 hover:underline cursor-pointer flex items-center gap-2"
                         >
-                          {item.username}
-                          {(currentPage === 1 && index < 3) && (
-                            <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                              {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
-                            </span>
-                          )}
-                        </a>
-                      </td>
-                      <td 
-                        className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                        onClick={() => handleEasterEgg(null, item.username)}
-                      >
-                        {item.staked.toLocaleString(undefined, {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4,
-                          useGrouping: true,
-                        })}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {item.unstaked.toLocaleString(undefined, {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4,
-                          useGrouping: true,
-                        })}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {item.total.toLocaleString(undefined, {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4,
-                          useGrouping: true,
-                        })}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        ${(item.total * strxPrice).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                          useGrouping: true,
-                        })}
-                      </td>
+                          {item.staked.toLocaleString(undefined, {
+                            minimumFractionDigits: 4,
+                            maximumFractionDigits: 4,
+                            useGrouping: true,
+                          })}
+                        </td>
+                      )}
+                      {visibleColumns.unstaked && (
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.unstaked.toLocaleString(undefined, {
+                            minimumFractionDigits: 4,
+                            maximumFractionDigits: 4,
+                            useGrouping: true,
+                          })}
+                        </td>
+                      )}
+                      {visibleColumns.total && (
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {item.total.toLocaleString(undefined, {
+                            minimumFractionDigits: 4,
+                            maximumFractionDigits: 4,
+                            useGrouping: true,
+                          })}
+                        </td>
+                      )}
+                      {visibleColumns.usdValue && (
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          ${(item.total * strxPrice).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                            useGrouping: true,
+                          })}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
