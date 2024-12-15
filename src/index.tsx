@@ -288,16 +288,7 @@ const RecentActions: React.FC<{
                   action.isNewStaker ? 'bg-green-50' : ''
                 }`}>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {new Date(action.time.getTime() - (action.time.getTimezoneOffset() * 60000))
-                      .toLocaleString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: true
-                      })}
+                    {action.time.toLocaleTimeString()}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <div className="flex items-center gap-2">
@@ -748,15 +739,6 @@ function Leaderboard() {
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <StatisticCard
-            title="STRX Price"
-            value={`$${strxPrice.toLocaleString(undefined, {
-              minimumFractionDigits: 4,
-              maximumFractionDigits: 4,
-            })}`}
-            tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
-          />
-
-          <StatisticCard
             title="Total Stakers"
             value={statistics?.totalUsers.toLocaleString()}
             tooltip="Total number of unique addresses that currently have STRX tokens staked"
@@ -800,6 +782,16 @@ function Leaderboard() {
             )}
             tooltip="The middle value of all stake amounts. 50% of stakers have more than this amount, 50% have less."
             onClick={() => toggleAmountDisplay('statistics', 'median')}
+          />
+
+          <StatisticCard
+            title="STRX Price"
+            value={`$${strxPrice.toLocaleString(undefined, {
+              minimumFractionDigits: 4,
+              maximumFractionDigits: 4,
+              useGrouping: true,
+            })}`}
+            tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
           />
         </div>
 
