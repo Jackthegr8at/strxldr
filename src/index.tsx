@@ -202,12 +202,13 @@ type ActionResponse = {
       act: {
         data: {
           from: string;
+          to: string;
           memo: string;
           quantity: string;
-          to: string;
         };
       };
       block_time: string;
+      trx_id: string;
     };
   }>;
 };
@@ -227,7 +228,7 @@ const RecentActions: React.FC = () => {
         offset: -30
       })
     }).then(res => res.json()),
-    { refreshInterval: 30000 } // Refresh every 30 seconds
+    { refreshInterval: 30000 }
   );
 
   const recentActions = useMemo(() => {
@@ -238,12 +239,15 @@ const RecentActions: React.FC = () => {
         action.action_trace.act.data.memo === "add stake" || 
         action.action_trace.act.data.memo === "withdraw stake"
       )
-      .slice(0, 15) // Get only the last 15 actions
+      .slice(0, 15)
       .map(action => ({
         time: new Date(action.action_trace.block_time),
-        username: action.action_trace.act.data.from,
+        username: action.action_trace.act.data.memo === "withdraw stake" 
+          ? action.action_trace.act.data.to 
+          : action.action_trace.act.data.from,
         amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
-        type: action.action_trace.act.data.memo
+        type: action.action_trace.act.data.memo,
+        trxId: action.action_trace.trx_id
       }));
   }, [actionsData]);
 
@@ -258,6 +262,7 @@ const RecentActions: React.FC = () => {
                 <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Action</th>
               </tr>
             </thead>
@@ -283,12 +288,23 @@ const RecentActions: React.FC = () => {
                       maximumFractionDigits: 4
                     })} STRX
                   </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    ${(action.amount * strxPrice).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </td>
                   <td className="px-6 py-4 text-sm">
-                    <span className={`inline-flex items-center gap-1 ${
-                      action.type === 'add stake' 
-                        ? 'text-green-600' 
-                        : 'text-red-600'
-                    }`}>
+                    <a 
+                      href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-1 hover:underline ${
+                        action.type === 'add stake' 
+                          ? 'text-green-600 hover:text-green-800' 
+                          : 'text-red-600 hover:text-red-800'
+                      }`}
+                    >
                       {action.type === 'add stake' ? (
                         <>
                           <span>👍</span> Add Stake
@@ -298,7 +314,7 @@ const RecentActions: React.FC = () => {
                           <span>👎</span> Withdraw
                         </>
                       )}
-                    </span>
+                    </a>
                   </td>
                 </tr>
               ))}
@@ -897,7 +913,7 @@ function Leaderboard() {
                             {item.username}
                             {(currentPage === 1 && index < 3) && (
                               <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                                {index === 0 ? '���' : index === 1 ? '🥈' : '🥉'}
+                                {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
                               </span>
                             )}
                           </a>
