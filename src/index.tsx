@@ -41,7 +41,7 @@ type StakingTier = {
 const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '��' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
   { name: 'Free', minimum: 0, emoji: '🆓' },
@@ -176,8 +176,14 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
           <ul className="list-disc pl-5 space-y-2">
             <li>View detailed staking statistics and distribution</li>
             <li>Track top holders and their staking positions</li>
-            <li>Monitor global staking metrics</li>
-            <li>Check current STRX price and USD values</li>
+            <li>Real-time statistics with automatic 2-minute updates</li>
+            <li>Toggle between STRX and USD values by clicking on amounts</li>
+            <li>Live staking activity dashboard showing recent stakes and withdrawals</li>
+            <li>New staker detection and highlighting</li>
+            <li>Local timezone conversion for all timestamps</li>
+            <li>Percentage of total supply for staked amounts</li>
+            <li>Sortable leaderboard with search functionality</li>
+            <li>Direct links to blockchain explorer for transactions and accounts</li>
             <li>Find some easter eggs</li>
           </ul>
           <p>
@@ -924,13 +930,23 @@ function Leaderboard() {
 
           <StatisticCard
             title="Stake Range"
-            value={`${formatAmount(
-              statistics?.minStake || 0,
-              amountDisplays['statistics-range'] || 'strx'
-            )} - ${formatAmount(
-              statistics?.maxStake || 0,
-              amountDisplays['statistics-range'] || 'strx'
-            )}`}
+            value={
+              <div className="flex flex-col">
+                <span className="text-sm">
+                  {formatAmount(
+                    statistics?.minStake || 0,
+                    amountDisplays['statistics-range'] || 'strx'
+                  )}
+                </span>
+                <span className="text-xs text-gray-500">to</span>
+                <span className="text-sm">
+                  {formatAmount(
+                    statistics?.maxStake || 0,
+                    amountDisplays['statistics-range'] || 'strx'
+                  )}
+                </span>
+              </div>
+            }
             tooltip="The range between the smallest and largest stake amounts in the system. Click to toggle between STRX and USD values."
             onClick={() => toggleAmountDisplay('statistics', 'range')}
           />
