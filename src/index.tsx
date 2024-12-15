@@ -284,7 +284,7 @@ const RecentActions: React.FC<{
                            !stakersData[username];
 
         return {
-          time: new Date(action.action_trace.block_time),
+          time: new Date(new Date(action.action_trace.block_time).getTime() - new Date().getTimezoneOffset() * 60000),
           username,
           amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
           type: action.action_trace.act.data.memo,
