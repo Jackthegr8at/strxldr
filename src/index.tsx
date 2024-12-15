@@ -72,11 +72,19 @@ type ColumnSelectorProps = {
 };
 
 function Leaderboard() {
+  // Add console.log to debug
+  console.log('Rendering Leaderboard');
+
   const { data, error, isLoading } = useSWR<StakeData>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
     fetcher,
     { refreshInterval: 120000 } // Refresh every 2 minutes
   );
+
+  // Add console logs to debug
+  console.log('Data:', data);
+  console.log('Error:', error);
+  console.log('IsLoading:', isLoading);
 
   const { data: blockchainData } = useSWR<BlockchainResponse>(
     'https://proton.eosusa.io/v1/chain/get_table_rows',
@@ -360,6 +368,18 @@ function Leaderboard() {
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-700 border-t-transparent"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-white p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+            <p className="text-yellow-700">No data available.</p>
           </div>
         </div>
       </div>
