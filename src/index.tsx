@@ -718,7 +718,7 @@ function Leaderboard() {
   // Add new SWR fetch for new stakers inside the Leaderboard function
   const { data: newStakersData } = useSWR<NewStakersResponse>(
     'https://nfts.jessytremblay.com/STRX/newstakers.json',
-    fetcher,
+    (url) => fetch(url).then((res) => res.json()),
     { refreshInterval: 120000 }
   );
 
