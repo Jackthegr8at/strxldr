@@ -120,6 +120,48 @@ function Leaderboard() {
   type SortField = 'staked' | 'unstaked' | 'total';
   const [sortField, setSortField] = useState<SortField>('staked');
 
+  // Add this state for column visibility
+  const [visibleColumns, setVisibleColumns] = useState({
+    rank: true,
+    username: true,
+    staked: true,
+    unstaked: false,
+    total: false,
+    usdValue: false,
+  });
+
+  // Add this component for the column selector
+  const ColumnSelector = ({ visibleColumns, setVisibleColumns }) => (
+    <div className="mb-4">
+      <select
+        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+        multiple={true}
+        value={Object.keys(visibleColumns).filter(key => visibleColumns[key])}
+        onChange={(e) => {
+          const selected = Array.from(e.target.selectedOptions, option => option.value);
+          const newVisibleColumns = {
+            ...visibleColumns,
+            ...Object.keys(visibleColumns).reduce((acc, key) => ({
+              ...acc,
+              [key]: selected.includes(key)
+            }), {})
+          };
+          // Ensure at least one column is always visible
+          if (selected.length > 0) {
+            setVisibleColumns(newVisibleColumns);
+          }
+        }}
+      >
+        <option value="rank">Rank</option>
+        <option value="username">Username</option>
+        <option value="staked">Staked Amount</option>
+        <option value="unstaked">Unstaked Amount</option>
+        <option value="total">Total Amount</option>
+        <option value="usdValue">USD Value</option>
+      </select>
+    </div>
+  );
+
   // Update processedData to handle new structure
   const processedData = useMemo(() => {
     if (!data) return [];
@@ -466,6 +508,7 @@ function Leaderboard() {
                 )}
               </div>
               <div className="flex items-center gap-2">
+                <ColumnSelector visibleColumns={visibleColumns} setVisibleColumns={setVisibleColumns} />
                 <span className="text-gray-600">Sort by:</span>
                 <select
                   value={sortField}
@@ -493,69 +536,62 @@ function Leaderboard() {
               <table className="w-full">
                 <thead className="bg-purple-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Rank</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Staked Amount</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Unstaked Amount</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Total Amount</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700"></th>
+                    {visibleColumns.rank && <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Rank</th>}
+                    {visibleColumns.username && <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>}
+                    {visibleColumns.staked && <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Staked Amount</th>}
+                    {visibleColumns.unstaked && <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Unstaked Amount</th>}
+                    {visibleColumns.total && <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Total Amount</th>}
+                    {visibleColumns.usdValue && <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {currentData.map((item, index) => (
-                    <tr key={item.username} className="hover:bg-purple-50">
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        <a 
-                          onClick={() => handleEasterEgg(null, item.username)}
-                          href={`https://explorer.xprnetwork.org/account/${item.username}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-purple-600 hover:text-purple-800 hover:underline cursor-pointer flex items-center gap-2"
-                        >
-                          {item.username}
-                          {(currentPage === 1 && index < 3) && (
-                            <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                              {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
-                            </span>
-                          )}
-                        </a>
-                      </td>
-                      <td 
-                        className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                        onClick={() => handleEasterEgg(null, item.username)}
-                      >
-                        {item.staked.toLocaleString(undefined, {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4,
-                          useGrouping: true,
-                        })}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {item.unstaked.toLocaleString(undefined, {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4,
-                          useGrouping: true,
-                        })}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {item.total.toLocaleString(undefined, {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4,
-                          useGrouping: true,
-                        })}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        ${(item.total * strxPrice).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                          useGrouping: true,
-                        })}
-                      </td>
-                    </tr>
-                  ))}
+                  {currentData.map((item, index) => {
+                    const [isExpanded, setIsExpanded] = useState(false);
+                    return (
+                      <React.Fragment key={item.username}>
+                        <tr className="hover:bg-purple-50">
+                          <td className="px-2 py-4">
+                            <button 
+                              onClick={() => setIsExpanded(!isExpanded)}
+                              className="md:hidden text-purple-600"
+                            >
+                              {isExpanded ? '▼' : '▶'}
+                            </button>
+                          </td>
+                          {visibleColumns.rank && <td>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>}
+                          {visibleColumns.username && <td>{/* username column content */}</td>}
+                          {visibleColumns.staked && <td>{/* staked amount content */}</td>}
+                          {visibleColumns.unstaked && <td>{/* unstaked amount content */}</td>}
+                          {visibleColumns.total && <td>{/* total amount content */}</td>}
+                          {visibleColumns.usdValue && <td>{/* USD value content */}</td>}
+                        </tr>
+                        {isExpanded && (
+                          <tr className="md:hidden bg-purple-50">
+                            <td colSpan={Object.values(visibleColumns).filter(Boolean).length + 1}>
+                              <div className="px-6 py-4 space-y-2">
+                                {!visibleColumns.unstaked && (
+                                  <div>
+                                    <span className="font-semibold">Unstaked:</span> {item.unstaked.toLocaleString()}
+                                  </div>
+                                )}
+                                {!visibleColumns.total && (
+                                  <div>
+                                    <span className="font-semibold">Total:</span> {item.total.toLocaleString()}
+                                  </div>
+                                )}
+                                {!visibleColumns.usdValue && (
+                                  <div>
+                                    <span className="font-semibold">USD Value:</span> ${(item.total * strxPrice).toLocaleString()}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
