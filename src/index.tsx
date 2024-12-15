@@ -785,6 +785,12 @@ function Leaderboard() {
           />
 
           <StatisticCard
+            title="Stake Range"
+            value={`${formatAmount(statistics?.minStake || 0, 'strx')} - ${formatAmount(statistics?.maxStake || 0, 'strx')}`}
+            tooltip="The range between the smallest and largest stake amounts in the system"
+          />
+
+          <StatisticCard
             title="STRX Price"
             value={`$${strxPrice.toLocaleString(undefined, {
               minimumFractionDigits: 4,
