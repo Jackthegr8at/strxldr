@@ -155,41 +155,28 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-lg w-full p-6 relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-        >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <h2 className="text-2xl font-bold text-purple-700 mb-4">About STRX Staking Leaderboard</h2>
-        <div className="prose text-gray-600 space-y-4">
-          <p>
-            Welcome to the STRX Staking Leaderboard! This platform provides real-time tracking of STOREX token staking positions across the community.
-          </p>
-          <p>
-            Here you can:
-          </p>
-          <ul className="list-disc pl-5 space-y-2">
-            <li>View detailed staking statistics and distribution</li>
-            <li>Track top holders and their staking positions</li>
-            <li>Real-time statistics with automatic 2-minute updates</li>
-            <li>Toggle between STRX and USD values by clicking on amounts</li>
-            <li>Live staking activity dashboard showing recent stakes and withdrawals</li>
-            <li>New staker detection and highlighting</li>
-            <li>Percentage of total supply for staked amounts</li>
-            <li>Sortable leaderboard with search functionality</li>
-            <li>Find some easter eggs</li>
-          </ul>
-          <p>
-            The leaderboard updates every 60 minutes to provide the most current staking data. USD price is updated every 2 minutes. Users are categorized into tiers (Whale, Shark, Dolphin, etc.) based on their total STRX holdings.
-          </p>
-        </div>
+  <div className="text-sm text-gray-500 mb-4">
+    <div className="group relative">
+      <QuestionMarkCircleIcon 
+        className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
+        title="About STRX Leaderboard"
+      />
+      <div className="invisible group-hover:visible absolute z-10 w-full md:w-96 p-4 mt-2 text-sm text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity left-0 md:left-auto">
+        <p className="mb-2">STRX Leaderboard Features:</p>
+        <ul className="list-disc pl-4 space-y-1 max-h-[80vh] overflow-y-auto">
+          <li>Real-time statistics with automatic 2-minute updates</li>
+          <li>Toggle between STRX and USD values by clicking on amounts</li>
+          <li>Live staking activity dashboard showing recent stakes and withdrawals</li>
+          <li>New staker detection and highlighting</li>
+          <li>Local timezone conversion for all timestamps</li>
+          <li>Percentage of total supply for staked amounts</li>
+          <li>Detailed statistics including median, average, and range</li>
+          <li>Sortable leaderboard with search functionality</li>
+          <li>Direct links to blockchain explorer for transactions and accounts</li>
+        </ul>
       </div>
     </div>
+  </div>
   );
 };
 
@@ -930,19 +917,16 @@ function Leaderboard() {
             title="Stake Range"
             value={
               <div className="flex flex-col">
-                <span className="text-sm">
-                  {formatAmount(
-                    statistics?.minStake || 0,
-                    amountDisplays['statistics-range'] || 'strx'
-                  )}
-                </span>
-                <span className="text-xs text-gray-500">to</span>
-                <span className="text-sm">
-                  {formatAmount(
-                    statistics?.maxStake || 0,
-                    amountDisplays['statistics-range'] || 'strx'
-                  )}
-                </span>
+                <span className="text-xs text-gray-500">Min:</span>
+                {formatAmount(
+                  statistics?.minStake || 0,
+                  amountDisplays['statistics-range'] || 'strx'
+                )}
+                <span className="text-xs text-gray-500">Max:</span>
+                {formatAmount(
+                  statistics?.maxStake || 0,
+                  amountDisplays['statistics-range'] || 'strx'
+                )}
               </div>
             }
             tooltip="The range between the smallest and largest stake amounts in the system. Click to toggle between STRX and USD values."
