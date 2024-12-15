@@ -354,6 +354,18 @@ function Leaderboard() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-white p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-700 border-t-transparent"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
