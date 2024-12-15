@@ -41,7 +41,7 @@ type StakingTier = {
 const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '��' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
   { name: 'Free', minimum: 0, emoji: '🆓' },
@@ -140,6 +140,55 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
       <p className="text-xs text-gray-500 mt-1">
         Rank and Username are always visible
       </p>
+    </div>
+  );
+};
+
+// Add this type
+type InfoModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+// Add this component
+const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-lg w-full p-6 relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+        >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <h2 className="text-2xl font-bold text-purple-700 mb-4">About STRX Staking Leaderboard</h2>
+        <div className="prose text-gray-600 space-y-4">
+          <p>
+            Welcome to the STRX Staking Leaderboard! This platform provides real-time tracking of STOREX token staking positions across the community.
+          </p>
+          <p>
+            Here you can:
+          </p>
+          <ul className="list-disc pl-5 space-y-2">
+            <li>View detailed staking statistics and distribution</li>
+            <li>Track top holders and their staking positions</li>
+            <li>Real-time statistics with automatic 2-minute updates</li>
+            <li>Toggle between STRX and USD values by clicking on amounts</li>
+            <li>Live staking activity dashboard showing recent stakes and withdrawals</li>
+            <li>New staker detection and highlighting</li>
+            <li>Percentage of total supply for staked amounts</li>
+            <li>Sortable leaderboard with search functionality</li>
+            <li>Find some easter eggs</li>
+          </ul>
+          <p>
+            The leaderboard updates every 60 minutes to provide the most current staking data. USD price is updated every 2 minutes. Users are categorized into tiers (Whale, Shark, Dolphin, etc.) based on their total STRX holdings.
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
@@ -532,6 +581,9 @@ function Leaderboard() {
     usdValue: false,
   });
 
+  // Add this state
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+
   // Add this state to track display mode for each cell
   const [amountDisplays, setAmountDisplays] = useState<{ [key: string]: AmountDisplay }>({});
 
@@ -784,33 +836,171 @@ function Leaderboard() {
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-purple-700 mb-2">STRX Leaderboard</h1>
-        
-        {/* Simplified tooltip */}
-        <div className="text-sm text-gray-500 mb-4">
-          <div className="group relative">
-            <QuestionMarkCircleIcon 
-              className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
-              title="About STRX Leaderboard"
-            />
-            <div className="invisible group-hover:visible absolute z-10 w-full md:w-96 p-4 mt-2 text-sm text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity left-0 md:left-auto">
-              <p className="mb-2">STRX Leaderboard Features:</p>
-              <ul className="list-disc pl-4 space-y-1 max-h-[80vh] overflow-y-auto">
-                <li>Real-time statistics with automatic 2-minute updates</li>
-                <li>Toggle between STRX and USD values by clicking on amounts</li>
-                <li>Live staking activity dashboard showing recent stakes and withdrawals</li>
-                <li>New staker detection and highlighting</li>
-                <li>Local timezone conversion for all timestamps</li>
-                <li>Percentage of total supply for staked amounts</li>
-                <li>Detailed statistics including median, average, and range</li>
-                <li>Sortable leaderboard with search functionality</li>
-                <li>Direct links to blockchain explorer for transactions and accounts</li>
-              </ul>
-            </div>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className={`text-3xl font-bold text-purple-700 ${
+            isEasterEggActive ? 'rainbow-text' : ''
+          }`}>
+            {pageTitle}
+          </h1>
+          <button
+            onClick={() => setIsInfoModalOpen(true)}
+            className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
+            aria-label="Information"
+          >
+            <QuestionMarkCircleIcon className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Add the modal component */}
+        <InfoModal 
+          isOpen={isInfoModalOpen} 
+          onClose={() => setIsInfoModalOpen(false)} 
+        />
+
+        {/* Add the last update time */}
+        {response?.lastModified && (
+          <div className="text-sm text-gray-500 mb-4 italic">
+            Last updated {formatTimeDiff(response.lastModified)}
+          </div>
+        )}
+
+        {/* Statistics Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <StatisticCard
+            title="Total Stakers"
+            value={statistics?.totalUsers.toLocaleString()}
+            tooltip="Total number of unique addresses that currently have STRX tokens staked"
+          />
+
+          <StatisticCard
+            title="Total Staked (Cleos Call)"
+            value={
+              <div className="flex flex-col">
+                {formatAmount(
+                  statistics?.totalStaked || 0,
+                  amountDisplays['statistics-totalStaked'] || 'strx'
+                )}
+                <span className="text-xs text-gray-500">
+                  ({((statistics?.totalStaked || 0) / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
+                </span>
+              </div>
+            }
+            tooltip="Total amount of STRX tokens currently staked in the protocol. Click to toggle between STRX and USD values."
+            onClick={() => toggleAmountDisplay('statistics', 'totalStaked')}
+          />
+
+          <StatisticCard
+            title="Global Staked (API)"
+            value={
+              <div className="flex flex-col">
+                {formatAmount(
+                  globalStaked,
+                  amountDisplays['statistics-globalStaked'] || 'strx'
+                )}
+                <span className="text-xs text-gray-500">
+                  ({(globalStaked / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
+                </span>
+              </div>
+            }
+            tooltip="Total staked amount reported by the blockchain API. May differ slightly from Cleos call due to timing differences."
+            onClick={() => toggleAmountDisplay('statistics', 'globalStaked')}
+          />
+
+          <StatisticCard
+            title="Average Stake"
+            value={formatAmount(
+              statistics?.average || 0,
+              amountDisplays['statistics-average'] || 'strx'
+            )}
+            tooltip="Average amount of STRX tokens staked per user. Click to toggle between STRX and USD values."
+            onClick={() => toggleAmountDisplay('statistics', 'average')}
+          />
+
+          <StatisticCard
+            title="Median Stake"
+            value={formatAmount(
+              statistics?.median || 0,
+              amountDisplays['statistics-median'] || 'strx'
+            )}
+            tooltip="The middle value of all stake amounts. 50% of stakers have more than this amount, 50% have less."
+            onClick={() => toggleAmountDisplay('statistics', 'median')}
+          />
+
+          <StatisticCard
+            title="Stake Range"
+            value={
+              <div className="flex flex-col">
+                <span className="text-sm">
+                  {formatAmount(
+                    statistics?.minStake || 0,
+                    amountDisplays['statistics-range'] || 'strx'
+                  )}
+                </span>
+                <span className="text-xs text-gray-500">to</span>
+                <span className="text-sm">
+                  {formatAmount(
+                    statistics?.maxStake || 0,
+                    amountDisplays['statistics-range'] || 'strx'
+                  )}
+                </span>
+              </div>
+            }
+            tooltip="The range between the smallest and largest stake amounts in the system. Click to toggle between STRX and USD values."
+            onClick={() => toggleAmountDisplay('statistics', 'range')}
+          />
+
+          <StatisticCard
+            title="STRX Price"
+            value={`$${strxPrice.toLocaleString(undefined, {
+              minimumFractionDigits: 4,
+              maximumFractionDigits: 4,
+              useGrouping: true,
+            })}`}
+            tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
+          />
+        </div>
+
+        {/* Staking Tiers Dashboard */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Staking Tiers Distribution</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {tierStatistics?.map((tier) => (
+              <div
+                key={tier.name}
+                onClick={() => {
+                  setSelectedTier(selectedTier?.name === tier.name ? null : tier);
+                  handleEasterEgg(tier);
+                }}
+                className={`tier-card bg-white p-4 rounded-lg shadow border cursor-pointer transition-colors ${
+                  selectedTier?.name === tier.name 
+                    ? 'border-purple-500 bg-purple-50' 
+                    : 'border-purple-100 hover:bg-purple-50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-2xl">{tier.emoji}</span>
+                  <span className="text-sm text-gray-500">{tier.name}</span>
+                </div>
+                <div className="text-xl font-semibold text-purple-700">
+                  {tier.count.toLocaleString()}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {tier.minimum.toLocaleString()}+ STRX
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Keep the rest of your existing components */}
+        {/* Add the recent actions dashboard */}
+        <RecentActions strxPrice={strxPrice} stakersData={response?.data} />
+
+        {/* Add the new stakers panel before the leaderboard table */}
+        <NewStakersPanel 
+          newStakers={processedNewStakers}
+          strxPrice={strxPrice}
+        />
+
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-700 border-t-transparent"></div>
