@@ -41,7 +41,7 @@ type StakingTier = {
 const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '��' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
   { name: 'Free', minimum: 0, emoji: '🆓' },
@@ -155,38 +155,61 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-lg w-full p-6 relative">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
+        {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <h2 className="text-2xl font-bold text-purple-700 mb-4">About STRX Staking Leaderboard</h2>
-        <div className="prose text-gray-600 space-y-4">
-          <p>
-            Welcome to the STRX Staking Leaderboard! This platform provides real-time tracking of STOREX token staking positions across the community.
-          </p>
-          <p>
-            Here you can:
-          </p>
-          <ul className="list-disc pl-5 space-y-2">
-            <li>View detailed staking statistics and distribution</li>
-            <li>Track top holders and their staking positions</li>
-            <li>Real-time statistics with automatic 2-minute updates</li>
-            <li>Toggle between STRX and USD values by clicking on amounts</li>
-            <li>Live staking activity dashboard showing recent stakes and withdrawals</li>
-            <li>New staker detection and highlighting</li>
-            <li>Percentage of total supply for staked amounts</li>
-            <li>Sortable leaderboard with search functionality</li>
-            <li>Find some easter eggs</li>
-          </ul>
-          <p>
-            The leaderboard updates every 60 minutes to provide the most current staking data. USD price is updated every 2 minutes. Users are categorized into tiers (Whale, Shark, Dolphin, etc.) based on their total STRX holdings.
-          </p>
+
+        {/* Content container with padding */}
+        <div className="p-4 md:p-6">
+          <h2 className="text-xl md:text-2xl font-bold text-purple-700 mb-4">
+            About STRX Staking Leaderboard
+          </h2>
+          
+          <div className="prose prose-sm md:prose max-w-none text-gray-600 space-y-4">
+            <p>
+              Welcome to the STRX Staking Leaderboard! This platform provides real-time tracking 
+              of STOREX token staking positions across the community.
+            </p>
+            
+            <p>Here you can:</p>
+            
+            <ul className="list-disc pl-5 space-y-2">
+              <li className="text-sm md:text-base">View detailed staking statistics and distribution</li>
+              <li className="text-sm md:text-base">Track top holders and their staking positions</li>
+              <li className="text-sm md:text-base">Real-time statistics with automatic 2-minute updates</li>
+              <li className="text-sm md:text-base">Toggle between STRX and USD values by clicking on amounts</li>
+              <li className="text-sm md:text-base">Live staking activity dashboard showing recent stakes and withdrawals</li>
+              <li className="text-sm md:text-base">New staker detection and highlighting</li>
+              <li className="text-sm md:text-base">Percentage of total supply for staked amounts</li>
+              <li className="text-sm md:text-base">Sortable leaderboard with search functionality</li>
+              <li className="text-sm md:text-base">Find some easter eggs</li>
+            </ul>
+
+            <p className="text-sm md:text-base">
+              The leaderboard updates every 60 minutes to provide the most current staking data. 
+              USD price is updated every 2 minutes. Users are categorized into tiers (Whale, 
+              Shark, Dolphin, etc.) based on their total STRX holdings.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer with close button */}
+        <div className="border-t border-gray-200 p-4 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 
+                     transition-colors text-sm md:text-base"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
