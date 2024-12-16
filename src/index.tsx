@@ -975,8 +975,8 @@ function Leaderboard() {
           <StatisticCard
             title="STRX Price"
             value={`$${strxPrice.toLocaleString(undefined, {
-              minimumFractionDigits: 4,
-              maximumFractionDigits: 4,
+              minimumFractionDigits: 6,
+              maximumFractionDigits: 6,
               useGrouping: true,
             })}`}
             tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
