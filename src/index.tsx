@@ -676,6 +676,14 @@ type SectionVisibility = {
   tierMilestones: boolean;
 };
 
+// Add these types near your other type definitions
+type RecentAction = {
+  username: string;
+  amount: number;
+  type: 'add stake' | 'remove stake';
+  time: string;
+};
+
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
@@ -1076,6 +1084,18 @@ function Leaderboard() {
       </button>
     </div>
   );
+
+  // Inside your Leaderboard component, add this state
+  const [recentActions, setRecentActions] = useState<RecentAction[]>([
+    // This is sample data - you'll need to replace it with your actual data
+    {
+      username: "user1",
+      amount: 1000000,
+      type: "add stake",
+      time: new Date().toISOString()
+    },
+    // ... more actions ...
+  ]);
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
