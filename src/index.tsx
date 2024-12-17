@@ -242,7 +242,7 @@ type ActionResponse = {
 };
 
 // Add this component for the recent actions dashboard
-const RecentActions: React.FC<{ 
+const RecentActions: React.FC<{
   strxPrice: number;
   stakersData?: StakeData;
   setSearchTerm: (term: string) => void;
@@ -296,111 +296,108 @@ const RecentActions: React.FC<{
   }, [actionsData, stakersData]);
 
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Staking Activity</h2>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-purple-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Action</th>
-                <th className="px-3 py-3 text-left text-sm font-semibold text-purple-700"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {recentActions.map((action, index) => (
-                <tr key={index} className={`hover:bg-purple-50 ${
-                  action.isNewStaker ? 'bg-green-50' : ''
-                }`}>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {new Date(action.time).toLocaleString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: 'numeric',
-                      second: 'numeric',
-                      hour12: true,
-                      timeZoneName: 'short'
-                    })}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="flex items-center gap-2">
-                      <a 
-                        href={`https://explorer.xprnetwork.org/account/${action.username}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-purple-600 hover:text-purple-800 hover:underline"
-                      >
-                        {action.username}
-                      </a>
-                      {action.isNewStaker && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                          New Staker! 🎉
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {action.amount.toLocaleString(undefined, {
-                      minimumFractionDigits: 4,
-                      maximumFractionDigits: 4
-                    })} STRX
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    ${(action.amount * strxPrice).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
+    <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="min-w-full">
+          <thead className="bg-purple-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Action</th>
+              <th className="px-3 py-3 text-left text-sm font-semibold text-purple-700"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {recentActions.map((action, index) => (
+              <tr key={index} className={`hover:bg-purple-50 ${
+                action.isNewStaker ? 'bg-green-50' : ''
+              }`}>
+                <td className="px-6 py-4 text-sm text-gray-900">
+                  {new Date(action.time).toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    second: 'numeric',
+                    hour12: true,
+                    timeZoneName: 'short'
+                  })}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-900">
+                  <div className="flex items-center gap-2">
                     <a 
-                      href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
+                      href={`https://explorer.xprnetwork.org/account/${action.username}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`inline-flex items-center gap-1 hover:underline ${
-                        action.type === 'add stake' 
-                          ? 'text-green-600 hover:text-green-800' 
-                          : 'text-red-600 hover:text-red-800'
-                      }`}
+                      className="text-purple-600 hover:text-purple-800 hover:underline"
                     >
-                      {action.type === 'add stake' ? (
-                        <>
-                          <span>👍</span> Add Stake
-                        </>
-                      ) : (
-                        <>
-                          <span>👎</span> Withdraw
-                        </>
-                      )}
+                      {action.username}
                     </a>
-                  </td>
-                  <td className="px-3 py-4 text-sm">
-                    <button
-                      onClick={() => {
-                        setSearchTerm(action.username);
-                        
-                        // Scroll to the search input
-                        const searchInput = document.querySelector('input[type="text"]');
-                        if (searchInput) {
-                          searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                      }}
-                      className="text-purple-600 hover:text-purple-800"
-                      title="Search this user"
-                    >
-                      <MagnifyingGlassIcon className="h-5 w-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    {action.isNewStaker && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        New Staker! 🎉
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-900">
+                  {action.amount.toLocaleString(undefined, {
+                    minimumFractionDigits: 4,
+                    maximumFractionDigits: 4
+                  })} STRX
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-900">
+                  ${(action.amount * strxPrice).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  <a 
+                    href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center gap-1 hover:underline ${
+                      action.type === 'add stake' 
+                        ? 'text-green-600 hover:text-green-800' 
+                        : 'text-red-600 hover:text-red-800'
+                    }`}
+                  >
+                    {action.type === 'add stake' ? (
+                      <>
+                        <span>👍</span> Add Stake
+                      </>
+                    ) : (
+                      <>
+                        <span>👎</span> Withdraw
+                      </>
+                    )}
+                  </a>
+                </td>
+                <td className="px-3 py-4 text-sm">
+                  <button
+                    onClick={() => {
+                      setSearchTerm(action.username);
+                      
+                      // Scroll to the search input
+                      const searchInput = document.querySelector('input[type="text"]');
+                      if (searchInput) {
+                        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }
+                    }}
+                    className="text-purple-600 hover:text-purple-800"
+                    title="Search this user"
+                  >
+                    <MagnifyingGlassIcon className="h-5 w-5" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -1259,13 +1256,11 @@ function Leaderboard() {
           />
           
           {sectionVisibility.recentActivity && (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <RecentActions 
-                strxPrice={strxPrice}
-                stakersData={response?.data}
-                setSearchTerm={setSearchTerm}
-              />
-            </div>
+            <RecentActions 
+              strxPrice={strxPrice}
+              stakersData={response?.data}
+              setSearchTerm={setSearchTerm}
+            />
           )}
         </div>
 
