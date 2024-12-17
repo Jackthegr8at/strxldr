@@ -669,19 +669,11 @@ const TierMilestoneTracker: React.FC<{
   );
 };
 
-// Add this type for section visibility
+// Add these types at the top with your other types
 type SectionVisibility = {
   recentActivity: boolean;
   newStakers: boolean;
   tierMilestones: boolean;
-};
-
-// Add these types near your other type definitions
-type RecentAction = {
-  username: string;
-  amount: number;
-  type: 'add stake' | 'remove stake';
-  time: string;
 };
 
 function Leaderboard() {
@@ -1047,7 +1039,7 @@ function Leaderboard() {
       }, [] as NewStaker[]);
   }, [newStakersData]);
 
-  // Add this hook at the start of your Leaderboard component
+  // Inside your Leaderboard component, add this state
   const [sectionVisibility, setSectionVisibility] = useState<SectionVisibility>(() => {
     const saved = localStorage.getItem('sectionVisibility');
     return saved ? JSON.parse(saved) : {
@@ -1062,7 +1054,7 @@ function Leaderboard() {
     localStorage.setItem('sectionVisibility', JSON.stringify(sectionVisibility));
   }, [sectionVisibility]);
 
-  // Create a reusable section header component
+  // Add this component definition
   const SectionHeader: React.FC<{
     title: string;
     sectionKey: keyof SectionVisibility;
@@ -1084,34 +1076,6 @@ function Leaderboard() {
       </button>
     </div>
   );
-
-  // Inside your Leaderboard component, update the recentActions state
-  const [recentActions, setRecentActions] = useState<RecentAction[]>([]);
-
-  // Add this effect to transform newStakersData into recentActions
-  useEffect(() => {
-    if (!newStakersData) return;
-
-    // Transform newStakersData into two different arrays for different purposes
-    const newStakerActions = newStakersData
-      .filter(staker => {
-        const stakerDate = new Date(staker.date);
-        const oneDayAgo = new Date();
-        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-        return stakerDate >= oneDayAgo;
-      })
-      .slice(0, 10);  // Only show last 10 new stakers
-
-    // For Recent Activity, we want to show all recent staking actions
-    const recentActivityActions = processedNewStakers.map(staker => ({
-      username: staker.username,
-      amount: staker.total_staked,
-      type: 'add stake' as const,
-      time: staker.date
-    }));
-
-    setRecentActions(recentActivityActions);
-  }, [processedNewStakers]);
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
@@ -1296,105 +1260,11 @@ function Leaderboard() {
           
           {sectionVisibility.recentActivity && (
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              {/* Mobile view */}
-              <div className="md:hidden">
-                <div className="grid grid-cols-1 gap-4 p-4">
-                  {recentActions.slice(0, 3).map((action, index) => (
-                    <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
-                      {/* Compact card view */}
-                      <div className="flex justify-between items-start mb-2">
-                        <a 
-                          href={`https://explorer.xprnetwork.org/account/${action.username}`}
-                          className="text-purple-600 hover:text-purple-800 hover:underline"
-                        >
-                          {action.username}
-                        </a>
-                        <span className="text-sm text-gray-500">
-                          {new Date(action.time).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">
-                          {action.amount.toLocaleString()} STRX
-                        </span>
-                        <span className={action.type === 'add stake' 
-                          ? 'text-green-600' 
-                          : 'text-red-600'
-                        }>
-                          {action.type === 'add stake' ? '👍' : '👎'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Compact table for remaining items */}
-                {recentActions.length > 3 && (
-                  <div className="border-t border-gray-200">
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full">
-                        <tbody className="divide-y divide-gray-200">
-                          {recentActions.slice(3).map((action, index) => (
-                            <tr key={index} className="hover:bg-purple-50">
-                              <td className="px-4 py-2 text-sm">
-                                <a 
-                                  href={`https://explorer.xprnetwork.org/account/${action.username}`}
-                                  className="text-purple-600 hover:text-purple-800 hover:underline"
-                                >
-                                  {action.username}
-                                </a>
-                              </td>
-                              <td className="px-4 py-2 text-sm text-right">
-                                {action.amount.toLocaleString()} STRX
-                              </td>
-                              <td className="px-4 py-2 text-sm text-center">
-                                {action.type === 'add stake' ? '👍' : '👎'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop view */}
-              <div className="hidden md:block">
-                <table className="min-w-full">
-                  <thead className="bg-purple-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">User</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Action</th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {recentActions.map((action, index) => (
-                      <tr key={index} className="hover:bg-purple-50">
-                        <td className="px-6 py-4 text-sm">
-                          <a 
-                            href={`https://explorer.xprnetwork.org/account/${action.username}`}
-                            className="text-purple-600 hover:text-purple-800 hover:underline"
-                          >
-                            {action.username}
-                          </a>
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          {action.amount.toLocaleString()} STRX
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          {action.type === 'add stake' ? '👍' : '👎'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {new Date(action.time).toLocaleTimeString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <RecentActions 
+                strxPrice={strxPrice}
+                stakersData={response?.data}
+                setSearchTerm={setSearchTerm}
+              />
             </div>
           )}
         </div>
