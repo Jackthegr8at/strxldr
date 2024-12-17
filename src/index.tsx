@@ -1085,17 +1085,22 @@ function Leaderboard() {
     </div>
   );
 
-  // Inside your Leaderboard component, add this state
-  const [recentActions, setRecentActions] = useState<RecentAction[]>([
-    // This is sample data - you'll need to replace it with your actual data
-    {
-      username: "user1",
-      amount: 1000000,
-      type: "add stake",
-      time: new Date().toISOString()
-    },
-    // ... more actions ...
-  ]);
+  // Inside your Leaderboard component, update the recentActions state
+  const [recentActions, setRecentActions] = useState<RecentAction[]>([]);
+
+  // Add this effect to transform newStakersData into recentActions
+  useEffect(() => {
+    if (!newStakersData) return;
+
+    const actions: RecentAction[] = newStakersData.map(staker => ({
+      username: staker.username,
+      amount: parseFloat(staker.amount),
+      type: 'add stake',
+      time: staker.date
+    }));
+
+    setRecentActions(actions);
+  }, [newStakersData]);
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
