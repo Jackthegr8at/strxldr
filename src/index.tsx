@@ -1343,9 +1343,41 @@ function Leaderboard() {
                 )}
               </div>
 
-              {/* Desktop view - original table */}
+              {/* Desktop view */}
               <div className="hidden md:block">
-                {/* Your existing table code */}
+                <table className="min-w-full">
+                  <thead className="bg-purple-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">User</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Action</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {recentActions.map((action, index) => (
+                      <tr key={index} className="hover:bg-purple-50">
+                        <td className="px-6 py-4 text-sm">
+                          <a 
+                            href={`https://explorer.xprnetwork.org/account/${action.username}`}
+                            className="text-purple-600 hover:text-purple-800 hover:underline"
+                          >
+                            {action.username}
+                          </a>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          {action.amount.toLocaleString()} STRX
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          {action.type === 'add stake' ? '👍' : '👎'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {new Date(action.time).toLocaleTimeString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
