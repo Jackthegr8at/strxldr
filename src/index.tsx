@@ -552,9 +552,6 @@ const TierMilestoneTracker: React.FC<{
   SectionHeader 
 }) => {
   const milestones = useMemo(() => {
-    console.log('Recalculating milestones for tier:', selectedTier?.name);
-    console.log('Total stakers to process:', stakersData.length);
-    
     return stakersData
       .map(staker => {
         let currentTier = STAKING_TIERS[0];
@@ -608,7 +605,18 @@ const TierMilestoneTracker: React.FC<{
           return milestone.currentTier.name !== 'Free' && isCloseToNextTier;
         }
       })
-      .sort((a, b) => a.remaining - b.remaining)
+      .sort((a, b) => {
+        // First sort by tier level (higher tiers first)
+        const aTierIndex = STAKING_TIERS.findIndex(t => t.name === a.currentTier.name);
+        const bTierIndex = STAKING_TIERS.findIndex(t => t.name === b.currentTier.name);
+        
+        if (aTierIndex !== bTierIndex) {
+          return aTierIndex - bTierIndex; // Lower index (higher tier) comes first
+        }
+        
+        // If same tier, sort by how close they are to next tier (percentage)
+        return b.percentageComplete - a.percentageComplete;
+      })
       .slice(0, selectedTier ? 999 : 15);
   }, [stakersData, selectedTier]);
 
