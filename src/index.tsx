@@ -248,9 +248,9 @@ const RecentActions: React.FC<{
   setSearchTerm: (term: string) => void;
   selectedTier: StakingTier | null;
 }> = ({ strxPrice, stakersData, setSearchTerm, selectedTier }) => {
-  // Use the existing blockchain actions API
+  // Use the existing blockchain actions API with a key that includes the tier
   const { data: actionsData } = useSWR<ActionResponse>(
-    'recent_actions',
+    ['recent_actions', selectedTier?.name], // Add tier to the cache key
     () => fetch('https://proton.greymass.com/v1/history/get_actions', {
       method: 'POST',
       headers: {
@@ -259,7 +259,7 @@ const RecentActions: React.FC<{
       body: JSON.stringify({
         account_name: "storexstake",
         pos: -1,
-        offset: selectedTier ? -100 : -30 // Fetch more actions when tier is selected
+        offset: selectedTier ? -100 : -30
       })
     }).then(res => res.json()),
     { refreshInterval: 30000 }
