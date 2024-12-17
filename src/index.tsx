@@ -245,7 +245,8 @@ type ActionResponse = {
 const RecentActions: React.FC<{ 
   strxPrice: number;
   stakersData?: StakeData;
-}> = ({ strxPrice, stakersData }) => {
+  setSearchTerm: (term: string) => void;
+}> = ({ strxPrice, stakersData, setSearchTerm }) => {
   const { data: actionsData } = useSWR<ActionResponse>(
     'recent_actions',
     () => fetch('https://proton.greymass.com/v1/history/get_actions', {
@@ -307,6 +308,7 @@ const RecentActions: React.FC<{
                 <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Action</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -376,6 +378,24 @@ const RecentActions: React.FC<{
                         </>
                       )}
                     </a>
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    <button
+                      onClick={() => {
+                        // Set the search term
+                        setSearchTerm(action.username);
+                        
+                        // Scroll to the search input
+                        const searchInput = document.querySelector('input[type="text"]');
+                        if (searchInput) {
+                          searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }}
+                      className="text-purple-600 hover:text-purple-800"
+                      title="Search this user"
+                    >
+                      <MagnifyingGlassIcon className="h-5 w-5" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -1016,7 +1036,11 @@ function Leaderboard() {
         </div>
 
         {/* Add the recent actions dashboard */}
-        <RecentActions strxPrice={strxPrice} stakersData={response?.data} />
+        <RecentActions 
+          strxPrice={strxPrice} 
+          stakersData={response?.data}
+          setSearchTerm={setSearchTerm}
+        />
 
         {/* Add the new stakers panel before the leaderboard table */}
         <NewStakersPanel 
