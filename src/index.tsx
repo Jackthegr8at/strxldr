@@ -1094,7 +1094,7 @@ function Leaderboard() {
 
     const actions: RecentAction[] = newStakersData.map(staker => ({
       username: staker.username,
-      amount: parseFloat(staker.amount),
+      amount: staker.total_staked, // Changed from amount to total_staked
       type: 'add stake',
       time: staker.date
     }));
