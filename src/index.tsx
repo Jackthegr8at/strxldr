@@ -259,7 +259,7 @@ const RecentActions: React.FC<{
       body: JSON.stringify({
         account_name: "storexstake",
         pos: -1,
-        offset: selectedTier ? -200 : -30 // Fetch more actions when tier is selected
+        offset: selectedTier ? -100 : -30 // Fetch more actions when tier is selected
       })
     }).then(res => res.json()),
     { refreshInterval: 30000 }
