@@ -308,7 +308,7 @@ const RecentActions: React.FC<{
                 <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Action</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700"></th>
+                <th className="px-3 py-3 text-left text-sm font-semibold text-purple-700"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -379,10 +379,9 @@ const RecentActions: React.FC<{
                       )}
                     </a>
                   </td>
-                  <td className="px-6 py-4 text-sm">
+                  <td className="px-3 py-4 text-sm">
                     <button
                       onClick={() => {
-                        // Set the search term
                         setSearchTerm(action.username);
                         
                         // Scroll to the search input
