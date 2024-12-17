@@ -1092,15 +1092,26 @@ function Leaderboard() {
   useEffect(() => {
     if (!newStakersData) return;
 
-    const actions: RecentAction[] = newStakersData.map(staker => ({
+    // Transform newStakersData into two different arrays for different purposes
+    const newStakerActions = newStakersData
+      .filter(staker => {
+        const stakerDate = new Date(staker.date);
+        const oneDayAgo = new Date();
+        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+        return stakerDate >= oneDayAgo;
+      })
+      .slice(0, 10);  // Only show last 10 new stakers
+
+    // For Recent Activity, we want to show all recent staking actions
+    const recentActivityActions = processedNewStakers.map(staker => ({
       username: staker.username,
-      amount: staker.total_staked, // Changed from amount to total_staked
-      type: 'add stake',
+      amount: staker.total_staked,
+      type: 'add stake' as const,
       time: staker.date
     }));
 
-    setRecentActions(actions);
-  }, [newStakersData]);
+    setRecentActions(recentActivityActions);
+  }, [processedNewStakers]);
 
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
