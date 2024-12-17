@@ -824,16 +824,16 @@ function Leaderboard() {
         
         // For "Free" tier (last tier)
         if (selectedTier.name === 'Free') {
-          return item.total >= 0 && item.total < STAKING_TIERS[STAKING_TIERS.length - 2].minimum;
+          return item.staked >= 0 && item.staked < STAKING_TIERS[STAKING_TIERS.length - 2].minimum;
         }
         
         // For "Whale" tier (first tier)
         if (selectedTier.name === 'Whale') {
-          return item.total >= selectedTier.minimum;
+          return item.staked >= selectedTier.minimum;
         }
         
         // For all other tiers
-        return item.total >= selectedTier.minimum && item.total < nextTierUp.minimum;
+        return item.staked >= selectedTier.minimum && item.staked < nextTierUp.minimum;
       })
       .sort((a, b) => {
         const compareValue = sortOrder === 'desc' ? -1 : 1;
