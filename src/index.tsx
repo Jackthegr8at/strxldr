@@ -6,17 +6,12 @@ import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 
-const fetcher = (url: string) => {
-  const limit = url.includes('tier=') ? 1000 : 100;
-  return fetch(`${url}${url.includes('?') ? '&' : '?'}limit=${limit}&include_transactions=true`)
-    .then((res) => res.json());
-};
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type StakeData = {
   [key: string]: {
     staked: number;
     unstaked: number;
-    transaction_id?: string;
   };
 };
 
@@ -253,37 +248,68 @@ const RecentActions: React.FC<{
   setSearchTerm: (term: string) => void;
   selectedTier: StakingTier | null;
 }> = ({ strxPrice, stakersData, setSearchTerm, selectedTier }) => {
-  const actions = useMemo(() => {
-    if (!stakersData) return [];
+  // Use the existing blockchain actions API
+  const { data: actionsData } = useSWR<ActionResponse>(
+    'recent_actions',
+    () => fetch('https://proton.greymass.com/v1/history/get_actions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=UTF-8',
+      },
+      body: JSON.stringify({
+        account_name: "storexstake",
+        pos: -1,
+        offset: selectedTier ? -100 : -30 // Fetch more actions when tier is selected
+      })
+    }).then(res => res.json()),
+    { refreshInterval: 30000 }
+  );
 
-    return Object.entries(stakersData)
-      .map(([username, amounts]) => ({
-        username,
-        staked: amounts.staked,
-        unstaked: amounts.unstaked,
-        total: amounts.staked + amounts.unstaked,
-        amount: amounts.staked,
-        type: 'add stake' as const,
-        isNewStaker: false,
-        time: new Date().toISOString(),
-        trxId: amounts.transaction_id || ''
-      }))
+  const recentActions = useMemo(() => {
+    if (!actionsData?.actions) return [];
+    
+    return actionsData.actions
       .filter(action => {
-        if (!selectedTier) return true;
+        const data = action.action_trace.act.data;
+        const isValidAction = (data.memo === "add stake" || data.memo === "withdraw stake") &&
+                            action.action_trace.receiver === data.to;
 
-        // Find user's tier based on staked amount
+        if (!selectedTier || !stakersData) return isValidAction;
+
+        // If tier is selected, check if user belongs to that tier
+        const username = data.memo === "withdraw stake" ? data.to : data.from;
+        const userData = stakersData[username];
+        if (!userData) return false;
+
         let currentTier = STAKING_TIERS[0];
-        for (let i = 0; i < STAKING_TIERS.length; i++) {
-          if (action.staked >= STAKING_TIERS[i].minimum) {
-            currentTier = STAKING_TIERS[i];
+        for (const tier of STAKING_TIERS) {
+          if (userData.staked >= tier.minimum) {
+            currentTier = tier;
             break;
           }
         }
 
-        return currentTier.name === selectedTier.name;
+        return isValidAction && currentTier.name === selectedTier.name;
       })
-      .sort((a, b) => b.staked - a.staked);  // Sort by staked amount
-  }, [stakersData, selectedTier]);
+      .slice(0, 15)
+      .reverse()
+      .map(action => {
+        const username = action.action_trace.act.data.memo === "withdraw stake" 
+          ? action.action_trace.act.data.to 
+          : action.action_trace.act.data.from;
+        
+        return {
+          time: action.action_trace.block_time,
+          username,
+          amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
+          type: action.action_trace.act.data.memo,
+          trxId: action.action_trace.trx_id,
+          isNewStaker: stakersData && 
+                      action.action_trace.act.data.memo === "add stake" && 
+                      !stakersData[username]
+        };
+      });
+  }, [actionsData, stakersData, selectedTier]);
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -300,7 +326,7 @@ const RecentActions: React.FC<{
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {actions.map((action, index) => (
+            {recentActions.map((action, index) => (
               <tr key={index} className={`hover:bg-purple-50 ${
                 action.isNewStaker ? 'bg-green-50' : ''
               }`}>
@@ -935,12 +961,7 @@ function Leaderboard() {
         username,
         staked: amounts.staked,
         unstaked: amounts.unstaked,
-        total: amounts.staked + amounts.unstaked,
-        amount: amounts.staked,
-        type: 'add stake' as const,
-        isNewStaker: false,
-        time: new Date().toISOString(),
-        trxId: amounts.transaction_id || ''
+        total: amounts.staked + amounts.unstaked
       }))
       .filter((item) => {
         // Remove zero balance entries
