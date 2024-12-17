@@ -735,7 +735,7 @@ const TierMilestoneTracker: React.FC<{
           </div>
 
           {/* Desktop view - original grid layout */}
-          <div className="hidden md:block">
+          <div className="hidden md:block p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {milestones.map((milestone, index) => (
                 <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
