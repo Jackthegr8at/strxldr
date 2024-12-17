@@ -540,6 +540,8 @@ const TierMilestoneTracker: React.FC<{
   selectedTier: StakingTier | null;
 }> = ({ stakersData, setSearchTerm, selectedTier }) => {
   const milestones = useMemo(() => {
+    console.log('Recalculating milestones for tier:', selectedTier?.name); // Debug log
+    
     return stakersData
       .map(staker => {
         // Find current tier
@@ -567,17 +569,26 @@ const TierMilestoneTracker: React.FC<{
           percentageComplete
         };
       })
-      .filter((milestone): milestone is MilestoneUser => 
-        milestone !== null && 
-        milestone.remaining > 0 && 
-        milestone.remaining < milestone.nextTier.minimum * 0.15 && // Within 15% of next tier
-        (selectedTier 
-          ? milestone.currentTier.name === selectedTier.name // Show only selected tier
-          : milestone.currentTier.name !== 'Free') // Exclude Free tier from default view
-      )
+      .filter((milestone): milestone is MilestoneUser => {
+        if (!milestone) return false;
+        
+        const isCloseToNextTier = 
+          milestone.remaining > 0 && 
+          milestone.remaining < milestone.nextTier.minimum * 0.15;
+        
+        if (selectedTier) {
+          // When tier is selected, show all users from that tier close to next tier
+          return milestone.currentTier.name === selectedTier.name && isCloseToNextTier;
+        } else {
+          // By default, show users from all tiers except Free who are close to next tier
+          return milestone.currentTier.name !== 'Free' && isCloseToNextTier;
+        }
+      })
       .sort((a, b) => a.remaining - b.remaining)
-      .slice(0, selectedTier ? 999 : 15); // Show all for selected tier, limit to 15 for default view
-  }, [stakersData, selectedTier]);
+      .slice(0, selectedTier ? 999 : 15);
+  }, [stakersData, selectedTier]); // Make sure selectedTier is in dependencies
+
+  console.log('Filtered milestones:', milestones.length); // Debug log
 
   if (milestones.length === 0) return null;
 
