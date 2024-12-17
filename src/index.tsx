@@ -606,62 +606,117 @@ const TierMilestoneTracker: React.FC<{
 
   return (
     <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Tier Milestone Tracker 🎯</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {milestones.map((user) => (
-          <div key={user.username} className="bg-white p-4 rounded-lg shadow border border-purple-100">
-            <div className="flex items-center justify-between mb-2">
-              <a 
-                href={`https://explorer.xprnetwork.org/account/${user.username}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-purple-600 hover:text-purple-800 hover:underline flex items-center gap-2"
-              >
-                {user.username}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setSearchTerm(user.username);
-                    const searchInput = document.querySelector('input[type="text"]');
-                    if (searchInput) {
-                      searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                  }}
-                  className="text-purple-600 hover:text-purple-800"
-                >
-                  <MagnifyingGlassIcon className="h-4 w-4" />
-                </button>
-              </a>
+      <SectionHeader
+        title="Tier Milestone Tracker 🎯"
+        sectionKey="tierMilestones"
+        isVisible={sectionVisibility.tierMilestones}
+        onToggle={() => setSectionVisibility(prev => ({
+          ...prev,
+          tierMilestones: !prev.tierMilestones
+        }))}
+      />
+
+      {sectionVisibility.tierMilestones && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {/* Mobile view */}
+          <div className="md:hidden">
+            <div className="grid grid-cols-1 gap-4 p-4">
+              {milestones.slice(0, 3).map((milestone, index) => (
+                <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
+                  <div className="flex justify-between items-start mb-2">
+                    <a 
+                      href={`https://explorer.xprnetwork.org/account/${milestone.username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-600 hover:text-purple-800 hover:underline flex items-center gap-2"
+                    >
+                      {milestone.username}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSearchTerm(milestone.username);
+                          const searchInput = document.querySelector('input[type="text"]');
+                          if (searchInput) {
+                            searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                        }}
+                        className="text-purple-600 hover:text-purple-800"
+                      >
+                        <MagnifyingGlassIcon className="h-4 w-4" />
+                      </button>
+                    </a>
+                  </div>
+
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">{milestone.currentTier.emoji}</span>
+                    <span className="text-gray-400">➜</span>
+                    <span className="text-2xl">{milestone.nextTier.emoji}</span>
+                  </div>
+
+                  <div className="mb-2">
+                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                      <span>Progress to {milestone.nextTier.name}</span>
+                      <span>{milestone.percentageComplete.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div 
+                        className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
+                        style={{ width: `${milestone.percentageComplete}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium text-purple-600">
+                      {milestone.remaining.toLocaleString()} STRX
+                    </span>
+                    {' '}remaining
+                  </div>
+                </div>
+              ))}
             </div>
-            
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl">{user.currentTier.emoji}</span>
-              <span className="text-gray-400">➜</span>
-              <span className="text-2xl">{user.nextTier.emoji}</span>
-            </div>
-            
-            <div className="mb-2">
-              <div className="flex justify-between text-sm text-gray-600 mb-1">
-                <span>Progress to {user.nextTier.name}</span>
-                <span>{user.percentageComplete.toFixed(1)}%</span>
+
+            {/* Compact table for remaining items */}
+            {milestones.length > 3 && (
+              <div className="border-t border-gray-200">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <tbody className="divide-y divide-gray-200">
+                      {milestones.slice(3).map((milestone, index) => (
+                        <tr key={index} className="hover:bg-purple-50">
+                          <td className="px-4 py-2 text-sm">
+                            <a 
+                              href={`https://explorer.xprnetwork.org/account/${milestone.username}`}
+                              className="text-purple-600 hover:text-purple-800 hover:underline"
+                            >
+                              {milestone.username}
+                            </a>
+                          </td>
+                          <td className="px-4 py-2 text-sm text-center">
+                            <span className="text-lg">
+                              {milestone.currentTier.emoji} ➜ {milestone.nextTier.emoji}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-sm text-right">
+                            <span className="text-purple-600">
+                              {milestone.remaining.toLocaleString()}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div 
-                  className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
-                  style={{ width: `${user.percentageComplete}%` }}
-                ></div>
-              </div>
-            </div>
-            
-            <div className="text-sm text-gray-600">
-              <span className="font-medium text-purple-600">
-                {user.remaining.toLocaleString()} STRX
-              </span>
-              {' '}remaining to reach {user.nextTier.name}
-            </div>
+            )}
           </div>
-        ))}
-      </div>
+
+          {/* Desktop view - original table */}
+          <div className="hidden md:block">
+            {/* Your existing table code */}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
