@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
-import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -669,6 +669,13 @@ const TierMilestoneTracker: React.FC<{
   );
 };
 
+// Add this type for section visibility
+type SectionVisibility = {
+  recentActivity: boolean;
+  newStakers: boolean;
+  tierMilestones: boolean;
+};
+
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
@@ -1032,6 +1039,44 @@ function Leaderboard() {
       }, [] as NewStaker[]);
   }, [newStakersData]);
 
+  // Add this hook at the start of your Leaderboard component
+  const [sectionVisibility, setSectionVisibility] = useState<SectionVisibility>(() => {
+    const saved = localStorage.getItem('sectionVisibility');
+    return saved ? JSON.parse(saved) : {
+      recentActivity: true,
+      newStakers: true,
+      tierMilestones: true
+    };
+  });
+
+  // Add this effect to save visibility state
+  useEffect(() => {
+    localStorage.setItem('sectionVisibility', JSON.stringify(sectionVisibility));
+  }, [sectionVisibility]);
+
+  // Create a reusable section header component
+  const SectionHeader: React.FC<{
+    title: string;
+    sectionKey: keyof SectionVisibility;
+    isVisible: boolean;
+    onToggle: () => void;
+  }> = ({ title, isVisible, onToggle }) => (
+    <div className="flex justify-between items-center mb-4">
+      <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+      <button
+        onClick={onToggle}
+        className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
+        aria-label={isVisible ? "Hide section" : "Show section"}
+      >
+        {isVisible ? (
+          <ChevronUpIcon className="h-5 w-5" />
+        ) : (
+          <ChevronDownIcon className="h-5 w-5" />
+        )}
+      </button>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
@@ -1202,11 +1247,89 @@ function Leaderboard() {
         />
 
         {/* Add the recent actions dashboard */}
-        <RecentActions 
-          strxPrice={strxPrice} 
-          stakersData={response?.data}
-          setSearchTerm={setSearchTerm}
-        />
+        <div className="mb-8">
+          <SectionHeader
+            title="Recent Staking Activity"
+            sectionKey="recentActivity"
+            isVisible={sectionVisibility.recentActivity}
+            onToggle={() => setSectionVisibility(prev => ({
+              ...prev,
+              recentActivity: !prev.recentActivity
+            }))}
+          />
+          
+          {sectionVisibility.recentActivity && (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              {/* Mobile view */}
+              <div className="md:hidden">
+                <div className="grid grid-cols-1 gap-4 p-4">
+                  {recentActions.slice(0, 3).map((action, index) => (
+                    <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
+                      {/* Compact card view */}
+                      <div className="flex justify-between items-start mb-2">
+                        <a 
+                          href={`https://explorer.xprnetwork.org/account/${action.username}`}
+                          className="text-purple-600 hover:text-purple-800 hover:underline"
+                        >
+                          {action.username}
+                        </a>
+                        <span className="text-sm text-gray-500">
+                          {new Date(action.time).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">
+                          {action.amount.toLocaleString()} STRX
+                        </span>
+                        <span className={action.type === 'add stake' 
+                          ? 'text-green-600' 
+                          : 'text-red-600'
+                        }>
+                          {action.type === 'add stake' ? '👍' : '👎'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Compact table for remaining items */}
+                {recentActions.length > 3 && (
+                  <div className="border-t border-gray-200">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full">
+                        <tbody className="divide-y divide-gray-200">
+                          {recentActions.slice(3).map((action, index) => (
+                            <tr key={index} className="hover:bg-purple-50">
+                              <td className="px-4 py-2 text-sm">
+                                <a 
+                                  href={`https://explorer.xprnetwork.org/account/${action.username}`}
+                                  className="text-purple-600 hover:text-purple-800 hover:underline"
+                                >
+                                  {action.username}
+                                </a>
+                              </td>
+                              <td className="px-4 py-2 text-sm text-right">
+                                {action.amount.toLocaleString()} STRX
+                              </td>
+                              <td className="px-4 py-2 text-sm text-center">
+                                {action.type === 'add stake' ? '👍' : '👎'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop view - original table */}
+              <div className="hidden md:block">
+                {/* Your existing table code */}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Add the new stakers panel before the leaderboard table */}
         <NewStakersPanel 
