@@ -539,50 +539,40 @@ const TierMilestoneTracker: React.FC<{
   setSearchTerm: (term: string) => void;
 }> = ({ stakersData, setSearchTerm }) => {
   const milestones = useMemo(() => {
-    // Group users by their current tier
-    const usersByTier = stakersData.reduce((acc, staker) => {
-      const currentTier = [...STAKING_TIERS].reverse()
-        .find(tier => staker.total >= tier.minimum);
-      
-      if (!currentTier) return acc;
-      
-      if (!acc[currentTier.name]) {
-        acc[currentTier.name] = [];
-      }
-      acc[currentTier.name].push(staker);
-      return acc;
-    }, {} as Record<string, typeof stakersData>);
-
-    // For each tier, find users close to next tier
-    return STAKING_TIERS.flatMap((tier, index) => {
-      const nextTier = STAKING_TIERS[index - 1];
-      if (!nextTier) return []; // Skip if no next tier (Whale tier)
-
-      const usersInTier = usersByTier[tier.name] || [];
-      
-      return usersInTier
-        .map(staker => {
-          const remaining = nextTier.minimum - staker.total;
-          const percentageComplete = ((staker.total - tier.minimum) / 
-            (nextTier.minimum - tier.minimum)) * 100;
-          
-          return {
-            username: staker.username,
-            currentTier: tier,
-            nextTier,
-            total: staker.total,
-            remaining,
-            percentageComplete
-          };
-        })
-        .filter(milestone => 
-          milestone.remaining > 0 && 
-          milestone.remaining < milestone.nextTier.minimum * 0.15 // Within 15% of next tier
-        )
-        .slice(0, 3); // Show top 3 closest from each tier
-    })
-    .sort((a, b) => a.remaining - b.remaining)
-    .slice(0, 15); // Show maximum 15 cards total
+    return stakersData
+      .map(staker => {
+        // Find current tier
+        const currentTier = [...STAKING_TIERS].reverse()
+          .find(tier => staker.total >= tier.minimum);
+        
+        if (!currentTier) return null;
+        
+        // Find next tier
+        const tierIndex = STAKING_TIERS.findIndex(t => t.name === currentTier.name);
+        const nextTier = STAKING_TIERS[tierIndex - 1];
+        
+        if (!nextTier) return null; // Skip if no next tier (Whale tier)
+        
+        const remaining = nextTier.minimum - staker.total;
+        const percentageComplete = ((staker.total - currentTier.minimum) / 
+          (nextTier.minimum - currentTier.minimum)) * 100;
+        
+        return {
+          username: staker.username,
+          currentTier,
+          nextTier,
+          total: staker.total,
+          remaining,
+          percentageComplete
+        };
+      })
+      .filter((milestone): milestone is MilestoneUser => 
+        milestone !== null && 
+        milestone.remaining > 0 && 
+        milestone.remaining < milestone.nextTier.minimum * 0.15 // Within 15% of next tier
+      )
+      .sort((a, b) => a.remaining - b.remaining)
+      .slice(0, 15); // Show top 15 closest overall
   }, [stakersData]);
 
   if (milestones.length === 0) return null;
