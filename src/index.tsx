@@ -914,7 +914,7 @@ function Leaderboard() {
       return {
         ...tier,
         count: processedData.filter(user => {
-          const amount = user.total;
+          const amount = user.staked;
           // If this is the highest tier, only check minimum
           if (!nextTier) {
             return amount >= tier.minimum;
