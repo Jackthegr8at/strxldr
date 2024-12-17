@@ -780,17 +780,28 @@ function Leaderboard() {
         total: amounts.staked + amounts.unstaked
       }))
       .filter((item) => {
+        // Remove zero balance entries
         if (item.staked <= 0 && item.unstaked <= 0) return false;
         
+        // If no tier is selected, show all
         if (!selectedTier) return true;
         
+        // Find the index of the selected tier
         const tierIndex = STAKING_TIERS.findIndex(t => t.name === selectedTier.name);
-        const nextTier = STAKING_TIERS[tierIndex - 1];
+        const nextTierUp = STAKING_TIERS[tierIndex - 1]; // Get next tier up (if any)
         
-        if (!nextTier) {
+        // For "Free" tier (last tier)
+        if (selectedTier.name === 'Free') {
+          return item.total >= 0 && item.total < STAKING_TIERS[STAKING_TIERS.length - 2].minimum;
+        }
+        
+        // For "Whale" tier (first tier)
+        if (selectedTier.name === 'Whale') {
           return item.total >= selectedTier.minimum;
         }
-        return item.total >= selectedTier.minimum && item.total < nextTier.minimum;
+        
+        // For all other tiers
+        return item.total >= selectedTier.minimum && item.total < nextTierUp.minimum;
       })
       .sort((a, b) => {
         const compareValue = sortOrder === 'desc' ? -1 : 1;
