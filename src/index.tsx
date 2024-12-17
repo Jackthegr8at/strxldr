@@ -528,14 +528,14 @@ type MilestoneUser = {
   username: string;
   currentTier: StakingTier;
   nextTier: StakingTier;
-  total: number;
+  staked: number;
   remaining: number;
   percentageComplete: number;
 };
 
 // Add this new component
 const TierMilestoneTracker: React.FC<{
-  stakersData: Array<{ username: string; total: number }>;
+  stakersData: Array<{ username: string; total: number; staked: number }>;
   setSearchTerm: (term: string) => void;
   selectedTier: StakingTier | null;
 }> = ({ stakersData, setSearchTerm, selectedTier }) => {
@@ -545,16 +545,14 @@ const TierMilestoneTracker: React.FC<{
     
     return stakersData
       .map(staker => {
-        // Fix: Find current tier by iterating from highest to lowest
-        let currentTier = STAKING_TIERS[0]; // Start with Whale tier
+        let currentTier = STAKING_TIERS[0];
         for (let i = 0; i < STAKING_TIERS.length; i++) {
-          if (staker.total >= STAKING_TIERS[i].minimum) {
+          if (staker.staked >= STAKING_TIERS[i].minimum) {
             currentTier = STAKING_TIERS[i];
             break;
           }
         }
         
-        // Find next tier up
         const tierIndex = STAKING_TIERS.findIndex(t => t.name === currentTier.name);
         const nextTier = STAKING_TIERS[tierIndex - 1];
         
@@ -563,13 +561,13 @@ const TierMilestoneTracker: React.FC<{
           return null;
         }
         
-        const remaining = nextTier.minimum - staker.total;
-        const percentageComplete = ((staker.total - currentTier.minimum) / 
+        const remaining = nextTier.minimum - staker.staked;
+        const percentageComplete = ((staker.staked - currentTier.minimum) / 
           (nextTier.minimum - currentTier.minimum)) * 100;
 
         console.log('Processing:', {
           username: staker.username,
-          total: staker.total,
+          staked: staker.staked,
           currentTier: currentTier.name,
           nextTier: nextTier.name,
           remaining,
@@ -580,7 +578,7 @@ const TierMilestoneTracker: React.FC<{
           username: staker.username,
           currentTier,
           nextTier,
-          total: staker.total,
+          staked: staker.staked,
           remaining,
           percentageComplete
         };
@@ -1194,7 +1192,11 @@ function Leaderboard() {
         </div>
 
         <TierMilestoneTracker 
-          stakersData={processedData}
+          stakersData={processedData.map(item => ({
+            username: item.username,
+            total: item.total,
+            staked: item.staked
+          }))}
           setSearchTerm={setSearchTerm}
           selectedTier={selectedTier}
         />
