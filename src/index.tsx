@@ -535,7 +535,22 @@ const TierMilestoneTracker: React.FC<{
   stakersData: Array<{ username: string; total: number; staked: number }>;
   setSearchTerm: (term: string) => void;
   selectedTier: StakingTier | null;
-}> = ({ stakersData, setSearchTerm, selectedTier }) => {
+  sectionVisibility: SectionVisibility;
+  setSectionVisibility: React.Dispatch<React.SetStateAction<SectionVisibility>>;
+  SectionHeader: React.FC<{
+    title: string;
+    sectionKey: keyof SectionVisibility;
+    isVisible: boolean;
+    onToggle: () => void;
+  }>;
+}> = ({ 
+  stakersData, 
+  setSearchTerm, 
+  selectedTier, 
+  sectionVisibility, 
+  setSectionVisibility,
+  SectionHeader 
+}) => {
   const milestones = useMemo(() => {
     console.log('Recalculating milestones for tier:', selectedTier?.name);
     console.log('Total stakers to process:', stakersData.length);
@@ -1289,13 +1304,12 @@ function Leaderboard() {
         </div>
 
         <TierMilestoneTracker 
-          stakersData={processedData.map(item => ({
-            username: item.username,
-            total: item.total,
-            staked: item.staked
-          }))}
+          stakersData={processedData}
           setSearchTerm={setSearchTerm}
           selectedTier={selectedTier}
+          sectionVisibility={sectionVisibility}
+          setSectionVisibility={setSectionVisibility}
+          SectionHeader={SectionHeader}
         />
 
         {/* Add the recent actions dashboard */}
