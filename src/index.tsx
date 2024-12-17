@@ -537,7 +537,8 @@ type MilestoneUser = {
 const TierMilestoneTracker: React.FC<{
   stakersData: Array<{ username: string; total: number }>;
   setSearchTerm: (term: string) => void;
-}> = ({ stakersData, setSearchTerm }) => {
+  selectedTier: StakingTier | null;
+}> = ({ stakersData, setSearchTerm, selectedTier }) => {
   const milestones = useMemo(() => {
     return stakersData
       .map(staker => {
@@ -569,11 +570,14 @@ const TierMilestoneTracker: React.FC<{
       .filter((milestone): milestone is MilestoneUser => 
         milestone !== null && 
         milestone.remaining > 0 && 
-        milestone.remaining < milestone.nextTier.minimum * 0.15 // Within 15% of next tier
+        milestone.remaining < milestone.nextTier.minimum * 0.15 && // Within 15% of next tier
+        (selectedTier 
+          ? milestone.currentTier.name === selectedTier.name // Show only selected tier
+          : milestone.currentTier.name !== 'Free') // Exclude Free tier from default view
       )
       .sort((a, b) => a.remaining - b.remaining)
-      .slice(0, 15); // Show top 15 closest overall
-  }, [stakersData]);
+      .slice(0, selectedTier ? 999 : 15); // Show all for selected tier, limit to 15 for default view
+  }, [stakersData, selectedTier]);
 
   if (milestones.length === 0) return null;
 
@@ -1164,6 +1168,7 @@ function Leaderboard() {
         <TierMilestoneTracker 
           stakersData={processedData}
           setSearchTerm={setSearchTerm}
+          selectedTier={selectedTier}
         />
 
         {/* Add the recent actions dashboard */}
