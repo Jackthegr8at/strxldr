@@ -540,26 +540,26 @@ const TierMilestoneTracker: React.FC<{
   selectedTier: StakingTier | null;
 }> = ({ stakersData, setSearchTerm, selectedTier }) => {
   const milestones = useMemo(() => {
-    console.log('Recalculating milestones for tier:', selectedTier?.name); // Debug log
-    console.log('Total stakers to process:', stakersData.length); // Debug total data
+    console.log('Recalculating milestones for tier:', selectedTier?.name);
+    console.log('Total stakers to process:', stakersData.length);
     
     return stakersData
       .map(staker => {
-        // Find current tier
-        const currentTier = [...STAKING_TIERS].reverse()
-          .find(tier => staker.total >= tier.minimum);
-        
-        if (!currentTier) {
-          console.log('No tier found for:', staker.username, staker.total); // Debug tier assignment
-          return null;
+        // Fix: Find current tier by iterating from highest to lowest
+        let currentTier = STAKING_TIERS[0]; // Start with Whale tier
+        for (let i = 0; i < STAKING_TIERS.length; i++) {
+          if (staker.total >= STAKING_TIERS[i].minimum) {
+            currentTier = STAKING_TIERS[i];
+            break;
+          }
         }
         
-        // Find next tier
+        // Find next tier up
         const tierIndex = STAKING_TIERS.findIndex(t => t.name === currentTier.name);
         const nextTier = STAKING_TIERS[tierIndex - 1];
         
         if (!nextTier) {
-          console.log('No next tier for:', staker.username, '(current:', currentTier.name, ')'); // Debug next tier
+          console.log('No next tier for:', staker.username, '(current:', currentTier.name, ')');
           return null;
         }
         
@@ -574,7 +574,7 @@ const TierMilestoneTracker: React.FC<{
           nextTier: nextTier.name,
           remaining,
           percentageComplete
-        }); // Debug processing
+        });
 
         return {
           username: staker.username,
@@ -591,33 +591,21 @@ const TierMilestoneTracker: React.FC<{
         const isCloseToNextTier = 
           milestone.remaining > 0 && 
           milestone.remaining < milestone.nextTier.minimum * 0.15;
-
-        console.log('Filtering:', {
-          username: milestone.username,
-          currentTier: milestone.currentTier.name,
-          isCloseToNextTier,
-          selectedTier: selectedTier?.name,
-          willInclude: selectedTier 
-            ? milestone.currentTier.name === selectedTier.name && isCloseToNextTier
-            : milestone.currentTier.name !== 'Free' && isCloseToNextTier
-        }); // Debug filtering
         
         if (selectedTier) {
-          // When tier is selected, show all users from that tier close to next tier
           return milestone.currentTier.name === selectedTier.name && isCloseToNextTier;
         } else {
-          // By default, show users from all tiers except Free who are close to next tier
           return milestone.currentTier.name !== 'Free' && isCloseToNextTier;
         }
       })
       .sort((a, b) => a.remaining - b.remaining)
       .slice(0, selectedTier ? 999 : 15);
-  }, [stakersData, selectedTier]); // Make sure selectedTier is in dependencies
+  }, [stakersData, selectedTier]);
 
   console.log('Final filtered milestones:', {
     count: milestones.length,
     tiers: milestones.map(m => m.currentTier.name)
-  }); // Debug final results
+  });
 
   if (milestones.length === 0) return null;
 
