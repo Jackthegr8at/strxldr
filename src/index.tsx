@@ -726,9 +726,63 @@ const TierMilestoneTracker: React.FC<{
             )}
           </div>
 
-          {/* Desktop view - original table */}
+          {/* Desktop view - original grid layout */}
           <div className="hidden md:block">
-            {/* Your existing table code */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {milestones.map((milestone, index) => (
+                <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
+                  <div className="flex justify-between items-start mb-2">
+                    <a 
+                      href={`https://explorer.xprnetwork.org/account/${milestone.username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-600 hover:text-purple-800 hover:underline flex items-center gap-2"
+                    >
+                      {milestone.username}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSearchTerm(milestone.username);
+                          const searchInput = document.querySelector('input[type="text"]');
+                          if (searchInput) {
+                            searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                        }}
+                        className="text-purple-600 hover:text-purple-800"
+                      >
+                        <MagnifyingGlassIcon className="h-4 w-4" />
+                      </button>
+                    </a>
+                  </div>
+
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">{milestone.currentTier.emoji}</span>
+                    <span className="text-gray-400">➜</span>
+                    <span className="text-2xl">{milestone.nextTier.emoji}</span>
+                  </div>
+
+                  <div className="mb-2">
+                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                      <span>Progress to {milestone.nextTier.name}</span>
+                      <span>{milestone.percentageComplete.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div 
+                        className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
+                        style={{ width: `${milestone.percentageComplete}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium text-purple-600">
+                      {milestone.remaining.toLocaleString()} STRX
+                    </span>
+                    {' '}remaining
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
