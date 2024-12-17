@@ -989,6 +989,120 @@ function Leaderboard() {
       }, [] as NewStaker[]);
   }, [newStakersData]);
 
+  // Add this new type near your other type definitions
+  type MilestoneUser = {
+    username: string;
+    currentTier: StakingTier;
+    nextTier: StakingTier;
+    total: number;
+    remaining: number;
+    percentageComplete: number;
+  };
+
+  // Add this new component
+  const TierMilestoneTracker: React.FC<{
+    stakersData: Array<{ username: string; total: number }>;
+    setSearchTerm: (term: string) => void;
+  }> = ({ stakersData, setSearchTerm }) => {
+    const milestones = useMemo(() => {
+      return stakersData
+        .map(staker => {
+          // Find current tier
+          const currentTier = [...STAKING_TIERS].reverse()
+            .find(tier => staker.total >= tier.minimum);
+          
+          // Find next tier
+          const nextTierIndex = STAKING_TIERS.findIndex(tier => tier.minimum === currentTier?.minimum) - 1;
+          const nextTier = nextTierIndex >= 0 ? STAKING_TIERS[nextTierIndex] : null;
+          
+          if (!currentTier || !nextTier) return null;
+          
+          const remaining = nextTier.minimum - staker.total;
+          const percentageComplete = ((staker.total - currentTier.minimum) / 
+            (nextTier.minimum - currentTier.minimum)) * 100;
+          
+          return {
+            username: staker.username,
+            currentTier,
+            nextTier,
+            total: staker.total,
+            remaining,
+            percentageComplete
+          };
+        })
+        .filter((milestone): milestone is MilestoneUser => 
+          milestone !== null && 
+          milestone.remaining > 0 && 
+          milestone.remaining < milestone.nextTier.minimum * 0.15 // Within 15% of next tier
+        )
+        .sort((a, b) => a.remaining - b.remaining)
+        .slice(0, 5); // Show top 5 closest to next tier
+    }, [stakersData]);
+
+    if (milestones.length === 0) return null;
+
+    return (
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Tier Milestone Tracker 🎯</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {milestones.map((user) => (
+            <div key={user.username} className="bg-white p-4 rounded-lg shadow border border-purple-100">
+              <div className="flex items-center justify-between mb-2">
+                <a 
+                  href={`https://explorer.xprnetwork.org/account/${user.username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-600 hover:text-purple-800 hover:underline flex items-center gap-2"
+                >
+                  {user.username}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setSearchTerm(user.username);
+                      const searchInput = document.querySelector('input[type="text"]');
+                      if (searchInput) {
+                        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }
+                    }}
+                    className="text-purple-600 hover:text-purple-800"
+                  >
+                    <MagnifyingGlassIcon className="h-4 w-4" />
+                  </button>
+                </a>
+              </div>
+              
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">{user.currentTier.emoji}</span>
+                <span className="text-gray-400">➜</span>
+                <span className="text-2xl">{user.nextTier.emoji}</span>
+              </div>
+              
+              <div className="mb-2">
+                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>Progress to {user.nextTier.name}</span>
+                  <span>{user.percentageComplete.toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${user.percentageComplete}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div className="text-sm text-gray-600">
+                <span className="font-medium text-purple-600">
+                  {user.remaining.toLocaleString()} STRX
+                </span>
+                {' '}remaining to reach {user.nextTier.name}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
