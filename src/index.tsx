@@ -248,20 +248,19 @@ const RecentActions: React.FC<{
   setSearchTerm: (term: string) => void;
   selectedTier: StakingTier | null;
 }> = ({ strxPrice, stakersData, setSearchTerm, selectedTier }) => {
-  // Use the existing blockchain actions API with a key that includes the tier
   const { data: actionsData } = useSWR<ActionResponse>(
-    ['recent_actions', selectedTier?.name], // Add tier to the cache key
-    () => fetch('https://proton.greymass.com/v1/history/get_actions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=UTF-8',
-      },
-      body: JSON.stringify({
-        account_name: "storexstake",
-        pos: -1,
-        offset: selectedTier ? -100 : -30
-      })
-    }).then(res => res.json()),
+    ['recent_actions', selectedTier?.name],
+    () => {
+      const baseUrl = 'https://proton.eosusa.io/v2/history/get_actions';
+      const params = new URLSearchParams({
+        limit: selectedTier ? '100' : '30',
+        account: 'storexstake',
+        sort: 'desc',
+        'act.name': 'transfer'
+      });
+      
+      return fetch(`${baseUrl}?${params}`).then(res => res.json());
+    },
     { refreshInterval: 30000 }
   );
 
