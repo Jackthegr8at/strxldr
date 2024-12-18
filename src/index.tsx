@@ -273,7 +273,7 @@ const RecentActions: React.FC<{
   };
 
   const recentActions = useMemo(() => {
-    if (!actionsData?.actions || !STAKING_TIERS?.length) return [];
+    if (!actionsData?.actions) return [];
     
     return actionsData.actions
       .filter(action => {
@@ -285,19 +285,13 @@ const RecentActions: React.FC<{
 
         const userStaked = stakersData[username]?.staked || 0;
 
-        // Find user's tier with safety checks
-        if (!STAKING_TIERS?.length) return false;
-        
-        let userTier = STAKING_TIERS[0];
-        for (const tier of STAKING_TIERS) {
-          if (!tier?.minimum) continue;
-          if (userStaked >= tier.minimum) {
-            userTier = tier;
-            break;
-          }
-        }
+        // Get tier boundaries
+        const tierIndex = STAKING_TIERS.findIndex(t => t.name === selectedTier.name);
+        const nextTierUp = STAKING_TIERS[tierIndex - 1];
 
-        return userTier?.name === selectedTier?.name;
+        // Check if user is within the selected tier's range
+        return userStaked >= selectedTier.minimum && 
+               (!nextTierUp || userStaked < nextTierUp.minimum);
       })
       .slice(0, 15)
       .map(action => ({
@@ -574,10 +568,24 @@ const TierMilestoneTracker: React.FC<{
         
         const tierIndex = STAKING_TIERS.findIndex(t => t.name === currentTier.name);
         const nextTier = STAKING_TIERS[tierIndex - 1];
-               
+        
+        if (!nextTier) {
+          console.log('No next tier for:', staker.username, '(current:', currentTier.name, ')');
+          return null;
+        }
+        
         const remaining = nextTier.minimum - staker.staked;
         const percentageComplete = ((staker.staked - currentTier.minimum) / 
           (nextTier.minimum - currentTier.minimum)) * 100;
+
+        console.log('Processing:', {
+          username: staker.username,
+          staked: staker.staked,
+          currentTier: currentTier.name,
+          nextTier: nextTier.name,
+          remaining,
+          percentageComplete
+        });
 
         return {
           username: staker.username,
@@ -615,6 +623,11 @@ const TierMilestoneTracker: React.FC<{
       })
       .slice(0, selectedTier ? 999 : 15);
   }, [stakersData, selectedTier]);
+
+  console.log('Final filtered milestones:', {
+    count: milestones.length,
+    tiers: milestones.map(m => m.currentTier.name)
+  });
 
   if (milestones.length === 0) return null;
 
@@ -867,6 +880,9 @@ function Leaderboard() {
     }).then(res => res.json()),
     { refreshInterval: 120000 } // Refresh every 2 minutes
   );
+
+  // Add console.log to debug
+  console.log('Price data:', priceData);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
