@@ -276,9 +276,25 @@ const RecentActions: React.FC<{
     if (!actionsData?.actions) return [];
     
     return actionsData.actions
+      .filter(action => {
+        if (!selectedTier || !stakersData) return true;
+
+        // Get the username based on action type
+        const username = action.act.data.memo === "withdraw stake" 
+          ? action.act.data.to 
+          : action.act.data.from;
+
+        // Get user's staked amount
+        const userStaked = stakersData[username]?.staked || 0;
+
+        // Check if user belongs to selected tier
+        return userStaked >= selectedTier.minimum && 
+               (selectedTier.name === 'Whale' || 
+                userStaked < STAKING_TIERS[STAKING_TIERS.indexOf(selectedTier) - 1]?.minimum || Infinity);
+      })
       .slice(0, 15)
       .map(action => ({
-        time: formatTimestamp(action.timestamp),
+        time: formatTimestamp(action.timestamp.replace('.000', 'Z')),
         username: action.act.data.memo === "withdraw stake" 
           ? action.act.data.to 
           : action.act.data.from,
@@ -289,7 +305,7 @@ const RecentActions: React.FC<{
                     action.act.data.memo === "add stake" && 
                     !stakersData[action.act.data.from]
       }));
-  }, [actionsData, stakersData]);
+  }, [actionsData, stakersData, selectedTier]);
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
