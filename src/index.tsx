@@ -261,13 +261,23 @@ const RecentActions: React.FC<{
     { refreshInterval: 30000 }
   );
 
+  const formatTimestamp = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true
+    });
+  };
+
   const recentActions = useMemo(() => {
     if (!actionsData?.actions) return [];
     
     return actionsData.actions
       .slice(0, 15)
       .map(action => ({
-        time: action.timestamp,
+        time: formatTimestamp(action.timestamp),
         username: action.act.data.memo === "withdraw stake" 
           ? action.act.data.to 
           : action.act.data.from,
@@ -300,16 +310,7 @@ const RecentActions: React.FC<{
                 action.isNewStaker ? 'bg-green-50' : ''
               }`}>
                 <td className="px-6 py-4 text-sm text-gray-900">
-                  {new Date(action.time).toLocaleString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: 'numeric',
-                    second: 'numeric',
-                    hour12: true,
-                    timeZoneName: 'short'
-                  })}
+                  {action.time}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900">
                   <div className="flex items-center gap-2">
