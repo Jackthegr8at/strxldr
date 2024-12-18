@@ -287,10 +287,12 @@ const RecentActions: React.FC<{
         // Get user's staked amount
         const userStaked = stakersData[username]?.staked || 0;
 
-        // Check if user belongs to selected tier
-        return userStaked >= selectedTier.minimum && 
-               (selectedTier.name === 'Whale' || 
-                userStaked < STAKING_TIERS[STAKING_TIERS.indexOf(selectedTier) - 1]?.minimum || Infinity);
+        // Find the user's current tier
+        const tierIndex = STAKING_TIERS.findIndex(tier => userStaked >= tier.minimum);
+        const userTier = STAKING_TIERS[tierIndex];
+
+        // Only include if user is exactly in the selected tier
+        return userTier?.name === selectedTier.name;
       })
       .slice(0, 15)
       .map(action => ({
@@ -567,24 +569,10 @@ const TierMilestoneTracker: React.FC<{
         
         const tierIndex = STAKING_TIERS.findIndex(t => t.name === currentTier.name);
         const nextTier = STAKING_TIERS[tierIndex - 1];
-        
-        if (!nextTier) {
-          console.log('No next tier for:', staker.username, '(current:', currentTier.name, ')');
-          return null;
-        }
-        
+               
         const remaining = nextTier.minimum - staker.staked;
         const percentageComplete = ((staker.staked - currentTier.minimum) / 
           (nextTier.minimum - currentTier.minimum)) * 100;
-
-        console.log('Processing:', {
-          username: staker.username,
-          staked: staker.staked,
-          currentTier: currentTier.name,
-          nextTier: nextTier.name,
-          remaining,
-          percentageComplete
-        });
 
         return {
           username: staker.username,
@@ -622,11 +610,6 @@ const TierMilestoneTracker: React.FC<{
       })
       .slice(0, selectedTier ? 999 : 15);
   }, [stakersData, selectedTier]);
-
-  console.log('Final filtered milestones:', {
-    count: milestones.length,
-    tiers: milestones.map(m => m.currentTier.name)
-  });
 
   if (milestones.length === 0) return null;
 
