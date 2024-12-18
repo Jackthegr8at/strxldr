@@ -287,12 +287,17 @@ const RecentActions: React.FC<{
         // Get user's staked amount
         const userStaked = stakersData[username]?.staked || 0;
 
-        // Find the user's current tier
-        const tierIndex = STAKING_TIERS.findIndex(tier => userStaked >= tier.minimum);
-        const userTier = STAKING_TIERS[tierIndex];
+        // Find user's tier
+        let userTier = STAKING_TIERS[0]; // Default to highest tier
+        for (const tier of STAKING_TIERS) {
+          if (userStaked >= tier.minimum) {
+            userTier = tier;
+            break;
+          }
+        }
 
         // Only include if user is exactly in the selected tier
-        return userTier?.name === selectedTier.name;
+        return userTier.name === selectedTier.name;
       })
       .slice(0, 15)
       .map(action => ({
@@ -862,9 +867,6 @@ function Leaderboard() {
     }).then(res => res.json()),
     { refreshInterval: 120000 } // Refresh every 2 minutes
   );
-
-  // Add console.log to debug
-  console.log('Price data:', priceData);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
