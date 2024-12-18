@@ -262,7 +262,8 @@ const RecentActions: React.FC<{
   );
 
   const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString(undefined, {
+    const date = new Date(timestamp.replace('.000', 'Z'));
+    return date.toLocaleString(undefined, {
       month: 'short',
       day: 'numeric',
       hour: 'numeric',
