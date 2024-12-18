@@ -222,21 +222,18 @@ type AmountDisplay = 'strx' | 'usd';
 // Add this constant at the top of your file
 const TOTAL_SUPPLY = 2000000000; // 2 billion STRX
 
-// Add these types for the actions API
+// Update the ActionResponse type to match v2 API
 type ActionResponse = {
   actions: Array<{
-    action_trace: {
-      act: {
-        data: {
-          from: string;
-          to: string;
-          memo: string;
-          quantity: string;
-        };
+    timestamp: string;
+    trx_id: string;
+    act: {
+      data: {
+        from: string;
+        to: string;
+        memo: string;
+        quantity: string;
       };
-      block_time: string;
-      trx_id: string;
-      receiver: string;
     };
   }>;
 };
@@ -268,47 +265,20 @@ const RecentActions: React.FC<{
     if (!actionsData?.actions) return [];
     
     return actionsData.actions
-      .filter(action => {
-        const data = action.action_trace.act.data;
-        const isValidAction = (data.memo === "add stake" || data.memo === "withdraw stake") &&
-                            action.action_trace.receiver === data.to;
-
-        if (!selectedTier || !stakersData) return isValidAction;
-
-        // If tier is selected, check if user belongs to that tier
-        const username = data.memo === "withdraw stake" ? data.to : data.from;
-        const userData = stakersData[username];
-        if (!userData) return false;
-
-        let currentTier = STAKING_TIERS[0];
-        for (const tier of STAKING_TIERS) {
-          if (userData.staked >= tier.minimum) {
-            currentTier = tier;
-            break;
-          }
-        }
-
-        return isValidAction && currentTier.name === selectedTier.name;
-      })
       .slice(0, 15)
-      .reverse()
-      .map(action => {
-        const username = action.action_trace.act.data.memo === "withdraw stake" 
-          ? action.action_trace.act.data.to 
-          : action.action_trace.act.data.from;
-        
-        return {
-          time: action.action_trace.block_time,
-          username,
-          amount: parseFloat(action.action_trace.act.data.quantity.split(' ')[0]),
-          type: action.action_trace.act.data.memo,
-          trxId: action.action_trace.trx_id,
-          isNewStaker: stakersData && 
-                      action.action_trace.act.data.memo === "add stake" && 
-                      !stakersData[username]
-        };
-      });
-  }, [actionsData, stakersData, selectedTier]);
+      .map(action => ({
+        time: action.timestamp,
+        username: action.act.data.memo === "withdraw stake" 
+          ? action.act.data.to 
+          : action.act.data.from,
+        amount: parseFloat(action.act.data.quantity.split(' ')[0]),
+        type: action.act.data.memo,
+        trxId: action.trx_id,
+        isNewStaker: stakersData && 
+                    action.act.data.memo === "add stake" && 
+                    !stakersData[action.act.data.from]
+      }));
+  }, [actionsData, stakersData]);
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
