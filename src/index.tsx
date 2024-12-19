@@ -607,7 +607,6 @@ const TierMilestoneTracker: React.FC<{
         const nextTier = STAKING_TIERS[tierIndex - 1];
         
         if (!nextTier) {
-          console.log('No next tier for:', staker.username, '(current:', currentTier.name, ')');
           return null;
         }
         
@@ -903,9 +902,6 @@ function Leaderboard() {
     }).then(res => res.json()),
     { refreshInterval: 120000 } // Refresh every 2 minutes
   );
-
-  // Add console.log to debug
-  console.log('Price data:', priceData);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
