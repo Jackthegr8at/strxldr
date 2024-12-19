@@ -1697,3 +1697,6 @@ root.render(
     <Leaderboard />
   </React.StrictMode>
 );
+
+// smapshot version
+// 1.0.0
