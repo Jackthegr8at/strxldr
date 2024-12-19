@@ -615,15 +615,6 @@ const TierMilestoneTracker: React.FC<{
         const percentageComplete = ((staker.staked - currentTier.minimum) / 
           (nextTier.minimum - currentTier.minimum)) * 100;
 
-        console.log('Processing:', {
-          username: staker.username,
-          staked: staker.staked,
-          currentTier: currentTier.name,
-          nextTier: nextTier.name,
-          remaining,
-          percentageComplete
-        });
-
         return {
           username: staker.username,
           currentTier,
@@ -660,11 +651,6 @@ const TierMilestoneTracker: React.FC<{
       })
       .slice(0, selectedTier ? 999 : 15);
   }, [stakersData, selectedTier]);
-
-  console.log('Final filtered milestones:', {
-    count: milestones.length,
-    tiers: milestones.map(m => m.currentTier.name)
-  });
 
   if (milestones.length === 0) return null;
 
