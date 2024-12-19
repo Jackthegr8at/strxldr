@@ -1687,17 +1687,17 @@ function Leaderboard() {
                                 <span>
                                   Daily: {isUsd 
                                     ? `$${rewards.dailyUsd.toFixed(2)}` 
-                                    : `${rewards.daily.toFixed(4)} STRX`}
+                                    : `${rewards.daily.toFixed(4)}`}
                                 </span>
                                 <span className="text-xs text-gray-500">
                                   Monthly: {isUsd 
                                     ? `$${rewards.monthlyUsd.toFixed(2)}` 
-                                    : `${rewards.monthly.toFixed(4)} STRX`}
+                                    : `${rewards.monthly.toFixed(4)}`}
                                 </span>
                                 <span className="text-xs text-gray-500">
                                   Yearly: {isUsd 
                                     ? `$${rewards.yearlyUsd.toFixed(2)}` 
-                                    : `${rewards.yearly.toFixed(4)} STRX`}
+                                    : `${rewards.yearly.toFixed(4)}`}
                                 </span>
                               </div>
                             );
