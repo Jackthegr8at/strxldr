@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
 import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
@@ -36,15 +36,16 @@ type StakingTier = {
   name: string;
   minimum: number;
   emoji: string;
+  color: string;
 };
 
 const STAKING_TIERS: StakingTier[] = [
-  { name: 'Whale', minimum: 20000000, emoji: '🐋' },
-  { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
-  { name: 'Fish', minimum: 1000000, emoji: '🐟' },
-  { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
-  { name: 'Free', minimum: 0, emoji: '🆓' },
+  { name: 'Whale', minimum: 20000000, emoji: '🐋', color: '#7C3AED' },
+  { name: 'Shark', minimum: 10000000, emoji: '🦈', color: '#8B5CF6' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '🐬', color: '#A78BFA' },
+  { name: 'Fish', minimum: 1000000, emoji: '🐟', color: '#C4B5FD' },
+  { name: 'Shrimp', minimum: 500000, emoji: '🦐', color: '#DDD6FE' },
+  { name: 'Free', minimum: 0, emoji: '🆓', color: '#F3F4F6' },
 ];
 
 // Add this type for the price response
@@ -837,6 +838,63 @@ type SectionVisibility = {
   tierMilestones: boolean;
 };
 
+const TierDistributionChart: React.FC<{ 
+  processedData: ProcessedDataItem[]
+}> = ({ processedData }) => {
+  const data = useMemo(() => {
+    const tierCounts = STAKING_TIERS.map(tier => ({
+      name: `${tier.emoji} ${tier.name}`,
+      value: 0,
+      color: tier.color
+    }));
+
+    processedData.forEach(staker => {
+      for (let i = 0; i < STAKING_TIERS.length; i++) {
+        if (staker.staked >= STAKING_TIERS[i].minimum) {
+          tierCounts[i].value++;
+          break;
+        }
+      }
+    });
+
+    return tierCounts;
+  }, [processedData]);
+
+  return (
+    <div className="mb-8">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">Staking Tier Distribution</h2>
+      <div className="bg-white p-4 rounded-lg shadow h-[400px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={150}
+              label={({ name, value }) => `${name}: ${value}`}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
+
+type ProcessedDataItem = {
+  username: string;
+  staked: number;
+  unstaked: number;
+  total: number;
+};
+
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
@@ -1361,6 +1419,9 @@ function Leaderboard() {
             tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
           />
         </div>
+
+        {/* Add the pie chart here */}
+        <TierDistributionChart processedData={processedData} />
 
         {/* Staking Tiers Dashboard */}
         <div className="mb-8">
