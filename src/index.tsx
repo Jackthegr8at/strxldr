@@ -224,17 +224,53 @@ const TOTAL_SUPPLY = 2000000000; // 2 billion STRX
 
 // Update the ActionResponse type to match v2 API
 type ActionResponse = {
+  query_time_ms: number;
+  cached: boolean;
+  lib: number;
+  last_indexed_block: number;
+  last_indexed_block_time: string;
+  total: {
+    value: number;
+    relation: string;
+  };
   actions: Array<{
+    "@timestamp": string;
     timestamp: string;
+    block_num: number;
+    block_id: string;
     trx_id: string;
     act: {
+      account: string;
+      name: string;
+      authorization: Array<{
+        actor: string;
+        permission: string;
+      }>;
       data: {
         from: string;
         to: string;
+        amount: number;
+        symbol: string;
         memo: string;
         quantity: string;
       };
     };
+    receipts: Array<{
+      receiver: string;
+      global_sequence: number;
+      recv_sequence: number;
+      auth_sequence: Array<{
+        account: string;
+        sequence: number;
+      }>;
+    }>;
+    cpu_usage_us: number;
+    net_usage_words: number;
+    global_sequence: number;
+    producer: string;
+    action_ordinal: number;
+    creator_action_ordinal: number;
+    signatures: Array<string>;
   }>;
 };
 
@@ -262,6 +298,7 @@ const RecentActions: React.FC<{
   );
 
   const formatTimestamp = (timestamp: string) => {
+    // Create Date object from UTC string and it will automatically convert to local time
     const date = new Date(timestamp.replace('.000', 'Z'));
     return date.toLocaleString(undefined, {
       month: 'short',
@@ -569,9 +606,23 @@ const TierMilestoneTracker: React.FC<{
         const tierIndex = STAKING_TIERS.findIndex(t => t.name === currentTier.name);
         const nextTier = STAKING_TIERS[tierIndex - 1];
         
+        if (!nextTier) {
+          console.log('No next tier for:', staker.username, '(current:', currentTier.name, ')');
+          return null;
+        }
+        
         const remaining = nextTier.minimum - staker.staked;
         const percentageComplete = ((staker.staked - currentTier.minimum) / 
           (nextTier.minimum - currentTier.minimum)) * 100;
+
+        console.log('Processing:', {
+          username: staker.username,
+          staked: staker.staked,
+          currentTier: currentTier.name,
+          nextTier: nextTier.name,
+          remaining,
+          percentageComplete
+        });
 
         return {
           username: staker.username,
@@ -609,6 +660,11 @@ const TierMilestoneTracker: React.FC<{
       })
       .slice(0, selectedTier ? 999 : 15);
   }, [stakersData, selectedTier]);
+
+  console.log('Final filtered milestones:', {
+    count: milestones.length,
+    tiers: milestones.map(m => m.currentTier.name)
+  });
 
   if (milestones.length === 0) return null;
 
@@ -861,6 +917,9 @@ function Leaderboard() {
     }).then(res => res.json()),
     { refreshInterval: 120000 } // Refresh every 2 minutes
   );
+
+  // Add console.log to debug
+  console.log('Price data:', priceData);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
