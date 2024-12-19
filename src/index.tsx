@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
 import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
@@ -36,16 +36,15 @@ type StakingTier = {
   name: string;
   minimum: number;
   emoji: string;
-  color: string;
 };
 
 const STAKING_TIERS: StakingTier[] = [
-  { name: 'Whale', minimum: 20000000, emoji: '🐋', color: '#7C3AED' },
-  { name: 'Shark', minimum: 10000000, emoji: '🦈', color: '#8B5CF6' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '🐬', color: '#A78BFA' },
-  { name: 'Fish', minimum: 1000000, emoji: '🐟', color: '#C4B5FD' },
-  { name: 'Shrimp', minimum: 500000, emoji: '🦐', color: '#DDD6FE' },
-  { name: 'Free', minimum: 0, emoji: '🆓', color: '#F3F4F6' },
+  { name: 'Whale', minimum: 20000000, emoji: '🐋' },
+  { name: 'Shark', minimum: 10000000, emoji: '🦈' },
+  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
+  { name: 'Fish', minimum: 1000000, emoji: '🐟' },
+  { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
+  { name: 'Free', minimum: 0, emoji: '🆓' },
 ];
 
 // Add this type for the price response
@@ -67,6 +66,7 @@ type VisibleColumns = {
   unstaked: boolean;
   total: boolean;
   usdValue: boolean;
+  rewards: boolean;
 };
 
 type ColumnSelectorProps = {
@@ -121,6 +121,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
             unstaked: selected === 'unstaked',
             total: selected === 'total',
             usdValue: selected === 'usdValue',
+            rewards: selected === 'rewards',
           };
           
           setVisibleColumns(newVisibleColumns);
@@ -137,6 +138,7 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
         <option value="unstaked">Unstaked Amount</option>
         <option value="total">Total Amount</option>
         <option value="usdValue">USD Value</option>
+        <option value="rewards">Estimated Rewards</option>
       </select>
       <p className="text-xs text-gray-500 mt-1">
         Rank and Username are always visible
@@ -311,7 +313,7 @@ const RecentActions: React.FC<{
   };
 
   const recentActions = useMemo(() => {
-    if (!actionsData?.actions || !STAKING_TIERS?.length) return [];
+    if (!actionsData?.actions) return [];
     
     return actionsData.actions
       .filter(action => {
@@ -323,19 +325,13 @@ const RecentActions: React.FC<{
 
         const userStaked = stakersData[username]?.staked || 0;
 
-        // Find user's tier with safety checks
-        if (!STAKING_TIERS?.length) return false;
-        
-        let userTier = STAKING_TIERS[0];
-        for (const tier of STAKING_TIERS) {
-          if (!tier?.minimum) continue;
-          if (userStaked >= tier.minimum) {
-            userTier = tier;
-            break;
-          }
-        }
+        // Get tier boundaries
+        const tierIndex = STAKING_TIERS.findIndex(t => t.name === selectedTier.name);
+        const nextTierUp = STAKING_TIERS[tierIndex - 1];
 
-        return userTier?.name === selectedTier?.name;
+        // Check if user is within the selected tier's range
+        return userStaked >= selectedTier.minimum && 
+               (!nextTierUp || userStaked < nextTierUp.minimum);
       })
       .slice(0, 15)
       .map(action => ({
@@ -838,97 +834,25 @@ type SectionVisibility = {
   tierMilestones: boolean;
 };
 
-const TierDistributionChart: React.FC<{ 
-  processedData: ProcessedDataItem[];
-  selectedTier: StakingTier | null;
-}> = ({ processedData, selectedTier }) => {
-  const data = useMemo(() => {
-    if (selectedTier) {
-      // When tier is selected, show top 10 users in that tier
-      return processedData
-        .filter(staker => {
-          if (selectedTier.name === 'Free') {
-            return staker.staked >= 0 && staker.staked < STAKING_TIERS[STAKING_TIERS.length - 2].minimum;
-          }
-          const tierIndex = STAKING_TIERS.findIndex(t => t.name === selectedTier.name);
-          const nextTierUp = STAKING_TIERS[tierIndex - 1];
-          return staker.staked >= selectedTier.minimum && (!nextTierUp || staker.staked < nextTierUp.minimum);
-        })
-        .sort((a, b) => b.staked - a.staked)
-        .slice(0, 10)
-        .map(staker => ({
-          name: staker.username,
-          value: staker.staked,
-          color: selectedTier.color
-        }));
-    }
-
-    // Default tier distribution view
-    const tierCounts = STAKING_TIERS.map(tier => ({
-      name: `${tier.emoji} ${tier.name}`,
-      value: 0,
-      color: tier.color
-    }));
-
-    processedData.forEach(staker => {
-      for (let i = 0; i < STAKING_TIERS.length; i++) {
-        if (staker.staked >= STAKING_TIERS[i].minimum) {
-          tierCounts[i].value++;
-          break;
-        }
-      }
-    });
-
-    return tierCounts;
-  }, [processedData, selectedTier]);
-
-  return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">
-        {selectedTier ? `Top ${selectedTier.name} Holders` : 'Staking Tier Distribution'}
-      </h2>
-      <div className="bg-white p-4 rounded-lg shadow h-[400px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              outerRadius={150}
-              label={({ name, value }) => {
-                if (selectedTier) {
-                  return `${name}: ${value.toLocaleString()} STRX`;
-                }
-                return `${name}: ${value}`;
-              }}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color || selectedTier?.color} />
-              ))}
-            </Pie>
-            <Tooltip 
-              formatter={(value: any) => {
-                if (selectedTier) {
-                  return [`${Number(value).toLocaleString()} STRX`, ''];
-                }
-                return [value, ''];
-              }}
-            />
-            <Legend verticalAlign="middle" align="right" layout="vertical" />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-};
-
-type ProcessedDataItem = {
-  username: string;
-  staked: number;
-  unstaked: number;
-  total: number;
+// Add this helper function near your other utility functions
+const calculateRewards = (
+  stakedAmount: number,
+  rewardsPerSec: number,
+  strxPrice: number,
+  globalStaked: number
+) => {
+  const dailyReward = rewardsPerSec * 86400 * (stakedAmount / globalStaked);
+  const monthlyReward = dailyReward * 30;
+  const yearlyReward = dailyReward * 365;
+  
+  return {
+    daily: dailyReward,
+    monthly: monthlyReward,
+    yearly: yearlyReward,
+    dailyUsd: dailyReward * strxPrice,
+    monthlyUsd: monthlyReward * strxPrice,
+    yearlyUsd: yearlyReward * strxPrice,
+  };
 };
 
 function Leaderboard() {
@@ -1026,6 +950,7 @@ function Leaderboard() {
     unstaked: false,
     total: false,
     usdValue: false,
+    rewards: true,
   });
 
   // Add this state
@@ -1245,6 +1170,7 @@ function Leaderboard() {
           unstaked: true,
           total: true,
           usdValue: true,
+          rewards: true,
         });
       }
     };
@@ -1456,12 +1382,6 @@ function Leaderboard() {
           />
         </div>
 
-        {/* Add the pie chart here */}
-        <TierDistributionChart 
-          processedData={processedData} 
-          selectedTier={selectedTier}
-        />
-
         {/* Staking Tiers Dashboard */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Staking Tiers Distribution</h2>
@@ -1640,6 +1560,11 @@ function Leaderboard() {
                     {visibleColumns.usdValue && (
                       <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
                     )}
+                    {visibleColumns.rewards && (
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">
+                        Estimated Rewards
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -1737,6 +1662,46 @@ function Leaderboard() {
                             item.total,
                             amountDisplays[`${item.username}-usdValue`] || 'usd'
                           )}
+                        </td>
+                      )}
+                      {visibleColumns.rewards && (
+                        <td 
+                          className="px-6 py-4 text-sm cursor-pointer hover:text-purple-600"
+                          onClick={() => toggleAmountDisplay(item.username, 'rewards')}
+                        >
+                          {(() => {
+                            const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
+                              ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                              : 0;
+                            
+                            const rewards = calculateRewards(
+                              item.staked, 
+                              rewardsPerSec, 
+                              strxPrice,
+                              blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
+                            );
+                            const isUsd = amountDisplays[`${item.username}-rewards`] === 'usd';
+
+                            return (
+                              <div className="flex flex-col">
+                                <span>
+                                  Daily: {isUsd 
+                                    ? `$${rewards.dailyUsd.toFixed(2)}` 
+                                    : `${rewards.daily.toFixed(4)} STRX`}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  Monthly: {isUsd 
+                                    ? `$${rewards.monthlyUsd.toFixed(2)}` 
+                                    : `${rewards.monthly.toFixed(4)} STRX`}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  Yearly: {isUsd 
+                                    ? `$${rewards.yearlyUsd.toFixed(2)}` 
+                                    : `${rewards.yearly.toFixed(4)} STRX`}
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </td>
                       )}
                     </tr>
