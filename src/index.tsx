@@ -310,7 +310,7 @@ const RecentActions: React.FC<{
   };
 
   const recentActions = useMemo(() => {
-    if (!actionsData?.actions) return [];
+    if (!actionsData?.actions || !STAKING_TIERS?.length) return [];
     
     return actionsData.actions
       .filter(action => {
@@ -322,13 +322,19 @@ const RecentActions: React.FC<{
 
         const userStaked = stakersData[username]?.staked || 0;
 
-        // Get tier boundaries
-        const tierIndex = STAKING_TIERS.findIndex(t => t.name === selectedTier.name);
-        const nextTierUp = STAKING_TIERS[tierIndex - 1];
+        // Find user's tier with safety checks
+        if (!STAKING_TIERS?.length) return false;
+        
+        let userTier = STAKING_TIERS[0];
+        for (const tier of STAKING_TIERS) {
+          if (!tier?.minimum) continue;
+          if (userStaked >= tier.minimum) {
+            userTier = tier;
+            break;
+          }
+        }
 
-        // Check if user is within the selected tier's range
-        return userStaked >= selectedTier.minimum && 
-               (!nextTierUp || userStaked < nextTierUp.minimum);
+        return userTier?.name === selectedTier?.name;
       })
       .slice(0, 15)
       .map(action => ({
