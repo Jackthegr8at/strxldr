@@ -839,9 +839,31 @@ type SectionVisibility = {
 };
 
 const TierDistributionChart: React.FC<{ 
-  processedData: ProcessedDataItem[]
-}> = ({ processedData }) => {
+  processedData: ProcessedDataItem[];
+  selectedTier: StakingTier | null;
+}> = ({ processedData, selectedTier }) => {
   const data = useMemo(() => {
+    if (selectedTier) {
+      // When tier is selected, show top 10 users in that tier
+      return processedData
+        .filter(staker => {
+          if (selectedTier.name === 'Free') {
+            return staker.staked >= 0 && staker.staked < STAKING_TIERS[STAKING_TIERS.length - 2].minimum;
+          }
+          const tierIndex = STAKING_TIERS.findIndex(t => t.name === selectedTier.name);
+          const nextTierUp = STAKING_TIERS[tierIndex - 1];
+          return staker.staked >= selectedTier.minimum && (!nextTierUp || staker.staked < nextTierUp.minimum);
+        })
+        .sort((a, b) => b.staked - a.staked)
+        .slice(0, 10)
+        .map(staker => ({
+          name: staker.username,
+          value: staker.staked,
+          color: selectedTier.color
+        }));
+    }
+
+    // Default tier distribution view
     const tierCounts = STAKING_TIERS.map(tier => ({
       name: `${tier.emoji} ${tier.name}`,
       value: 0,
@@ -858,11 +880,13 @@ const TierDistributionChart: React.FC<{
     });
 
     return tierCounts;
-  }, [processedData]);
+  }, [processedData, selectedTier]);
 
   return (
     <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Staking Tier Distribution</h2>
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">
+        {selectedTier ? `Top ${selectedTier.name} Holders` : 'Staking Tier Distribution'}
+      </h2>
       <div className="bg-white p-4 rounded-lg shadow h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -873,14 +897,26 @@ const TierDistributionChart: React.FC<{
               cx="50%"
               cy="50%"
               outerRadius={150}
-              label={({ name, value }) => `${name}: ${value}`}
+              label={({ name, value }) => {
+                if (selectedTier) {
+                  return `${name}: ${value.toLocaleString()} STRX`;
+                }
+                return `${name}: ${value}`;
+              }}
             >
               {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
+                <Cell key={`cell-${index}`} fill={entry.color || selectedTier?.color} />
               ))}
             </Pie>
-            <Tooltip />
-            <Legend />
+            <Tooltip 
+              formatter={(value: any) => {
+                if (selectedTier) {
+                  return [`${Number(value).toLocaleString()} STRX`, ''];
+                }
+                return [value, ''];
+              }}
+            />
+            <Legend verticalAlign="middle" align="right" layout="vertical" />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -1421,7 +1457,10 @@ function Leaderboard() {
         </div>
 
         {/* Add the pie chart here */}
-        <TierDistributionChart processedData={processedData} />
+        <TierDistributionChart 
+          processedData={processedData} 
+          selectedTier={selectedTier}
+        />
 
         {/* Staking Tiers Dashboard */}
         <div className="mb-8">
