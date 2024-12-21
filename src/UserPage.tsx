@@ -110,19 +110,27 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     }
   );
 
-  // Fetch user's transaction history
+  // Update the user's transaction history fetch
   const { data: actionsData } = useSWR<ActionResponse>(
     ['user_actions', username],
     () => {
       const baseUrl = 'https://proton.eosusa.io/v2/history/get_actions';
-      const params = new URLSearchParams({
-        limit: '100',
-        account: 'storexstake',
-        sort: 'desc',
-        'act.name': 'transfer'
-      });
       
-      return fetch(`${baseUrl}?${params}`).then(res => res.json());
+      // Create two promises for 'to' and 'from' transactions
+      const toPromise = fetch(`${baseUrl}?limit=50&account=storex&act.name=transfer&act.data.to=${username}`).then(res => res.json());
+      const fromPromise = fetch(`${baseUrl}?limit=50&account=storex&act.name=transfer&act.data.from=${username}`).then(res => res.json());
+      
+      // Combine and sort both results
+      return Promise.all([toPromise, fromPromise]).then(([toActions, fromActions]) => {
+        const combinedActions = [...(toActions.actions || []), ...(fromActions.actions || [])];
+        
+        // Sort by timestamp descending
+        combinedActions.sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+        
+        return { actions: combinedActions };
+      });
     },
     { refreshInterval: 30000 }
   );
