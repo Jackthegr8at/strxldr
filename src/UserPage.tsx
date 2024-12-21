@@ -107,7 +107,17 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         table: "prices",
         limit: 1
       })
-    }).then(res => res.json()),
+    })
+    .then(res => {
+      if (!res.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return res.json();
+    })
+    .then(data => {
+      console.log('Fetched Price Data:', data); // Log the fetched price data
+      return data;
+    }),
     { 
       refreshInterval: 120000,
       fallbackData: globalData.priceData
