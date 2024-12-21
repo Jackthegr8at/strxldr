@@ -4,7 +4,6 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import * as React from 'react';
 import { CubeTransparentIcon } from '@heroicons/react/24/outline';
-import { useParams } from 'react-router-dom';
 
 // Reuse types from index.tsx
 type StakeData = {
@@ -71,8 +70,7 @@ type UserPageProps = {
   };
 };
 
-const UserPage: React.FC<UserPageProps> = ({ onBack, userData, globalData }) => {
-  const { username } = useParams<{ username: string }>();
+const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d');
   const [transactionPage, setTransactionPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 10;
@@ -231,8 +229,6 @@ const UserPage: React.FC<UserPageProps> = ({ onBack, userData, globalData }) => 
     return userActions.slice(startIndex, endIndex);
   }, [userActions, transactionPage]);
 
-  const shareLink = `https://strxldr.vercel.app/userpage/${username}`;
-
   if (!userData) {
     return (
       <div className="min-h-screen bg-white p-4 md:p-8">
@@ -264,27 +260,26 @@ const UserPage: React.FC<UserPageProps> = ({ onBack, userData, globalData }) => 
           Back to Leaderboard
         </button>
 
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={() => navigator.clipboard.writeText(shareLink)}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Share this page
-          </button>
-        </div>
-
-        <div className="mb-8">
+        <div className="mb-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-purple-700 mb-2">
             {username}'s Staking Profile
           </h1>
-          <a 
-            href={`https://explorer.xprnetwork.org/account/${username}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-purple-600 hover:text-purple-800 hover:underline text-sm"
-          >
-            View on Explorer →
-          </a>
+          <div className="flex gap-2">
+            <button
+              onClick={() => window.location.href = `/userpage/${username}`}
+              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+            >
+              Share
+            </button>
+            <a 
+              href={`https://explorer.xprnetwork.org/account/${username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 text-sm"
+            >
+              View on Explorer →
+            </a>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
