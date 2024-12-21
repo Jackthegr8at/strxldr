@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
@@ -71,9 +71,11 @@ type UserPageProps = {
 };
 
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
+  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d');
   const [transactionPage, setTransactionPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 10;
 
+  // We don't need to fetch the full staking data since we have the user's data
   const { data: blockchainData } = useSWR<BlockchainResponse>(
     'blockchain_data',
     () => fetch('https://proton.eosusa.io/v1/chain/get_table_rows', {
@@ -112,6 +114,9 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     }
   );
 
+  // Log the priceData to check if it's being fetched correctly
+  console.log('Price Data:', priceData);
+
   // Update the user's transaction history fetch
   const { data: actionsData } = useSWR<ActionResponse>(
     ['user_actions', username],
@@ -144,7 +149,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         return {
           time: new Date(action.timestamp),
           amount,
-          usdValue: amount * strxPrice, // Calculate USD value
+          usdValue: amount * strxPrice,
           type: action.act.data.memo,
           trxId: action.trx_id
         };
@@ -152,13 +157,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       .sort((a, b) => b.time.getTime() - a.time.getTime());
   }, [actionsData, strxPrice]);
 
-  const paginatedTransactions = useMemo(() => {
-    const startIndex = (transactionPage - 1) * TRANSACTIONS_PER_PAGE;
-    const endIndex = startIndex + TRANSACTIONS_PER_PAGE;
-    return userActions.slice(startIndex, endIndex);
-  }, [userActions, transactionPage]);
-
-  // Add this function back to calculate rewards
   const calculateRewards = (stakedAmount: number) => {
     if (!blockchainData?.rows?.[0]) return null;
     
@@ -179,7 +177,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     };
   };
 
-  // Define stakingStats using useMemo
   const stakingStats = useMemo(() => {
     if (!blockchainData?.rows?.[0]) return null;
 
@@ -192,7 +189,31 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       percentageOfSupply,
       rewards: calculateRewards(userData.staked)
     };
-  }, [userData, blockchainData, strxPrice]);
+  }, [userData, blockchainData]);
+
+  const activityData = useMemo(() => {
+    if (!userActions.length) return [];
+
+    const now = new Date();
+    const timeRangeMap = {
+      '24h': 24 * 60 * 60 * 1000,
+      '7d': 7 * 24 * 60 * 60 * 1000,
+      '30d': 30 * 24 * 60 * 60 * 1000
+    };
+
+    return userActions
+      .filter(action => now.getTime() - action.time.getTime() <= timeRangeMap[timeRange])
+      .map(action => ({
+        time: action.time.toLocaleDateString(),
+        amount: action.type === 'add stake' ? action.amount : -action.amount
+      }));
+  }, [userActions, timeRange]);
+
+  const paginatedTransactions = useMemo(() => {
+    const startIndex = (transactionPage - 1) * TRANSACTIONS_PER_PAGE;
+    const endIndex = startIndex + TRANSACTIONS_PER_PAGE;
+    return userActions.slice(startIndex, endIndex);
+  }, [userActions, transactionPage]);
 
   if (!userData) {
     return (
@@ -277,6 +298,108 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
           </div>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Estimated Rewards</h2>
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm text-gray-500">Daily</div>
+                <div className="text-lg font-semibold text-purple-700">
+                  {stakingStats?.rewards?.daily.toFixed(4)} STRX
+                </div>
+                <div className="text-sm text-gray-500">
+                  ≈ ${stakingStats?.rewards?.dailyUsd.toFixed(2)}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Monthly</div>
+                <div className="text-lg font-semibold text-purple-700">
+                  {stakingStats?.rewards?.monthly.toFixed(4)} STRX
+                </div>
+                <div className="text-sm text-gray-500">
+                  ≈ ${stakingStats?.rewards?.monthlyUsd.toFixed(2)}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Yearly</div>
+                <div className="text-lg font-semibold text-purple-700">
+                  {stakingStats?.rewards?.yearly.toFixed(4)} STRX
+                </div>
+                <div className="text-sm text-gray-500">
+                  ≈ ${stakingStats?.rewards?.yearlyUsd.toFixed(2)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Supply Statistics</h2>
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm text-gray-500">% of Total Supply</div>
+                <div className="text-lg font-semibold text-purple-700">
+                  {stakingStats?.percentageOfSupply.toFixed(4)}%
+                </div>
+                <div className="text-sm text-gray-500">
+                  of 2B STRX
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Total Value</div>
+                <div className="text-lg font-semibold text-purple-700">
+                  ${((userData.staked + userData.unstaked) * strxPrice).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-800">Staking Activity</h2>
+            <div className="flex gap-2">
+              {(['24h', '7d', '30d'] as const).map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={`px-3 py-1 rounded-lg text-sm ${
+                    timeRange === range
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                  }`}
+                >
+                  {range}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <div className="h-64">
+              <ResponsiveContainer>
+                <LineChart data={activityData}>
+                  <XAxis dataKey="time" />
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value: number) => [
+                      `${Math.abs(value).toLocaleString()} STRX`,
+                      value > 0 ? 'Staked' : 'Unstaked'
+                    ]}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="amount" 
+                    stroke="#7C63CC"
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Transactions</h2>
           <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -352,4 +475,4 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   );
 };
 
-export default UserPage;
+export default UserPage; 
