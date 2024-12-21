@@ -105,7 +105,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         code: "strxoracle",
         scope: "strxoracle",
         table: "prices",
-        limit: 1
+        limit: 100
       })
     })
     .then(res => {
