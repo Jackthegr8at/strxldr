@@ -119,14 +119,11 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       const params = new URLSearchParams({
         limit: '50',
         account: username,
-        'act.account': 'storexstake'
+        'act.account': 'storex',
+        'act.name': 'transfer'
       });
       
-      return fetch(`${baseUrl}?${params}`)
-        .then(res => res.json())
-        .then(data => ({
-          actions: data.actions.filter((action: { act: { name: string } }) => action.act.name === 'transfer')
-        }));
+      return fetch(`${baseUrl}?${params}`).then(res => res.json());
     },
     { refreshInterval: 30000 }
   );
