@@ -1256,20 +1256,47 @@ function Leaderboard() {
     </div>
   );
 
-  // Add this state in the Leaderboard component
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  // Add this near the start of the Leaderboard component
+  const [selectedUser, setSelectedUser] = useState<string | null>(() => {
+    // Check URL parameters on component mount
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('user');
+  });
+
+  // Update the selectedUser handler
+  const handleUserSelect = (username: string) => {
+    setSelectedUser(username);
+    // Update URL without page reload
+    const newUrl = `${window.location.pathname}?user=${username}`;
+    window.history.pushState({ username }, '', newUrl);
+  };
+
+  // Add effect to handle browser back/forward
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const urlParams = new URLSearchParams(window.location.search);
+      setSelectedUser(urlParams.get('user'));
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Update the return statement at the start of the Leaderboard component
   if (selectedUser) {
     const userData = response?.data?.[selectedUser];
-    if (!userData) return null; // Or show an error message
+    if (!userData) return null;
 
     return (
       <UserPage 
         username={selectedUser} 
-        onBack={() => setSelectedUser(null)}
-        userData={userData}  // Pass the specific user data
-        globalData={{       // Pass the global data
+        onBack={() => {
+          setSelectedUser(null);
+          // Remove the query parameter when going back
+          window.history.pushState({}, '', window.location.pathname);
+        }}
+        userData={userData}
+        globalData={{
           blockchainData,
           priceData
         }}
@@ -1624,7 +1651,7 @@ function Leaderboard() {
                             {/* Username with top 3 medals */}
                             <div className="flex items-center gap-1">
                               <button 
-                                onClick={() => setSelectedUser(item.username)}
+                                onClick={() => handleUserSelect(item.username)}
                                 className="text-purple-600 hover:text-purple-800 hover:underline"
                               >
                                 {item.username}

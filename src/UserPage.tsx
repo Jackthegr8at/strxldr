@@ -266,7 +266,11 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
           </h1>
           <div className="flex gap-2">
             <button
-              onClick={() => window.location.href = `/userpage/${username}`}
+              onClick={() => {
+                const url = `${window.location.origin}?user=${username}`;
+                navigator.clipboard.writeText(url);
+                alert('URL copied to clipboard!');
+              }}
               className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
             >
               Share
