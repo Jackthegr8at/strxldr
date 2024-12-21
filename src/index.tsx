@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
-import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon, CubeTransparentIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -1607,24 +1607,38 @@ function Leaderboard() {
                       )}
                       {visibleColumns.username && (
                         <td className="px-6 py-4 text-sm text-gray-900">
-                          <a 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setSelectedUser(item.username);
-                              handleEasterEgg(null, item.username);
-                            }}
-                            href={`https://explorer.xprnetwork.org/account/${item.username}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-purple-600 hover:text-purple-800 hover:underline cursor-pointer flex items-center gap-2"
-                          >
-                            {item.username}
-                            {(currentPage === 1 && index < 3) && (
-                              <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                                {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
-                              </span>
-                            )}
-                          </a>
+                          <div className="flex items-center gap-2">
+                            {/* Tier emoji */}
+                            <span title={`${selectedTier?.name} Tier`}>
+                              {selectedTier?.emoji}
+                            </span>
+                            
+                            {/* Username with top 3 medals */}
+                            <div className="flex items-center gap-1">
+                              <button 
+                                onClick={() => setSearchTerm(item.username)}
+                                className="text-purple-600 hover:text-purple-800 hover:underline"
+                              >
+                                {item.username}
+                              </button>
+                              {(currentPage === 1 && index < 3) && (
+                                <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
+                                  {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Blockchain explorer link */}
+                            <a 
+                              href={`https://explorer.xprnetwork.org/account/${item.username}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-gray-400 hover:text-purple-600 transition-colors"
+                              title="View on Blockchain Explorer"
+                            >
+                              <CubeTransparentIcon className="h-4 w-4" />
+                            </a>
+                          </div>
                         </td>
                       )}
                       {visibleColumns.staked && (
