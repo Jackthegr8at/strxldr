@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import UserPage from './userpage';
+import UserPage from './UserPage';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
