@@ -1,9 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
+import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import * as React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { UserPage } from './UserPage';
-import { Leaderboard } from './Leaderboard';
-import './index.css';
+import { PriceResponse, BlockchainResponse } from './utils';
 
 function App() {
   // Fetch price data
