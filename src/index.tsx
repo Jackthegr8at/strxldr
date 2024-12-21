@@ -1282,14 +1282,16 @@ function Leaderboard() {
 
         {/* Last update info with info button */}
         {response?.lastModified && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4 italic">
-            <span>Last updated {formatTimeDiff(response.lastModified)}</span>
+          <div className="flex justify-between items-center text-sm mb-4">
+            <span className="text-gray-500 italic">
+              Last updated {formatTimeDiff(response.lastModified)}
+            </span>
             <button
               onClick={() => setIsInfoModalOpen(true)}
-              className="p-1 text-gray-500 hover:text-purple-600 transition-colors"
+              className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
               aria-label="Information"
             >
-              <QuestionMarkCircleIcon className="h-4 w-4" />
+              <QuestionMarkCircleIcon className="h-6 w-6" />
             </button>
           </div>
         )}
