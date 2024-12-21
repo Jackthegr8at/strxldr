@@ -71,6 +71,8 @@ type UserPageProps = {
 
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d');
+  const [transactionPage, setTransactionPage] = useState(1);
+  const TRANSACTIONS_PER_PAGE = 10;
 
   // We don't need to fetch the full staking data since we have the user's data
   const { data: blockchainData } = useSWR<BlockchainResponse>(
@@ -198,6 +200,12 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         amount: action.type === 'add stake' ? action.amount : -action.amount
       }));
   }, [userActions, timeRange]);
+
+  const paginatedTransactions = useMemo(() => {
+    const startIndex = (transactionPage - 1) * TRANSACTIONS_PER_PAGE;
+    const endIndex = startIndex + TRANSACTIONS_PER_PAGE;
+    return userActions.slice(startIndex, endIndex);
+  }, [userActions, transactionPage]);
 
   if (!userData) {
     return (
@@ -397,7 +405,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {userActions.slice(0, 10).map((action, index) => (
+                {paginatedTransactions.map((action, index) => (
                   <tr key={index} className="hover:bg-purple-50">
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {action.time.toLocaleString()}
@@ -428,6 +436,30 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 ))}
               </tbody>
             </table>
+            
+            <div className="px-6 py-4 border-t border-gray-200">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-500">
+                  Showing {((transactionPage - 1) * TRANSACTIONS_PER_PAGE) + 1} to {Math.min(transactionPage * TRANSACTIONS_PER_PAGE, userActions.length)} of {userActions.length} transactions
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setTransactionPage(p => Math.max(1, p - 1))}
+                    disabled={transactionPage === 1}
+                    className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setTransactionPage(p => p + 1)}
+                    disabled={transactionPage * TRANSACTIONS_PER_PAGE >= userActions.length}
+                    className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
