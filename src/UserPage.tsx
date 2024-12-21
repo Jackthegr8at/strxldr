@@ -58,26 +58,20 @@ const TOTAL_SUPPLY = 2000000000;
 type UserPageProps = {
   username: string;
   onBack: () => void;
-  initialData: {
-    stakingData?: { data: StakeData };
+  userData: {
+    staked: number;
+    unstaked: number;
+  };
+  globalData: {
     blockchainData?: BlockchainResponse;
     priceData?: PriceResponse;
   };
 };
 
-const UserPage: React.FC<UserPageProps> = ({ username, onBack, initialData }) => {
+const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d');
 
-  // Update the SWR hooks to use initialData
-  const { data: stakingData } = useSWR<{ data: StakeData }>(
-    'https://nfts.jessytremblay.com/STRX/stakes.json',
-    (url) => fetch(url).then(res => res.json()),
-    { 
-      refreshInterval: 120000,
-      fallbackData: initialData.stakingData // Use initial data while loading
-    }
-  );
-
+  // We don't need to fetch the full staking data since we have the user's data
   const { data: blockchainData } = useSWR<BlockchainResponse>(
     'blockchain_data',
     () => fetch('https://proton.eosusa.io/v1/chain/get_table_rows', {
@@ -93,7 +87,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, initialData }) =>
     }).then(res => res.json()),
     { 
       refreshInterval: 60000,
-      fallbackData: initialData.blockchainData // Use initial data while loading
+      fallbackData: globalData.blockchainData
     }
   );
 
@@ -112,7 +106,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, initialData }) =>
     }).then(res => res.json()),
     { 
       refreshInterval: 120000,
-      fallbackData: initialData.priceData // Use initial data while loading
+      fallbackData: globalData.priceData
     }
   );
 
@@ -138,11 +132,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, initialData }) =>
     const strxRow = priceData.rows.find(row => row.sym === '4,STRX');
     return strxRow ? parseFloat(strxRow.quantity.split(' ')[0]) : 0;
   }, [priceData]);
-
-  const userData = useMemo(() => {
-    if (!stakingData?.data || !username) return null;
-    return stakingData.data[username];
-  }, [stakingData, username]);
 
   const userActions = useMemo(() => {
     if (!actionsData?.actions) return [];
@@ -181,7 +170,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, initialData }) =>
   };
 
   const stakingStats = useMemo(() => {
-    if (!userData || !blockchainData?.rows?.[0]) return null;
+    if (!blockchainData?.rows?.[0]) return null;
 
     const totalStaked = parseFloat(blockchainData.rows[0].stakes.split(' ')[0]);
     const percentageOfPool = (userData.staked / totalStaked) * 100;

@@ -1262,12 +1262,14 @@ function Leaderboard() {
   // Update the return statement at the start of the Leaderboard component
   if (selectedUser) {
     const userData = response?.data?.[selectedUser];
+    if (!userData) return null; // Or show an error message
+
     return (
       <UserPage 
         username={selectedUser} 
         onBack={() => setSelectedUser(null)}
-        initialData={{
-          stakingData: response?.data ? { data: response.data } : undefined,
+        userData={userData}  // Pass the specific user data
+        globalData={{       // Pass the global data
           blockchainData,
           priceData
         }}
