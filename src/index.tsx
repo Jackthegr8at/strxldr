@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
-import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon, CubeTransparentIcon } from '@heroicons/react/24/outline';
+import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon, CubeTransparentIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -1284,15 +1284,50 @@ function Leaderboard() {
 
   // Update the return statement at the start of the Leaderboard component
   if (selectedUser) {
+    // Add loading state check
+    if (isLoading || !response) {
+      return (
+        <div className="min-h-screen bg-white p-4 md:p-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-700 border-t-transparent"></div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     const userData = response?.data?.[selectedUser];
-    if (!userData) return null;
+    
+    // Show not found state instead of returning null
+    if (!userData) {
+      return (
+        <div className="min-h-screen bg-white p-4 md:p-8">
+          <div className="max-w-4xl mx-auto">
+            <button
+              onClick={() => {
+                setSelectedUser(null);
+                window.history.pushState({}, '', window.location.pathname);
+              }}
+              className="mb-4 flex items-center gap-2 text-purple-600 hover:text-purple-800"
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+              Back to Leaderboard
+            </button>
+            <div className="text-center py-12">
+              <h2 className="text-2xl font-bold text-gray-800">User not found</h2>
+              <p className="text-gray-600 mt-2">No staking data available for {selectedUser}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <UserPage 
         username={selectedUser} 
         onBack={() => {
           setSelectedUser(null);
-          // Remove the query parameter when going back
           window.history.pushState({}, '', window.location.pathname);
         }}
         userData={userData}

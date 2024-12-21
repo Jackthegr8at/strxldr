@@ -36,5 +36,5 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16"
   },
-  "homepage": "."
+  "homepage": "/"
 }

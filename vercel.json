@@ -2,12 +2,20 @@
   "version": 2,
   "routes": [
     {
-      "src": "/userpage/(.*)",
-      "dest": "/"
+      "src": "^/static/(.*)",
+      "dest": "/static/$1"
     },
     {
-      "src": "/(.*)",
-      "dest": "/"
+      "src": "^/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "^/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": ".*",
+      "dest": "/index.html"
     }
   ]
 }
