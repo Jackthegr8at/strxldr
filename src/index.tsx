@@ -1643,25 +1643,37 @@ function Leaderboard() {
                 <thead className="bg-purple-50">
                   <tr>
                     {visibleColumns.rank && (
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Rank</th>
+                      <th className="px-2 py-3 text-left text-sm font-semibold text-purple-700 w-12">
+                        Rank
+                      </th>
                     )}
                     {visibleColumns.username && (
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700 w-48">
+                        Username
+                      </th>
                     )}
                     {visibleColumns.staked && (
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Staked Amount</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
+                        Staked Amount
+                      </th>
                     )}
                     {visibleColumns.unstaked && (
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Unstaked Amount</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
+                        Unstaked Amount
+                      </th>
                     )}
                     {visibleColumns.total && (
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Total Amount</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
+                        Total Amount
+                      </th>
                     )}
                     {visibleColumns.usdValue && (
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
+                        USD Value
+                      </th>
                     )}
                     {visibleColumns.rewards && (
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700 min-w-[200px]">
                         Estimated Rewards
                       </th>
                     )}
@@ -1671,12 +1683,12 @@ function Leaderboard() {
                   {currentData.map((item, index) => (
                     <tr key={item.username} className="hover:bg-purple-50">
                       {visibleColumns.rank && (
-                        <td className="px-6 py-4 text-sm text-gray-900">
+                        <td className="px-2 py-4 text-sm text-gray-900 w-12">
                           {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                         </td>
                       )}
                       {visibleColumns.username && (
-                        <td className="px-6 py-4 text-sm text-gray-900">
+                        <td className="px-4 py-4 text-sm text-gray-900 w-48">
                           <div className="flex items-center gap-2">
                             {/* Tier emoji */}
                             <span title={`${selectedTier?.name} Tier`}>
@@ -1783,10 +1795,7 @@ function Leaderboard() {
                         </td>
                       )}
                       {visibleColumns.rewards && (
-                        <td 
-                          className="px-6 py-4 text-sm cursor-pointer hover:text-purple-600"
-                          onClick={() => toggleAmountDisplay(item.username, 'rewards')}
-                        >
+                        <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[200px]">
                           {(() => {
                             const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
                               ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
