@@ -3,6 +3,7 @@ import useSWR from 'swr';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import * as React from 'react';
+import { CubeTransparentIcon } from '@heroicons/react/24/outline';
 
 // Reuse types from index.tsx
 type StakeData = {
@@ -140,14 +141,18 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     if (!actionsData?.actions) return [];
     
     return actionsData.actions
-      .map(action => ({
-        time: new Date(action.timestamp),
-        amount: parseFloat(action.act.data.quantity.split(' ')[0]),
-        type: action.act.data.memo,
-        trxId: action.trx_id
-      }))
+      .map(action => {
+        const amount = parseFloat(action.act.data.quantity.split(' ')[0]);
+        return {
+          time: new Date(action.timestamp),
+          amount,
+          usdValue: amount * strxPrice,
+          type: action.act.data.memo,
+          trxId: action.trx_id
+        };
+      })
       .sort((a, b) => b.time.getTime() - a.time.getTime());
-  }, [actionsData]);
+  }, [actionsData, strxPrice]);
 
   const calculateRewards = (stakedAmount: number) => {
     if (!blockchainData?.rows?.[0]) return null;
@@ -401,6 +406,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                   <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Type</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Transaction</th>
                 </tr>
               </thead>
@@ -411,16 +417,15 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                       {action.time.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-sm">
-                      <span className={
-                        action.type === 'add stake'
-                          ? 'text-green-600'
-                          : 'text-red-600'
-                      }>
+                      <span className={action.type === 'add stake' ? 'text-green-600' : 'text-red-600'}>
                         {action.type === 'add stake' ? 'Stake' : 'Unstake'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {action.amount.toLocaleString()} STRX
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      ${action.usdValue.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <a
@@ -429,7 +434,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                         rel="noopener noreferrer"
                         className="text-purple-600 hover:text-purple-800 hover:underline"
                       >
-                        View
+                        <CubeTransparentIcon className="h-4 w-4" />
                       </a>
                     </td>
                   </tr>
