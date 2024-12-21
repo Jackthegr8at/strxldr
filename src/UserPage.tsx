@@ -32,6 +32,7 @@ type ActionResponse = {
     "@timestamp": string;
     timestamp: string;
     act: {
+      name: string;
       data: {
         from: string;
         to: string;
@@ -115,22 +116,17 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     ['user_actions', username],
     () => {
       const baseUrl = 'https://proton.eosusa.io/v2/history/get_actions';
-      
-      // Create two promises for 'to' and 'from' transactions
-      const toPromise = fetch(`${baseUrl}?limit=50&account=storex&act.name=transfer&act.data.to=${username}`).then(res => res.json());
-      const fromPromise = fetch(`${baseUrl}?limit=50&account=storex&act.name=transfer&act.data.from=${username}`).then(res => res.json());
-      
-      // Combine and sort both results
-      return Promise.all([toPromise, fromPromise]).then(([toActions, fromActions]) => {
-        const combinedActions = [...(toActions.actions || []), ...(fromActions.actions || [])];
-        
-        // Sort by timestamp descending
-        combinedActions.sort((a, b) => 
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        );
-        
-        return { actions: combinedActions };
+      const params = new URLSearchParams({
+        limit: '50',
+        account: username,
+        'act.account': 'storexstake'
       });
+      
+      return fetch(`${baseUrl}?${params}`)
+        .then(res => res.json())
+        .then(data => ({
+          actions: data.actions.filter((action: { act: { name: string } }) => action.act.name === 'transfer')
+        }));
     },
     { refreshInterval: 30000 }
   );
@@ -145,17 +141,14 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     if (!actionsData?.actions) return [];
     
     return actionsData.actions
-      .filter(action => 
-        action.act.data.from === username || 
-        action.act.data.to === username
-      )
       .map(action => ({
         time: new Date(action.timestamp),
         amount: parseFloat(action.act.data.quantity.split(' ')[0]),
         type: action.act.data.memo,
         trxId: action.trx_id
-      }));
-  }, [actionsData, username]);
+      }))
+      .sort((a, b) => b.time.getTime() - a.time.getTime());
+  }, [actionsData]);
 
   const calculateRewards = (stakedAmount: number) => {
     if (!blockchainData?.rows?.[0]) return null;
