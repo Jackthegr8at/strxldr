@@ -1258,20 +1258,34 @@ function Leaderboard() {
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col items-center mb-6">
           <h1 className={`text-3xl font-bold text-purple-700 ${
             isEasterEggActive ? 'rainbow-text' : ''
           }`}>
             {pageTitle}
           </h1>
-          <button
-            onClick={() => setIsInfoModalOpen(true)}
-            className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
-            aria-label="Information"
+          
+          {/* Add staking link button */}
+          <a 
+            href="https://storex.io/account/staking"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 px-6 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors duration-200 flex items-center gap-2"
           >
-            <QuestionMarkCircleIcon className="h-6 w-6" />
-          </button>
+            <span>Stake STRX</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
         </div>
+
+        <button
+          onClick={() => setIsInfoModalOpen(true)}
+          className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
+          aria-label="Information"
+        >
+          <QuestionMarkCircleIcon className="h-6 w-6" />
+        </button>
 
         {/* Add the modal component */}
         <InfoModal 
