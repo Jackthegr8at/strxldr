@@ -144,7 +144,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         return {
           time: new Date(action.timestamp),
           amount,
-          usdValue: amount * strxPrice,
+          usdValue: amount * strxPrice, // Calculate USD value
           type: action.act.data.memo,
           trxId: action.trx_id
         };
@@ -352,4 +352,4 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   );
 };
 
-export default UserPage; 
+export default UserPage;
