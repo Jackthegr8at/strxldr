@@ -1261,10 +1261,16 @@ function Leaderboard() {
 
   // Update the return statement at the start of the Leaderboard component
   if (selectedUser) {
+    const userData = response?.data?.[selectedUser];
     return (
       <UserPage 
         username={selectedUser} 
-        onBack={() => setSelectedUser(null)} 
+        onBack={() => setSelectedUser(null)}
+        initialData={{
+          stakingData: response?.data ? { data: response.data } : undefined,
+          blockchainData,
+          priceData
+        }}
       />
     );
   }

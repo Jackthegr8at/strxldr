@@ -54,17 +54,30 @@ type PriceResponse = {
 
 const TOTAL_SUPPLY = 2000000000;
 
-const UserPage: React.FC<{ username: string; onBack: () => void }> = ({ username, onBack }) => {
+// Update the component props to include initial data
+type UserPageProps = {
+  username: string;
+  onBack: () => void;
+  initialData: {
+    stakingData?: { data: StakeData };
+    blockchainData?: BlockchainResponse;
+    priceData?: PriceResponse;
+  };
+};
+
+const UserPage: React.FC<UserPageProps> = ({ username, onBack, initialData }) => {
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d');
 
-  // Fetch user's staking data
+  // Update the SWR hooks to use initialData
   const { data: stakingData } = useSWR<{ data: StakeData }>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
     (url) => fetch(url).then(res => res.json()),
-    { refreshInterval: 120000 }
+    { 
+      refreshInterval: 120000,
+      fallbackData: initialData.stakingData // Use initial data while loading
+    }
   );
 
-  // Fetch blockchain data
   const { data: blockchainData } = useSWR<BlockchainResponse>(
     'blockchain_data',
     () => fetch('https://proton.eosusa.io/v1/chain/get_table_rows', {
@@ -78,10 +91,12 @@ const UserPage: React.FC<{ username: string; onBack: () => void }> = ({ username
         limit: 10
       })
     }).then(res => res.json()),
-    { refreshInterval: 60000 }
+    { 
+      refreshInterval: 60000,
+      fallbackData: initialData.blockchainData // Use initial data while loading
+    }
   );
 
-  // Fetch price data
   const { data: priceData } = useSWR<PriceResponse>(
     'strx_price',
     () => fetch('https://proton.eosusa.io/v1/chain/get_table_rows', {
@@ -95,7 +110,10 @@ const UserPage: React.FC<{ username: string; onBack: () => void }> = ({ username
         limit: 1
       })
     }).then(res => res.json()),
-    { refreshInterval: 120000 }
+    { 
+      refreshInterval: 120000,
+      fallbackData: initialData.priceData // Use initial data while loading
+    }
   );
 
   // Fetch user's transaction history
