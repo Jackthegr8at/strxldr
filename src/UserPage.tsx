@@ -154,6 +154,10 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     if (!actionsData?.actions) return [];
     
     return actionsData.actions
+      .filter(action => {
+        const memo = action.act.data.memo;
+        return memo === "add stake" || memo === "withdraw stake" || memo === "claim staking rewards";
+      })
       .map(action => {
         const amount = parseFloat(action.act.data.quantity.split(' ')[0]);
         return {
@@ -430,8 +434,16 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                       {action.time.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-sm">
-                      <span className={action.type === 'add stake' ? 'text-green-600' : 'text-red-600'}>
-                        {action.type === 'add stake' ? 'Stake' : 'Unstake'}
+                      <span className={
+                        action.type === 'add stake' ? 'text-green-600' :
+                        action.type === 'withdraw stake' ? 'text-red-600' :
+                        action.type === 'claim staking rewards' ? 'text-blue-600' :
+                        'text-gray-600'
+                      }>
+                        {action.type === 'add stake' ? 'Stake' :
+                         action.type === 'withdraw stake' ? 'Unstake' :
+                         action.type === 'claim staking rewards' ? 'Claim' : 
+                         'Unknown'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
