@@ -70,4 +70,11 @@ export const calculateRewards = (
     monthlyUsd: monthlyReward * strxPrice,
     yearlyUsd: yearlyReward * strxPrice,
   };
-}; 
+};
+
+export type PriceResponse = {
+  rows: [{
+    sym: string;
+    quantity: string;
+  }];
+};
