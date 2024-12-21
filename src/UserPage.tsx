@@ -4,6 +4,7 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import * as React from 'react';
 import { CubeTransparentIcon } from '@heroicons/react/24/outline';
+import { useParams } from 'react-router-dom';
 
 // Reuse types from index.tsx
 type StakeData = {
@@ -70,7 +71,8 @@ type UserPageProps = {
   };
 };
 
-const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
+const UserPage: React.FC<UserPageProps> = ({ onBack, userData, globalData }) => {
+  const { username } = useParams<{ username: string }>();
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d');
   const [transactionPage, setTransactionPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 10;
@@ -229,6 +231,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     return userActions.slice(startIndex, endIndex);
   }, [userActions, transactionPage]);
 
+  const shareLink = `https://strxldr.vercel.app/userpage/${username}`;
+
   if (!userData) {
     return (
       <div className="min-h-screen bg-white p-4 md:p-8">
@@ -259,6 +263,15 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
           <ArrowLeftIcon className="h-5 w-5" />
           Back to Leaderboard
         </button>
+
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => navigator.clipboard.writeText(shareLink)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Share this page
+          </button>
+        </div>
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-purple-700 mb-2">
