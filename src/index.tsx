@@ -1613,10 +1613,10 @@ function Leaderboard() {
                               {selectedTier?.emoji}
                             </span>
                             
-                            {/* Username with top 3 medals */}
+                            {/* Username with top 3 medals - now navigates to UserPage */}
                             <div className="flex items-center gap-1">
                               <button 
-                                onClick={() => setSearchTerm(item.username)}
+                                onClick={() => setSelectedUser(item.username)}
                                 className="text-purple-600 hover:text-purple-800 hover:underline"
                               >
                                 {item.username}
