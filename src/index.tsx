@@ -1266,42 +1266,39 @@ function Leaderboard() {
             {pageTitle}
           </h1>
           
-          {/* Buttons container on the right */}
-          <div className="flex items-center gap-4">
+          {/* Stake button on the right */}
+          <a 
+            href="https://storex.io/account/staking"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors duration-200 flex items-center gap-2"
+          >
+            <span>Stake STRX</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        </div>
+
+        {/* Last update info with info button */}
+        {response?.lastModified && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-4 italic">
+            <span>Last updated {formatTimeDiff(response.lastModified)}</span>
             <button
               onClick={() => setIsInfoModalOpen(true)}
-              className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
+              className="p-1 text-gray-500 hover:text-purple-600 transition-colors"
               aria-label="Information"
             >
-              <QuestionMarkCircleIcon className="h-6 w-6" />
+              <QuestionMarkCircleIcon className="h-4 w-4" />
             </button>
-            
-            <a 
-              href="https://storex.io/account/staking"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors duration-200 flex items-center gap-2"
-            >
-              <span>Stake STRX</span>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
           </div>
-        </div>
+        )}
 
         {/* Add the modal component */}
         <InfoModal 
           isOpen={isInfoModalOpen} 
           onClose={() => setIsInfoModalOpen(false)} 
         />
-
-        {/* Add the last update time */}
-        {response?.lastModified && (
-          <div className="text-sm text-gray-500 mb-4 italic">
-            Last updated {formatTimeDiff(response.lastModified)}
-          </div>
-        )}
 
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
