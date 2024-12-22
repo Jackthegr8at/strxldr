@@ -838,6 +838,22 @@ const getUserTier = (stakedAmount: number): StakingTier => {
   }) || STAKING_TIERS[STAKING_TIERS.length - 1]; // Default to lowest tier
 };
 
+// Add this helper function
+export const calculateDaysUntilEmpty = (rewardsPool: number, totalStaked: number, rewardsPerSec: number) => {
+  let remainingRewards = rewardsPool;
+  let currentStaked = totalStaked;
+  let days = 0;
+  
+  while (remainingRewards > 0 && days < 3650) { // Cap at 10 years
+    const dailyRewards = rewardsPerSec * 86400 * (currentStaked / totalStaked);
+    remainingRewards -= dailyRewards;
+    currentStaked += dailyRewards; // Compound effect
+    days++;
+  }
+  
+  return days;
+};
+
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {

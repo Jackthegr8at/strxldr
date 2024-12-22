@@ -4,7 +4,7 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import * as React from 'react';
 import { CubeTransparentIcon } from '@heroicons/react/24/outline';
-import { STAKING_TIERS, type StakingTier } from './index';
+import { STAKING_TIERS, type StakingTier, calculateDaysUntilEmpty } from './index';
 
 // Reuse types from index.tsx
 type StakeData = {
@@ -618,6 +618,15 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                           ? parseFloat(rewardsPoolData[0]).toLocaleString() 
                           : '...'} STRX
                       </span>
+                      {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
+                        <span className="text-gray-500">
+                          {' '}(~{calculateDaysUntilEmpty(
+                            parseFloat(rewardsPoolData[0]),
+                            parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
+                            parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                          ).toLocaleString()} days until empty)
+                        </span>
+                      )}
                     </p>
                     <p>
                       Projections may vary based on changes in reward rates and available rewards.
