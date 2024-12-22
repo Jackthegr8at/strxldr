@@ -533,14 +533,7 @@ const NewStakersPanel: React.FC<{
                       {stakerDate.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      <a 
-                        href={`https://explorer.xprnetwork.org/account/${staker.username}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-purple-600 hover:text-purple-800 hover:underline"
-                      >
-                        {staker.username}
-                      </a>
+                      <UsernameLink username={staker.username} />
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {staker.total_staked.toLocaleString(undefined, {
@@ -677,27 +670,7 @@ const TierMilestoneTracker: React.FC<{
               {milestones.slice(0, 3).map((milestone, index) => (
                 <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
                   <div className="flex justify-between items-start mb-2">
-                    <a 
-                      href={`https://explorer.xprnetwork.org/account/${milestone.username}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-purple-600 hover:text-purple-800 hover:underline flex items-center gap-2"
-                    >
-                      {milestone.username}
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setSearchTerm(milestone.username);
-                          const searchInput = document.querySelector('input[type="text"]');
-                          if (searchInput) {
-                            searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          }
-                        }}
-                        className="text-purple-600 hover:text-purple-800"
-                      >
-                        <MagnifyingGlassIcon className="h-4 w-4" />
-                      </button>
-                    </a>
+                    <UsernameLink username={milestone.username} />
                   </div>
 
                   <div className="flex items-center gap-2 mb-2">
@@ -738,12 +711,7 @@ const TierMilestoneTracker: React.FC<{
                       {milestones.slice(3).map((milestone, index) => (
                         <tr key={index} className="hover:bg-purple-50">
                           <td className="px-4 py-2 text-sm">
-                            <a 
-                              href={`https://explorer.xprnetwork.org/account/${milestone.username}`}
-                              className="text-purple-600 hover:text-purple-800 hover:underline"
-                            >
-                              {milestone.username}
-                            </a>
+                            <UsernameLink username={milestone.username} />
                           </td>
                           <td className="px-4 py-2 text-sm text-center">
                             <span className="text-lg">
@@ -770,27 +738,7 @@ const TierMilestoneTracker: React.FC<{
               {milestones.map((milestone, index) => (
                 <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
                   <div className="flex justify-between items-start mb-2">
-                    <a 
-                      href={`https://explorer.xprnetwork.org/account/${milestone.username}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-purple-600 hover:text-purple-800 hover:underline flex items-center gap-2"
-                    >
-                      {milestone.username}
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setSearchTerm(milestone.username);
-                          const searchInput = document.querySelector('input[type="text"]');
-                          if (searchInput) {
-                            searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          }
-                        }}
-                        className="text-purple-600 hover:text-purple-800"
-                      >
-                        <MagnifyingGlassIcon className="h-4 w-4" />
-                      </button>
-                    </a>
+                    <UsernameLink username={milestone.username} />
                   </div>
 
                   <div className="flex items-center gap-2 mb-2">
@@ -855,6 +803,33 @@ const calculateRewards = (
     yearlyUsd: yearlyReward * strxPrice,
   };
 };
+
+// Add this near your other component definitions
+const UsernameLink: React.FC<{
+  username: string;
+  showExplorer?: boolean;
+  className?: string;
+}> = ({ username, showExplorer = true, className = "" }) => (
+  <div className="flex items-center gap-1">
+    <button 
+      onClick={() => handleUserSelect(username)}
+      className={`text-purple-600 hover:text-purple-800 hover:underline ${className}`}
+    >
+      {username}
+    </button>
+    {showExplorer && (
+      <a 
+        href={`https://explorer.xprnetwork.org/account/${username}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-gray-400 hover:text-purple-600 transition-colors"
+        title="View on Blockchain Explorer"
+      >
+        <CubeTransparentIcon className="h-4 w-4" />
+      </a>
+    )}
+  </div>
+);
 
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
@@ -1648,7 +1623,7 @@ function Leaderboard() {
                       </th>
                     )}
                     {visibleColumns.username && (
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700 w-48">
+                      <th className="px-2 py-3 text-left text-sm font-semibold text-purple-700 w-40">
                         Username
                       </th>
                     )}
@@ -1684,33 +1659,28 @@ function Leaderboard() {
                     <tr key={item.username} className="hover:bg-purple-50">
                       {visibleColumns.rank && (
                         <td className="px-2 py-4 text-sm text-gray-900 w-12">
-                          {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                          <div className="flex items-center gap-1">
+                            {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                            {(currentPage === 1 && index < 3) && (
+                              <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
+                                {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                              </span>
+                            )}
+                          </div>
                         </td>
                       )}
                       {visibleColumns.username && (
-                        <td className="px-4 py-4 text-sm text-gray-900 w-48">
-                          <div className="flex items-center gap-2">
-                            {/* Tier emoji */}
+                        <td className="px-2 py-4 text-sm text-gray-900 w-40">
+                          <div className="flex items-center gap-1">
                             <span title={`${selectedTier?.name} Tier`}>
                               {selectedTier?.emoji}
                             </span>
-                            
-                            {/* Username with top 3 medals */}
-                            <div className="flex items-center gap-1">
-                              <button 
-                                onClick={() => handleUserSelect(item.username)}
-                                className="text-purple-600 hover:text-purple-800 hover:underline"
-                              >
-                                {item.username}
-                              </button>
-                              {(currentPage === 1 && index < 3) && (
-                                <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                                  {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
-                                </span>
-                              )}
-                            </div>
-                            
-                            {/* Blockchain explorer link */}
+                            <button 
+                              onClick={() => handleUserSelect(item.username)}
+                              className="text-purple-600 hover:text-purple-800 hover:underline"
+                            >
+                              {item.username}
+                            </button>
                             <a 
                               href={`https://explorer.xprnetwork.org/account/${item.username}`}
                               target="_blank"
@@ -1795,40 +1765,24 @@ function Leaderboard() {
                         </td>
                       )}
                       {visibleColumns.rewards && (
-                        <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[200px]">
-                          {(() => {
-                            const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
-                              ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
-                              : 0;
-                            
-                            const rewards = calculateRewards(
-                              item.staked, 
-                              rewardsPerSec, 
-                              strxPrice,
-                              blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
-                            );
-                            const isUsd = amountDisplays[`${item.username}-rewards`] === 'usd';
-
-                            return (
-                              <div className="flex flex-col">
-                                <span>
-                                  Daily: {isUsd 
-                                    ? `$${rewards.dailyUsd.toFixed(2)}` 
-                                    : `${rewards.daily.toFixed(4)}`}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Monthly: {isUsd 
-                                    ? `$${rewards.monthlyUsd.toFixed(2)}` 
-                                    : `${rewards.monthly.toFixed(4)}`}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Yearly: {isUsd 
-                                    ? `$${rewards.yearlyUsd.toFixed(2)}` 
-                                    : `${rewards.yearly.toFixed(4)}`}
-                                </span>
-                              </div>
-                            );
-                          })()}
+                        <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[220px]">
+                          <div className="flex flex-col items-start">
+                            <span>
+                              Daily: {isUsd 
+                                ? `$${rewards.dailyUsd.toFixed(2)}` 
+                                : `${rewards.daily.toFixed(4)}`}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              Monthly: {isUsd 
+                                ? `$${rewards.monthlyUsd.toFixed(2)}` 
+                                : `${rewards.monthly.toFixed(4)}`}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              Yearly: {isUsd 
+                                ? `$${rewards.yearlyUsd.toFixed(2)}` 
+                                : `${rewards.yearly.toFixed(4)}`}
+                            </span>
+                          </div>
                         </td>
                       )}
                     </tr>
