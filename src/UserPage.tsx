@@ -590,23 +590,75 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
               {tierAnalysis && (
                 <div className="mt-4 p-3 bg-purple-50 rounded-lg">
                   <h4 className="text-sm font-semibold text-purple-700 mb-2">Time to Next Tier Analysis</h4>
-                  <div className="space-y-2">
-                    {Object.entries(tierAnalysis.scenarios).map(([strategy, days]) => {
-                      const targetDate = new Date();
-                      targetDate.setDate(targetDate.getDate() + Math.ceil(days));
-                      
-                      return (
-                        <p key={strategy} className="text-sm text-gray-600">
-                          <span className="font-medium text-purple-700">
-                            {strategy === 'noCompound' ? 'Without compounding: ' :
-                             strategy === 'daily' ? 'Daily compound: ' :
-                             strategy === 'monthly' ? 'Monthly compound: ' : 'Annual compound: '}
-                          </span>
-                          ~{Math.ceil(days)} days ({targetDate.toLocaleDateString()})
-                        </p>
-                      );
-                    })}
-                  </div>
+                  
+                  {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (() => {
+                    const daysUntilEmpty = calculateDaysUntilEmpty(
+                      parseFloat(rewardsPoolData[0]),
+                      parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
+                      parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                    );
+
+                    const possibleScenarios: Array<[string, number]> = [];
+                    const impossibleScenarios: Array<[string, number]> = [];
+
+                    Object.entries(tierAnalysis.scenarios).forEach(([strategy, days]) => {
+                      if (days <= daysUntilEmpty) {
+                        possibleScenarios.push([strategy, days]);
+                      } else {
+                        impossibleScenarios.push([strategy, days]);
+                      }
+                    });
+
+                    return (
+                      <>
+                        {possibleScenarios.length > 0 && (
+                          <div className="mb-4">
+                            <div className="text-sm text-green-700 mb-2">Possible with current reward rates:</div>
+                            {possibleScenarios.map(([strategy, days]) => {
+                              const targetDate = new Date();
+                              targetDate.setDate(targetDate.getDate() + Math.ceil(days));
+                              
+                              return (
+                                <p key={strategy} className="text-sm text-gray-600 ml-2">
+                                  <span className="font-medium text-purple-700">
+                                    {strategy === 'noCompound' ? 'Without compounding: ' :
+                                     strategy === 'daily' ? 'Daily compound: ' :
+                                     strategy === 'monthly' ? 'Monthly compound: ' : 'Annual compound: '}
+                                  </span>
+                                  ~{Math.ceil(days)} days ({targetDate.toLocaleDateString()})
+                                </p>
+                              );
+                            })}
+                          </div>
+                        )}
+                        
+                        {impossibleScenarios.length > 0 && (
+                          <div>
+                            <div className="text-sm text-red-700 mb-2">Not possible with current reward rates:</div>
+                            {impossibleScenarios.map(([strategy, days]) => (
+                              <p key={strategy} className="text-sm text-gray-600 ml-2">
+                                <span className="font-medium text-purple-700">
+                                  {strategy === 'noCompound' ? 'Without compounding: ' :
+                                   strategy === 'daily' ? 'Daily compound: ' :
+                                   strategy === 'monthly' ? 'Monthly compound: ' : 'Annual compound: '}
+                                </span>
+                                ~{Math.ceil(days)} days (exceeds pool duration)
+                              </p>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="mt-4 text-sm text-gray-600">
+                          <p className="italic">
+                            Note: Reward pool will be depleted in approximately {Math.ceil(daysUntilEmpty)} days at current rates. 
+                            {impossibleScenarios.length > 0 && 
+                              " Some scenarios may become possible if the rewards pool is replenished, although rates might differ."}
+                          </p>
+                        </div>
+                      </>
+                    );
+                  })()}
+
                   <div className="mt-4 text-xs text-gray-500">
                     <p className="mb-1">
                       Note: These projections assume current reward rates remain constant.
