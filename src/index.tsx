@@ -533,7 +533,7 @@ const NewStakersPanel: React.FC<{
                       {stakerDate.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      <UsernameLink username={staker.username} />
+                      <UsernameLink username={staker.username} handleUserSelect={handleUserSelect} />
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {staker.total_staked.toLocaleString(undefined, {
@@ -670,7 +670,7 @@ const TierMilestoneTracker: React.FC<{
               {milestones.slice(0, 3).map((milestone, index) => (
                 <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
                   <div className="flex justify-between items-start mb-2">
-                    <UsernameLink username={milestone.username} />
+                    <UsernameLink username={milestone.username} handleUserSelect={handleUserSelect} />
                   </div>
 
                   <div className="flex items-center gap-2 mb-2">
@@ -711,7 +711,7 @@ const TierMilestoneTracker: React.FC<{
                       {milestones.slice(3).map((milestone, index) => (
                         <tr key={index} className="hover:bg-purple-50">
                           <td className="px-4 py-2 text-sm">
-                            <UsernameLink username={milestone.username} />
+                            <UsernameLink username={milestone.username} handleUserSelect={handleUserSelect} />
                           </td>
                           <td className="px-4 py-2 text-sm text-center">
                             <span className="text-lg">
@@ -738,7 +738,7 @@ const TierMilestoneTracker: React.FC<{
               {milestones.map((milestone, index) => (
                 <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
                   <div className="flex justify-between items-start mb-2">
-                    <UsernameLink username={milestone.username} />
+                    <UsernameLink username={milestone.username} handleUserSelect={handleUserSelect} />
                   </div>
 
                   <div className="flex items-center gap-2 mb-2">
@@ -804,12 +804,13 @@ const calculateRewards = (
   };
 };
 
-// Add this near your other component definitions
+// Add this before the Leaderboard function
 const UsernameLink: React.FC<{
   username: string;
   showExplorer?: boolean;
   className?: string;
-}> = ({ username, showExplorer = true, className = "" }) => (
+  handleUserSelect: (username: string) => void;
+}> = ({ username, showExplorer = true, className = "", handleUserSelect }) => (
   <div className="flex items-center gap-1">
     <button 
       onClick={() => handleUserSelect(username)}
@@ -1766,23 +1767,39 @@ function Leaderboard() {
                       )}
                       {visibleColumns.rewards && (
                         <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[220px]">
-                          <div className="flex flex-col items-start">
-                            <span>
-                              Daily: {isUsd 
-                                ? `$${rewards.dailyUsd.toFixed(2)}` 
-                                : `${rewards.daily.toFixed(4)}`}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              Monthly: {isUsd 
-                                ? `$${rewards.monthlyUsd.toFixed(2)}` 
-                                : `${rewards.monthly.toFixed(4)}`}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              Yearly: {isUsd 
-                                ? `$${rewards.yearlyUsd.toFixed(2)}` 
-                                : `${rewards.yearly.toFixed(4)}`}
-                            </span>
-                          </div>
+                          {(() => {
+                            const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
+                              ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                              : 0;
+                            
+                            const rewards = calculateRewards(
+                              item.staked, 
+                              rewardsPerSec, 
+                              strxPrice,
+                              blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
+                            );
+                            const isUsd = amountDisplays[`${item.username}-rewards`] === 'usd';
+
+                            return (
+                              <div className="flex flex-col items-start">
+                                <span>
+                                  Daily: {isUsd 
+                                    ? `$${rewards.dailyUsd.toFixed(2)}` 
+                                    : `${rewards.daily.toFixed(4)}`}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  Monthly: {isUsd 
+                                    ? `$${rewards.monthlyUsd.toFixed(2)}` 
+                                    : `${rewards.monthly.toFixed(4)}`}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  Yearly: {isUsd 
+                                    ? `$${rewards.yearlyUsd.toFixed(2)}` 
+                                    : `${rewards.yearly.toFixed(4)}`}
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </td>
                       )}
                     </tr>
