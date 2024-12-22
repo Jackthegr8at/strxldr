@@ -207,19 +207,22 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     };
   };
 
+  // Add total calculation
+  const totalAmount = userData.staked + userData.unstaked;
+
   const stakingStats = useMemo(() => {
     if (!blockchainData?.rows?.[0]) return null;
 
     const totalStaked = parseFloat(blockchainData.rows[0].stakes.split(' ')[0]);
     const percentageOfPool = (userData.staked / totalStaked) * 100;
-    const percentageOfSupply = (userData.staked / TOTAL_SUPPLY) * 100;
+    const percentageOfSupply = (totalAmount / TOTAL_SUPPLY) * 100;
 
     return {
       percentageOfPool,
       percentageOfSupply,
       rewards: calculateRewards(userData.staked)
     };
-  }, [userData, blockchainData]);
+  }, [userData, blockchainData, totalAmount]);
 
   const activityData = useMemo(() => {
     if (!userActions.length) return [];
@@ -272,6 +275,42 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       percentageComplete
     };
   }, [currentTier, nextTier, userData.staked]);
+
+  // Add rewards projection chart
+  const rewardsProjection = useMemo(() => {
+    if (!stakingStats?.rewards) return [];
+    
+    const dailyReward = stakingStats.rewards.daily;
+    const data = [];
+    let currentAmount = userData.staked;
+    
+    // Project for next 12 months
+    for (let i = 0; i <= 365; i += 30) {
+      data.push({
+        day: i,
+        date: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toLocaleDateString(),
+        amount: currentAmount,
+      });
+      currentAmount += dailyReward * 30;
+    }
+    
+    return data;
+  }, [stakingStats, userData.staked]);
+
+  // Add this calculation
+  const tierAnalysis = useMemo(() => {
+    if (!tierProgress || !stakingStats?.rewards) return null;
+    
+    const daysToNextTier = tierProgress.remaining / stakingStats.rewards.daily;
+    const estimatedDate = new Date();
+    estimatedDate.setDate(estimatedDate.getDate() + daysToNextTier);
+    
+    return {
+      daysToNextTier: Math.ceil(daysToNextTier),
+      estimatedDate,
+      monthlyProgress: (stakingStats.rewards.monthly / tierProgress.remaining) * 100
+    };
+  }, [tierProgress, stakingStats]);
 
   if (!userData) {
     return (
@@ -365,6 +404,30 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 </span>
                 {' '}remaining to {nextTier.name}
               </div>
+
+              {tierAnalysis && (
+                <div className="mt-4 p-3 bg-purple-50 rounded-lg">
+                  <h4 className="text-sm font-semibold text-purple-700 mb-2">Analysis</h4>
+                  <p className="text-sm text-gray-600">
+                    At current rewards rate, you may reach {nextTier.name} tier by{' '}
+                    <span className="font-medium text-purple-700">
+                      {tierAnalysis.estimatedDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </span>
+                    {' '}({tierAnalysis.daysToNextTier} days)
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Monthly rewards contribute{' '}
+                    <span className="font-medium text-purple-700">
+                      {tierAnalysis.monthlyProgress.toFixed(2)}%
+                    </span>
+                    {' '}towards your next tier goal
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -445,21 +508,24 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Supply Statistics</h2>
             <div className="space-y-4">
               <div>
-                <div className="text-sm text-gray-500">% of Total Supply</div>
+                <div className="text-sm text-gray-500">Total Balance</div>
                 <div className="text-lg font-semibold text-purple-700">
-                  {stakingStats?.percentageOfSupply.toFixed(4)}%
+                  {totalAmount.toLocaleString()} STRX
                 </div>
                 <div className="text-sm text-gray-500">
-                  of 2B STRX
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">Total Value</div>
-                <div className="text-lg font-semibold text-purple-700">
-                  ${((userData.staked + userData.unstaked) * strxPrice).toLocaleString(undefined, {
+                  ≈ ${(totalAmount * strxPrice).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                   })}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">% of Total Supply</div>
+                <div className="text-lg font-semibold text-purple-700">
+                  {(totalAmount / TOTAL_SUPPLY * 100).toFixed(4)}%
+                </div>
+                <div className="text-sm text-gray-500">
+                  of 2B STRX
                 </div>
               </div>
             </div>
@@ -585,6 +651,37 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow border border-purple-100 mt-4">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Rewards Projection</h3>
+          <div className="h-64">
+            <ResponsiveContainer>
+              <LineChart data={rewardsProjection}>
+                <XAxis 
+                  dataKey="date" 
+                  interval={2}
+                />
+                <YAxis 
+                  domain={['dataMin', 'dataMax']}
+                  tickFormatter={(value) => (value / 1000).toFixed(0) + 'k'}
+                />
+                <Tooltip 
+                  formatter={(value: number) => [
+                    `${value.toLocaleString()} STRX`,
+                    'Projected Balance'
+                  ]}
+                  labelFormatter={(label) => `Date: ${label}`}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="amount" 
+                  stroke="#7C63CC"
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

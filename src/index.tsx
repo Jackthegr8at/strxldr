@@ -830,6 +830,14 @@ const UsernameLink: React.FC<{
   );
 };
 
+// Add this before the Leaderboard function
+const getUserTier = (stakedAmount: number): StakingTier => {
+  return STAKING_TIERS.find((tier, index) => {
+    const nextTier = STAKING_TIERS[index - 1];
+    return stakedAmount >= tier.minimum && (!nextTier || stakedAmount < nextTier.minimum);
+  }) || STAKING_TIERS[STAKING_TIERS.length - 1]; // Default to lowest tier
+};
+
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
@@ -1672,8 +1680,8 @@ function Leaderboard() {
                         {visibleColumns.username && (
                           <td className="px-2 py-4 text-sm text-gray-900 w-40">
                             <div className="flex items-center gap-1">
-                              <span title={`${selectedTier?.name} Tier`}>
-                                {selectedTier?.emoji}
+                              <span title={getUserTier(item.staked).name}>
+                                {getUserTier(item.staked).emoji}
                               </span>
                               <button 
                                 onClick={() => handleUserSelect(item.username)}
