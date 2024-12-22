@@ -72,38 +72,27 @@ type UserPageProps = {
 };
 
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
-  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>(() => {
-    const last7Days = userActions.filter(action => {
-      const actionDate = new Date(action.time);
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      return actionDate >= sevenDaysAgo;
-    });
-    return last7Days.length < 2 ? '30d' : '7d';
-  });
   const [transactionPage, setTransactionPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 10;
 
-  // We don't need to fetch the full staking data since we have the user's data
-  const { data: blockchainData } = useSWR<BlockchainResponse>(
-    'blockchain_data',
-    () => fetch('https://proton.eosusa.io/v1/chain/get_table_rows', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify({
-        json: true,
-        code: "storexstake",
-        scope: "storexstake",
-        table: "config",
-        limit: 10
-      })
-    }).then(res => res.json()),
-    { 
-      refreshInterval: 60000,
-      fallbackData: globalData.blockchainData
-    }
+  // First, get the actions data
+  const { data: actionsData } = useSWR<ActionResponse>(
+    ['user_actions', username],
+    () => {
+      const baseUrl = 'https://proton.eosusa.io/v2/history/get_actions';
+      const params = new URLSearchParams({
+        limit: '50',
+        account: username,
+        'act.account': 'storex',
+        'act.name': 'transfer'
+      });
+      
+      return fetch(`${baseUrl}?${params}`).then(res => res.json());
+    },
+    { refreshInterval: 30000 }
   );
 
+  // First get priceData
   const { data: priceData } = useSWR<PriceResponse>(
     'strx_price',
     () => fetch('https://proton.eosusa.io/v1/chain/get_table_rows', {
@@ -122,10 +111,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         throw new Error('Network response was not ok');
       }
       return res.json();
-    })
-    .then(data => {
-      console.log('Fetched Price Data:', data); // Log the fetched price data
-      return data;
     }),
     { 
       refreshInterval: 120000,
@@ -133,32 +118,14 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     }
   );
 
-  // Log the priceData to check if it's being fetched correctly
-  console.log('Price Data:', priceData);
-
-  // Update the user's transaction history fetch
-  const { data: actionsData } = useSWR<ActionResponse>(
-    ['user_actions', username],
-    () => {
-      const baseUrl = 'https://proton.eosusa.io/v2/history/get_actions';
-      const params = new URLSearchParams({
-        limit: '50',
-        account: username,
-        'act.account': 'storex',
-        'act.name': 'transfer'
-      });
-      
-      return fetch(`${baseUrl}?${params}`).then(res => res.json());
-    },
-    { refreshInterval: 30000 }
-  );
-
+  // Then get strxPrice
   const strxPrice = useMemo(() => {
     if (!priceData?.rows) return 0;
     const strxRow = priceData.rows.find(row => row.sym === '4,STRX');
     return strxRow ? parseFloat(strxRow.quantity.split(' ')[0]) : 0;
   }, [priceData]);
 
+  // Then define userActions
   const userActions = useMemo(() => {
     if (!actionsData?.actions) return [];
     
@@ -179,6 +146,37 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       })
       .sort((a, b) => b.time.getTime() - a.time.getTime());
   }, [actionsData, strxPrice]);
+
+  // Now we can initialize timeRange using userActions
+  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>(() => {
+    const last7Days = userActions.filter(action => {
+      const actionDate = new Date(action.time);
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      return actionDate >= sevenDaysAgo;
+    });
+    return last7Days.length < 2 ? '30d' : '7d';
+  });
+
+  // We don't need to fetch the full staking data since we have the user's data
+  const { data: blockchainData } = useSWR<BlockchainResponse>(
+    'blockchain_data',
+    () => fetch('https://proton.eosusa.io/v1/chain/get_table_rows', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({
+        json: true,
+        code: "storexstake",
+        scope: "storexstake",
+        table: "config",
+        limit: 10
+      })
+    }).then(res => res.json()),
+    { 
+      refreshInterval: 60000,
+      fallbackData: globalData.blockchainData
+    }
+  );
 
   const calculateRewards = (stakedAmount: number) => {
     if (!blockchainData?.rows?.[0]) return null;
