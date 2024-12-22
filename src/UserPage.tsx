@@ -281,9 +281,11 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
 
   // Update rewards projection calculation
   const rewardsProjection = useMemo(() => {
-    if (!stakingStats?.rewards?.daily) return [];
+    // Early return if rewards data is missing
+    const rewards = stakingStats?.rewards;
+    if (!rewards?.daily) return [];
     
-    const dailyReward = stakingStats.rewards.daily;
+    const dailyReward = rewards.daily;  // Now safe to use
     const data = [];
     const years = projectionRange === '1y' ? 1 : projectionRange === '5y' ? 5 : 10;
     const days = years * 365;
@@ -325,16 +327,17 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
 
   // Update tier analysis calculation
   const tierAnalysis = useMemo(() => {
-    if (!tierProgress || !stakingStats?.rewards?.daily || !stakingStats.rewards.monthly) return null;
+    // Early return if any required data is missing
+    const rewards = stakingStats?.rewards;
+    if (!tierProgress || !rewards?.daily || !rewards?.monthly || !nextTier) return null;
     
     const calculateTimeToNextTier = (compoundInterval: number) => {
       let current = userData.staked;
       let days = 0;
-      const dailyReward = stakingStats.rewards.daily;
+      const dailyReward = rewards.daily;  // Now safe to use
       
       while (current < nextTier.minimum) {
         if (days % compoundInterval === 0) {
-          // Compound day
           current += (dailyReward * compoundInterval);
         }
         days++;
@@ -350,7 +353,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         monthly: calculateTimeToNextTier(30),
         annually: calculateTimeToNextTier(365)
       },
-      monthlyProgress: (stakingStats.rewards.monthly / tierProgress.remaining) * 100
+      monthlyProgress: (rewards.monthly / tierProgress.remaining) * 100
     };
   }, [tierProgress, stakingStats, userData.staked, nextTier]);
 
