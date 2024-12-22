@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import * as React from 'react';
 import { CubeTransparentIcon } from '@heroicons/react/24/outline';
 import { STAKING_TIERS, type StakingTier } from './index';
@@ -276,41 +276,83 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     };
   }, [currentTier, nextTier, userData.staked]);
 
-  // Add rewards projection chart
+  // Add new state for projection range
+  const [projectionRange, setProjectionRange] = useState<'1y' | '5y' | '10y'>('1y');
+
+  // Update rewards projection calculation
   const rewardsProjection = useMemo(() => {
-    if (!stakingStats?.rewards) return [];
+    if (!stakingStats?.rewards?.daily) return [];
     
     const dailyReward = stakingStats.rewards.daily;
     const data = [];
-    let currentAmount = userData.staked;
-    
-    // Project for next 12 months
-    for (let i = 0; i <= 365; i += 30) {
+    const years = projectionRange === '1y' ? 1 : projectionRange === '5y' ? 5 : 10;
+    const days = years * 365;
+    const intervals = 12 * years; // Monthly intervals
+
+    for (let i = 0; i <= days; i += Math.floor(days / intervals)) {
+      const date = new Date(Date.now() + i * 24 * 60 * 60 * 1000);
+      
+      // Calculate different compound strategies
+      const noCompound = userData.staked + (dailyReward * i);
+      
+      const dailyCompound = userData.staked * Math.pow(
+        1 + (dailyReward / userData.staked),
+        i
+      );
+      
+      const monthlyCompound = userData.staked * Math.pow(
+        1 + ((dailyReward * 30) / userData.staked),
+        Math.floor(i / 30)
+      );
+      
+      const annualCompound = userData.staked * Math.pow(
+        1 + ((dailyReward * 365) / userData.staked),
+        Math.floor(i / 365)
+      );
+
       data.push({
-        day: i,
-        date: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toLocaleDateString(),
-        amount: currentAmount,
+        date: date.toLocaleDateString(),
+        amountNoCompound: noCompound,
+        amountDaily: dailyCompound,
+        amountMonthly: monthlyCompound,
+        amountAnnually: annualCompound,
+        day: i
       });
-      currentAmount += dailyReward * 30;
     }
     
     return data;
-  }, [stakingStats, userData.staked]);
+  }, [stakingStats, userData.staked, projectionRange]);
 
-  // Add this calculation
+  // Update tier analysis calculation
   const tierAnalysis = useMemo(() => {
-    if (!tierProgress || !stakingStats?.rewards) return null;
+    if (!tierProgress || !stakingStats?.rewards?.daily || !stakingStats.rewards.monthly) return null;
     
-    const daysToNextTier = tierProgress.remaining / stakingStats.rewards.daily;
-    const estimatedDate = new Date();
-    estimatedDate.setDate(estimatedDate.getDate() + daysToNextTier);
-    
+    const calculateTimeToNextTier = (compoundInterval: number) => {
+      let current = userData.staked;
+      let days = 0;
+      const dailyReward = stakingStats.rewards.daily;
+      
+      while (current < nextTier.minimum) {
+        if (days % compoundInterval === 0) {
+          // Compound day
+          current += (dailyReward * compoundInterval);
+        }
+        days++;
+      }
+      
+      return days;
+    };
+
     return {
-      daysToNextTier: Math.ceil(daysToNextTier),
-      estimatedDate,
+      scenarios: {
+        noCompound: calculateTimeToNextTier(Infinity),
+        daily: calculateTimeToNextTier(1),
+        monthly: calculateTimeToNextTier(30),
+        annually: calculateTimeToNextTier(365)
+      },
       monthlyProgress: (stakingStats.rewards.monthly / tierProgress.remaining) * 100
     };
-  }, [tierProgress, stakingStats]);
+  }, [tierProgress, stakingStats, userData.staked, nextTier]);
 
   if (!userData) {
     return (
@@ -377,6 +419,61 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         </div>
 
         <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-800">Rewards Projection</h2>
+            <div className="flex gap-2">
+              {(['1y', '5y', '10y'] as const).map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setProjectionRange(range)}
+                  className={`px-3 py-1 rounded-lg text-sm ${
+                    projectionRange === range
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                  }`}
+                >
+                  {range}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
+            <div className="h-64">
+              <ResponsiveContainer>
+                <LineChart data={rewardsProjection}>
+                  <XAxis 
+                    dataKey="date" 
+                    interval={projectionRange === '1y' ? 1 : 2}
+                  />
+                  <YAxis 
+                    domain={['dataMin', 'dataMax']}
+                    tickFormatter={(value) => (value / 1000).toFixed(0) + 'k'}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [
+                      `${value.toLocaleString()} STRX`,
+                      'Projected Balance'
+                    ]}
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                  <Legend />
+                  {['No Compound', 'Daily', 'Monthly', 'Annually'].map((strategy, index) => (
+                    <Line 
+                      key={strategy}
+                      type="monotone" 
+                      dataKey={`amount${strategy.replace(' ', '')}`}
+                      name={`${strategy} Compound`}
+                      stroke={['#7C63CC', '#10B981', '#3B82F6', '#F59E0B'][index]}
+                      dot={false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-8">
           {tierProgress && nextTier && (
             <div className="bg-white p-4 rounded-lg shadow border border-purple-100 mt-4">
               <div className="flex items-center gap-2 mb-2">
@@ -407,19 +504,26 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
 
               {tierAnalysis && (
                 <div className="mt-4 p-3 bg-purple-50 rounded-lg">
-                  <h4 className="text-sm font-semibold text-purple-700 mb-2">Analysis</h4>
-                  <p className="text-sm text-gray-600">
-                    At current rewards rate, you may reach {nextTier.name} tier by{' '}
-                    <span className="font-medium text-purple-700">
-                      {tierAnalysis.estimatedDate.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </span>
-                    {' '}({tierAnalysis.daysToNextTier} days)
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <h4 className="text-sm font-semibold text-purple-700 mb-2">Time to Next Tier Analysis</h4>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium text-purple-700">Without compounding: </span>
+                      {Math.ceil(tierAnalysis.scenarios.noCompound)} days
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium text-purple-700">Daily compound: </span>
+                      {Math.ceil(tierAnalysis.scenarios.daily)} days
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium text-purple-700">Monthly compound: </span>
+                      {Math.ceil(tierAnalysis.scenarios.monthly)} days
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium text-purple-700">Annual compound: </span>
+                      {Math.ceil(tierAnalysis.scenarios.annually)} days
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-3">
                     Monthly rewards contribute{' '}
                     <span className="font-medium text-purple-700">
                       {tierAnalysis.monthlyProgress.toFixed(2)}%
@@ -651,37 +755,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow border border-purple-100 mt-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Rewards Projection</h3>
-          <div className="h-64">
-            <ResponsiveContainer>
-              <LineChart data={rewardsProjection}>
-                <XAxis 
-                  dataKey="date" 
-                  interval={2}
-                />
-                <YAxis 
-                  domain={['dataMin', 'dataMax']}
-                  tickFormatter={(value) => (value / 1000).toFixed(0) + 'k'}
-                />
-                <Tooltip 
-                  formatter={(value: number) => [
-                    `${value.toLocaleString()} STRX`,
-                    'Projected Balance'
-                  ]}
-                  labelFormatter={(label) => `Date: ${label}`}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="amount" 
-                  stroke="#7C63CC"
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
           </div>
         </div>
       </div>
