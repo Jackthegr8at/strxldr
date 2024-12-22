@@ -329,8 +329,13 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
 
       data.push({
         date: years === 1 
-          ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+          ? date.toLocaleDateString(undefined, { month: 'short' })
           : date.toLocaleDateString(undefined, { year: 'numeric', month: 'short' }),
+        fullDate: date.toLocaleDateString(undefined, { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }),
         amountNoCompound: noCompound,
         amountDaily: dailyCompound,
         amountMonthly: monthlyCompound,
@@ -359,19 +364,16 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       
       const daysSinceStart = i;
       
-      // Calculate amounts for each strategy
+      // No compound
       const noCompound = userData.staked + (rewards.daily * daysSinceStart);
       
       // Daily compound
       const dailyRate = rewards.daily / userData.staked;
       const dailyCompound = userData.staked * Math.pow(1 + dailyRate, daysSinceStart);
       
-      // Monthly compound - use actual months
-      const monthsSinceStart = Math.floor(daysSinceStart / (365/12));
-      const monthlyDate = new Date(startDate);
-      monthlyDate.setMonth(startDate.getMonth() + monthsSinceStart);
-      const actualDaysInMonth = Math.floor((monthlyDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      const monthlyRate = (rewards.daily * actualDaysInMonth) / userData.staked;
+      // Monthly compound - match the rewards projection calculation
+      const monthsSinceStart = Math.floor(daysSinceStart / 30);
+      const monthlyRate = (rewards.daily * 30) / userData.staked;
       const monthlyCompound = userData.staked * Math.pow(1 + monthlyRate, monthsSinceStart);
       
       // Annual compound
@@ -512,7 +514,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                       `${value.toLocaleString()} STRX`,
                       'Projected Balance'
                     ]}
-                    labelFormatter={(label) => `Date: ${label}`}
+                    labelFormatter={(_, data) => `Date: ${data[0].payload.fullDate}`}
                   />
                   <Legend />
                   {['No Compound', 'Daily', 'Monthly', 'Annually'].map((strategy, index) => (
