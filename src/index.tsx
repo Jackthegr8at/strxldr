@@ -926,6 +926,20 @@ function Leaderboard() {
     { refreshInterval: 120000 } // Refresh every 2 minutes
   );
 
+  // Add this with your other SWR fetches
+  const { data: rewardsPoolData } = useSWR<any>(
+    'rewards_pool',
+    () => fetch('https://proton.eosusa.io/v1/chain/get_currency_balance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: "storex",
+        account: "rewards.strx",
+        symbol: "STRX"
+      })
+    }).then(res => res.json())
+  );
+
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchTerm, setSearchTerm] = useState('');
@@ -1468,6 +1482,29 @@ function Leaderboard() {
               }
               tooltip="The range between the smallest and largest stake amounts in the system. Click to toggle between STRX and USD values."
               onClick={() => toggleAmountDisplay('statistics', 'range')}
+            />
+
+            <StatisticCard
+              title="Rewards Pool"
+              value={
+                <div className="flex flex-col">
+                  <span>
+                    {rewardsPoolData?.[0] 
+                      ? parseFloat(rewardsPoolData[0]).toLocaleString() 
+                      : '...'} STRX
+                  </span>
+                  {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
+                    <span className="text-xs text-gray-500">
+                      ~{calculateDaysUntilEmpty(
+                        parseFloat(rewardsPoolData[0]),
+                        parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
+                        parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                      ).toLocaleString()} days until empty
+                    </span>
+                  )}
+                </div>
+              }
+              tooltip="Current rewards pool balance and estimated days until depletion assuming daily compounding"
             />
 
             <StatisticCard
