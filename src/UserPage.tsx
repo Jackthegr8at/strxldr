@@ -325,16 +325,21 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   const calculateTimeToNextTier = (compoundInterval: number, dailyReward: number) => {
     let current = userData.staked;
     let days = 0;
+    let accumulatedRewards = 0;
     
     while (current < nextTier.minimum) {
+      accumulatedRewards += dailyReward;
+      
       if (compoundInterval === Infinity) {
         // No compound - just add daily rewards
-        current += dailyReward;
-      } else if (days % compoundInterval === 0) {
-        // Compound by adding accumulated rewards
-        const accumulatedRewards = dailyReward * compoundInterval;
-        current = current * (1 + (accumulatedRewards / current));
+        current = userData.staked + (dailyReward * days);
+      } else if (days % compoundInterval === 0 && days > 0) {
+        // On compound days, add accumulated rewards and compound them
+        current = current + accumulatedRewards;
+        // Reset accumulated rewards after compounding
+        accumulatedRewards = 0;
       }
+      
       days++;
     }
     
@@ -343,7 +348,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
 
   // The scenarios should now show daily as fastest, followed by monthly, annual, and no compound
   const tierAnalysis = useMemo(() => {
-    // Early return if any required data is missing
     const rewards = stakingStats?.rewards;
     if (!tierProgress || !rewards?.daily || !rewards?.monthly || !nextTier) return null;
     
