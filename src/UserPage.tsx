@@ -569,22 +569,21 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 <div className="mt-4 p-3 bg-purple-50 rounded-lg">
                   <h4 className="text-sm font-semibold text-purple-700 mb-2">Time to Next Tier Analysis</h4>
                   <div className="space-y-2">
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium text-purple-700">Without compounding: </span>
-                      {Math.ceil(tierAnalysis.scenarios.noCompound)} days
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium text-purple-700">Daily compound: </span>
-                      {Math.ceil(tierAnalysis.scenarios.daily)} days
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium text-purple-700">Monthly compound: </span>
-                      {Math.ceil(tierAnalysis.scenarios.monthly)} days
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium text-purple-700">Annual compound: </span>
-                      {Math.ceil(tierAnalysis.scenarios.annually)} days
-                    </p>
+                    {Object.entries(tierAnalysis.scenarios).map(([strategy, days]) => {
+                      const targetDate = new Date();
+                      targetDate.setDate(targetDate.getDate() + Math.ceil(days));
+                      
+                      return (
+                        <p key={strategy} className="text-sm text-gray-600">
+                          <span className="font-medium text-purple-700">
+                            {strategy === 'noCompound' ? 'Without compounding: ' :
+                             strategy === 'daily' ? 'Daily compound: ' :
+                             strategy === 'monthly' ? 'Monthly compound: ' : 'Annual compound: '}
+                          </span>
+                          ~{Math.ceil(days)} days ({targetDate.toLocaleDateString()})
+                        </p>
+                      );
+                    })}
                   </div>
                   <p className="text-sm text-gray-600 mt-3">
                     Monthly rewards contribute{' '}
