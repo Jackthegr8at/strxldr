@@ -33,13 +33,13 @@ type BlockchainResponse = {
 
 const ITEMS_PER_PAGE = 10;
 
-type StakingTier = {
+export type StakingTier = {
   name: string;
   minimum: number;
   emoji: string;
 };
 
-const STAKING_TIERS: StakingTier[] = [
+export const STAKING_TIERS: StakingTier[] = [
   { name: 'Whale', minimum: 20000000, emoji: '🐋' },
   { name: 'Shark', minimum: 10000000, emoji: '🦈' },
   { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
@@ -373,14 +373,7 @@ const RecentActions: React.FC<{
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900">
                   <div className="flex items-center gap-2">
-                    <a 
-                      href={`https://explorer.xprnetwork.org/account/${action.username}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-purple-600 hover:text-purple-800 hover:underline"
-                    >
-                      {action.username}
-                    </a>
+                    <UsernameLink username={action.username} />
                     {action.isNewStaker && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                         New Staker! 🎉

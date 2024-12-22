@@ -4,6 +4,7 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import * as React from 'react';
 import { CubeTransparentIcon } from '@heroicons/react/24/outline';
+import { STAKING_TIERS, type StakingTier } from './index';
 
 // Reuse types from index.tsx
 type StakeData = {
@@ -71,7 +72,15 @@ type UserPageProps = {
 };
 
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
-  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d');
+  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>(() => {
+    const last7Days = userActions.filter(action => {
+      const actionDate = new Date(action.time);
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      return actionDate >= sevenDaysAgo;
+    });
+    return last7Days.length < 2 ? '30d' : '7d';
+  });
   const [transactionPage, setTransactionPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 10;
 
@@ -216,7 +225,10 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     };
 
     return userActions
-      .filter(action => now.getTime() - action.time.getTime() <= timeRangeMap[timeRange])
+      .filter(action => {
+        if (action.type === 'claim staking rewards') return false;
+        return now.getTime() - action.time.getTime() <= timeRangeMap[timeRange];
+      })
       .map(action => ({
         time: action.time.toLocaleDateString(),
         amount: action.type === 'add stake' ? action.amount : -action.amount
@@ -228,6 +240,31 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     const endIndex = startIndex + TRANSACTIONS_PER_PAGE;
     return userActions.slice(startIndex, endIndex);
   }, [userActions, transactionPage]);
+
+  const currentTier = useMemo(() => {
+    return STAKING_TIERS.find((tier, index) => {
+      const nextTier = STAKING_TIERS[index - 1];
+      return userData.staked >= tier.minimum && (!nextTier || userData.staked < nextTier.minimum);
+    });
+  }, [userData.staked]);
+
+  const nextTier = useMemo(() => {
+    const currentTierIndex = STAKING_TIERS.findIndex(t => t.name === currentTier?.name);
+    return STAKING_TIERS[currentTierIndex - 1];
+  }, [currentTier]);
+
+  const tierProgress = useMemo(() => {
+    if (!currentTier || !nextTier) return null;
+    
+    const remaining = nextTier.minimum - userData.staked;
+    const percentageComplete = ((userData.staked - currentTier.minimum) / 
+      (nextTier.minimum - currentTier.minimum)) * 100;
+
+    return {
+      remaining,
+      percentageComplete
+    };
+  }, [currentTier, nextTier, userData.staked]);
 
   if (!userData) {
     return (
@@ -260,30 +297,56 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
           Back to Leaderboard
         </button>
 
-        <div className="mb-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-purple-700 mb-2">
-            {username}'s Staking Profile
-          </h1>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                const url = `${window.location.origin}?user=${username}`;
-                navigator.clipboard.writeText(url);
-                alert('URL copied to clipboard!');
-              }}
-              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-            >
-              Share
-            </button>
-            <a 
-              href={`https://explorer.xprnetwork.org/account/${username}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 text-sm"
-            >
-              View on Explorer →
-            </a>
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-3xl font-bold text-purple-700">
+              {username}'s Staking Profile
+            </h1>
+            {currentTier && (
+              <span className="text-2xl" title={currentTier.name}>
+                {currentTier.emoji}
+              </span>
+            )}
           </div>
+          
+          {tierProgress && nextTier && (
+            <div className="bg-white p-4 rounded-lg shadow border border-purple-100 mt-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">{currentTier?.emoji}</span>
+                <span className="text-gray-400">➜</span>
+                <span className="text-2xl">{nextTier.emoji}</span>
+              </div>
+
+              <div className="mb-2">
+                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                  <span>Progress to {nextTier.name}</span>
+                  <span>{tierProgress.percentageComplete.toFixed(1)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div 
+                    className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
+                    style={{ width: `${tierProgress.percentageComplete}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              <div className="text-sm text-gray-600">
+                <span className="font-medium text-purple-600">
+                  {tierProgress.remaining.toLocaleString()} STRX
+                </span>
+                {' '}remaining to {nextTier.name}
+              </div>
+            </div>
+          )}
+          
+          <a 
+            href={`https://explorer.xprnetwork.org/account/${username}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-purple-600 hover:text-purple-800 hover:underline text-sm"
+          >
+            View on Explorer →
+          </a>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
