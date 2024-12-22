@@ -71,6 +71,16 @@ type UserPageProps = {
   };
 };
 
+// Add this before the tierAnalysis useMemo
+interface DailyDataPoint {
+  day: number;
+  date: Date;
+  noCompound: number;
+  dailyCompound: number;
+  monthlyCompound: number;
+  annualCompound: number;
+}
+
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
   const [transactionPage, setTransactionPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 10;
@@ -333,43 +343,69 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   }, [stakingStats, userData.staked, projectionRange]);
 
   // Update tier analysis calculation
-  const calculateTimeToNextTier = (compoundInterval: number, dailyReward: number) => {
-    const targetAmount = nextTier.minimum;
-    const remainingAmount = targetAmount - userData.staked;
-    let current = userData.staked;
-    let days = 0;
-    
-    while (current < targetAmount) {
-      if (compoundInterval === Infinity) {
-        // No compound - linear progression
-        current += dailyReward;
-      } else {
-        // Compound interest on the entire balance
-        const rate = dailyReward / current;
-        if (days % compoundInterval === 0) {
-          const accumulatedRewards = dailyReward * compoundInterval;
-          current *= (1 + (accumulatedRewards / current));
-        } else {
-          current += dailyReward;
-        }
-      }
-      days++;
-    }
-    
-    return days;
-  };
-
-  // The scenarios should now show daily as fastest, followed by monthly, annual, and no compound
   const tierAnalysis = useMemo(() => {
     const rewards = stakingStats?.rewards;
     if (!tierProgress || !rewards?.daily || !rewards?.monthly || !nextTier) return null;
-    
+
+    // Generate daily data points for accurate analysis
+    const dailyData: DailyDataPoint[] = [];
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+
+    // Generate 5 years of daily data (should be enough to find next tier)
+    for (let i = 0; i <= 365 * 5; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      
+      const daysSinceStart = i;
+      
+      // Calculate amounts for each strategy
+      const noCompound = userData.staked + (rewards.daily * daysSinceStart);
+      
+      // Daily compound
+      const dailyRate = rewards.daily / userData.staked;
+      const dailyCompound = userData.staked * Math.pow(1 + dailyRate, daysSinceStart);
+      
+      // Monthly compound - use actual months
+      const monthsSinceStart = Math.floor(daysSinceStart / (365/12));
+      const monthlyDate = new Date(startDate);
+      monthlyDate.setMonth(startDate.getMonth() + monthsSinceStart);
+      const actualDaysInMonth = Math.floor((monthlyDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const monthlyRate = (rewards.daily * actualDaysInMonth) / userData.staked;
+      const monthlyCompound = userData.staked * Math.pow(1 + monthlyRate, monthsSinceStart);
+      
+      // Annual compound
+      const yearsSinceStart = Math.floor(daysSinceStart / 365);
+      const annualRate = (rewards.daily * 365) / userData.staked;
+      const annualCompound = userData.staked * Math.pow(1 + annualRate, yearsSinceStart);
+
+      dailyData.push({
+        day: i,
+        date,
+        noCompound,
+        dailyCompound,
+        monthlyCompound,
+        annualCompound
+      });
+
+      // Stop if all strategies have reached the target
+      if (Math.min(noCompound, dailyCompound, monthlyCompound, annualCompound) >= nextTier.minimum) {
+        break;
+      }
+    }
+
+    // Find days to reach next tier for each strategy
+    const findDaysToTarget = (strategy: 'noCompound' | 'dailyCompound' | 'monthlyCompound' | 'annualCompound') => {
+      const dataPoint = dailyData.find(d => d[strategy] >= nextTier.minimum);
+      return dataPoint ? dataPoint.day : Infinity;
+    };
+
     return {
       scenarios: {
-        daily: calculateTimeToNextTier(1, rewards.daily),
-        monthly: calculateTimeToNextTier(30, rewards.daily),
-        annually: calculateTimeToNextTier(365, rewards.daily),
-        noCompound: calculateTimeToNextTier(Infinity, rewards.daily)
+        daily: findDaysToTarget('dailyCompound'),
+        monthly: findDaysToTarget('monthlyCompound'),
+        annually: findDaysToTarget('annualCompound'),
+        noCompound: findDaysToTarget('noCompound')
       },
       monthlyProgress: (rewards.monthly / tierProgress.remaining) * 100
     };
