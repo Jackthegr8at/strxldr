@@ -281,11 +281,10 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
 
   // Update rewards projection calculation
   const rewardsProjection = useMemo(() => {
-    // Early return if rewards data is missing
     const rewards = stakingStats?.rewards;
     if (!rewards?.daily) return [];
     
-    const dailyReward = rewards.daily;  // Now safe to use
+    const dailyReward = rewards.daily;
     const data = [];
     const years = projectionRange === '1y' ? 1 : projectionRange === '5y' ? 5 : 10;
     const days = years * 365;
@@ -294,23 +293,20 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     for (let i = 0; i <= days; i += Math.floor(days / intervals)) {
       const date = new Date(Date.now() + i * 24 * 60 * 60 * 1000);
       
-      // Calculate different compound strategies
+      // No compound - just add daily rewards
       const noCompound = userData.staked + (dailyReward * i);
       
-      const dailyCompound = userData.staked * Math.pow(
-        1 + (dailyReward / userData.staked),
-        i
-      );
+      // Daily compound - (1 + r)^n where r is daily rate
+      const dailyRate = dailyReward / userData.staked;
+      const dailyCompound = userData.staked * Math.pow(1 + dailyRate, i);
       
-      const monthlyCompound = userData.staked * Math.pow(
-        1 + ((dailyReward * 30) / userData.staked),
-        Math.floor(i / 30)
-      );
+      // Monthly compound - (1 + r)^n where r is monthly rate
+      const monthlyRate = (dailyReward * 30) / userData.staked;
+      const monthlyCompound = userData.staked * Math.pow(1 + monthlyRate, Math.floor(i / 30));
       
-      const annualCompound = userData.staked * Math.pow(
-        1 + ((dailyReward * 365) / userData.staked),
-        Math.floor(i / 365)
-      );
+      // Annual compound - (1 + r)^n where r is annual rate
+      const annualRate = (dailyReward * 365) / userData.staked;
+      const annualCompound = userData.staked * Math.pow(1 + annualRate, Math.floor(i / 365));
 
       data.push({
         date: date.toLocaleDateString(),
@@ -326,32 +322,37 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   }, [stakingStats, userData.staked, projectionRange]);
 
   // Update tier analysis calculation
+  const calculateTimeToNextTier = (compoundInterval: number, dailyReward: number) => {
+    let current = userData.staked;
+    let days = 0;
+    
+    while (current < nextTier.minimum) {
+      if (compoundInterval === Infinity) {
+        // No compound - just add daily rewards
+        current += dailyReward;
+      } else if (days % compoundInterval === 0) {
+        // Compound by adding accumulated rewards
+        const accumulatedRewards = dailyReward * compoundInterval;
+        current = current * (1 + (accumulatedRewards / current));
+      }
+      days++;
+    }
+    
+    return days;
+  };
+
+  // The scenarios should now show daily as fastest, followed by monthly, annual, and no compound
   const tierAnalysis = useMemo(() => {
     // Early return if any required data is missing
     const rewards = stakingStats?.rewards;
     if (!tierProgress || !rewards?.daily || !rewards?.monthly || !nextTier) return null;
     
-    const calculateTimeToNextTier = (compoundInterval: number) => {
-      let current = userData.staked;
-      let days = 0;
-      const dailyReward = rewards.daily;  // Now safe to use
-      
-      while (current < nextTier.minimum) {
-        if (days % compoundInterval === 0) {
-          current += (dailyReward * compoundInterval);
-        }
-        days++;
-      }
-      
-      return days;
-    };
-
     return {
       scenarios: {
-        noCompound: calculateTimeToNextTier(Infinity),
-        daily: calculateTimeToNextTier(1),
-        monthly: calculateTimeToNextTier(30),
-        annually: calculateTimeToNextTier(365)
+        daily: calculateTimeToNextTier(1, rewards.daily),
+        monthly: calculateTimeToNextTier(30, rewards.daily),
+        annually: calculateTimeToNextTier(365, rewards.daily),
+        noCompound: calculateTimeToNextTier(Infinity, rewards.daily)
       },
       monthlyProgress: (rewards.monthly / tierProgress.remaining) * 100
     };
