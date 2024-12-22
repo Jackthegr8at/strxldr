@@ -287,31 +287,33 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     const dailyReward = rewards.daily;
     const data = [];
     const years = projectionRange === '1y' ? 1 : projectionRange === '5y' ? 5 : 10;
-    const days = years * 365;
-    const intervals = 12 * years; // Monthly intervals
+    const months = years * 12;
     
+    // Start from today
     const startDate = new Date();
-    startDate.setHours(0, 0, 0, 0); // Start at beginning of today
+    startDate.setHours(0, 0, 0, 0);
 
-    for (let i = 0; i <= days; i += Math.floor(days / intervals)) {
+    for (let i = 0; i <= months; i++) {
       const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
+      date.setMonth(startDate.getMonth() + i);
       
-      // No compound
-      const noCompound = userData.staked + (dailyReward * i);
+      // Calculate days since start for each strategy
+      const daysSinceStart = Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // No compound - just add daily rewards
+      const noCompound = userData.staked + (dailyReward * daysSinceStart);
       
       // Daily compound
       const dailyRate = dailyReward / userData.staked;
-      const dailyCompound = userData.staked * Math.pow(1 + dailyRate, i);
+      const dailyCompound = userData.staked * Math.pow(1 + dailyRate, daysSinceStart);
       
       // Monthly compound
       const monthlyRate = (dailyReward * 30) / userData.staked;
-      const monthlyPeriods = Math.floor(i / 30);
-      const monthlyCompound = userData.staked * Math.pow(1 + monthlyRate, monthlyPeriods);
+      const monthlyCompound = userData.staked * Math.pow(1 + monthlyRate, i);
       
       // Annual compound
       const annualRate = (dailyReward * 365) / userData.staked;
-      const annualPeriods = Math.floor(i / 365);
+      const annualPeriods = Math.floor(daysSinceStart / 365);
       const annualCompound = userData.staked * Math.pow(1 + annualRate, annualPeriods);
 
       data.push({
@@ -320,7 +322,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         amountDaily: dailyCompound,
         amountMonthly: monthlyCompound,
         amountAnnually: annualCompound,
-        day: i
+        day: daysSinceStart
       });
     }
     
