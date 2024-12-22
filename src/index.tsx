@@ -533,7 +533,7 @@ const NewStakersPanel: React.FC<{
                       {stakerDate.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      <UsernameLink username={staker.username} handleUserSelect={handleUserSelect} />
+                      <UsernameLink username={staker.username} />
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
                       {staker.total_staked.toLocaleString(undefined, {
@@ -670,7 +670,7 @@ const TierMilestoneTracker: React.FC<{
               {milestones.slice(0, 3).map((milestone, index) => (
                 <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
                   <div className="flex justify-between items-start mb-2">
-                    <UsernameLink username={milestone.username} handleUserSelect={handleUserSelect} />
+                    <UsernameLink username={milestone.username} />
                   </div>
 
                   <div className="flex items-center gap-2 mb-2">
@@ -711,7 +711,7 @@ const TierMilestoneTracker: React.FC<{
                       {milestones.slice(3).map((milestone, index) => (
                         <tr key={index} className="hover:bg-purple-50">
                           <td className="px-4 py-2 text-sm">
-                            <UsernameLink username={milestone.username} handleUserSelect={handleUserSelect} />
+                            <UsernameLink username={milestone.username} />
                           </td>
                           <td className="px-4 py-2 text-sm text-center">
                             <span className="text-lg">
@@ -738,7 +738,7 @@ const TierMilestoneTracker: React.FC<{
               {milestones.map((milestone, index) => (
                 <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
                   <div className="flex justify-between items-start mb-2">
-                    <UsernameLink username={milestone.username} handleUserSelect={handleUserSelect} />
+                    <UsernameLink username={milestone.username} />
                   </div>
 
                   <div className="flex items-center gap-2 mb-2">
@@ -804,33 +804,38 @@ const calculateRewards = (
   };
 };
 
-// Add this before the Leaderboard function
+// Add this near the top of the file, after imports
+const UserSelectContext = React.createContext<(username: string) => void>(() => {});
+
+// Update UsernameLink to use context
 const UsernameLink: React.FC<{
   username: string;
   showExplorer?: boolean;
   className?: string;
-  handleUserSelect: (username: string) => void;
-}> = ({ username, showExplorer = true, className = "", handleUserSelect }) => (
-  <div className="flex items-center gap-1">
-    <button 
-      onClick={() => handleUserSelect(username)}
-      className={`text-purple-600 hover:text-purple-800 hover:underline ${className}`}
-    >
-      {username}
-    </button>
-    {showExplorer && (
-      <a 
-        href={`https://explorer.xprnetwork.org/account/${username}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-gray-400 hover:text-purple-600 transition-colors"
-        title="View on Blockchain Explorer"
+}> = ({ username, showExplorer = true, className = "" }) => {
+  const handleUserSelect = React.useContext(UserSelectContext);
+  return (
+    <div className="flex items-center gap-1">
+      <button 
+        onClick={() => handleUserSelect(username)}
+        className={`text-purple-600 hover:text-purple-800 hover:underline ${className}`}
       >
-        <CubeTransparentIcon className="h-4 w-4" />
-      </a>
-    )}
-  </div>
-);
+        {username}
+      </button>
+      {showExplorer && (
+        <a 
+          href={`https://explorer.xprnetwork.org/account/${username}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-400 hover:text-purple-600 transition-colors"
+          title="View on Blockchain Explorer"
+        >
+          <CubeTransparentIcon className="h-4 w-4" />
+        </a>
+      )}
+    </div>
+  );
+};
 
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
@@ -1316,544 +1321,546 @@ function Leaderboard() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          {/* Title on the left */}
-          <h1 className={`text-3xl font-bold text-purple-700 ${
-            isEasterEggActive ? 'rainbow-text' : ''
-          }`}>
-            {pageTitle}
-          </h1>
-          
-          {/* Stake button on the right */}
-          <a 
-            href="https://storex.io/account/staking"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-6 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors duration-200 flex items-center gap-2"
-          >
-            <span>Stake STRX</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </a>
-        </div>
-
-        {/* Last update info with info button */}
-        {response?.lastModified && (
-          <div className="flex justify-between items-center text-sm mb-4">
-            <span className="text-gray-500 italic">
-              Last updated {formatTimeDiff(response.lastModified)}
-            </span>
-            <button
-              onClick={() => setIsInfoModalOpen(true)}
-              className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
-              aria-label="Information"
+    <UserSelectContext.Provider value={handleUserSelect}>
+      <div className="min-h-screen bg-white p-4 md:p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            {/* Title on the left */}
+            <h1 className={`text-3xl font-bold text-purple-700 ${
+              isEasterEggActive ? 'rainbow-text' : ''
+            }`}>
+              {pageTitle}
+            </h1>
+            
+            {/* Stake button on the right */}
+            <a 
+              href="https://storex.io/account/staking"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors duration-200 flex items-center gap-2"
             >
-              <QuestionMarkCircleIcon className="h-6 w-6" />
-            </button>
+              <span>Stake STRX</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
           </div>
-        )}
 
-        {/* Add the modal component */}
-        <InfoModal 
-          isOpen={isInfoModalOpen} 
-          onClose={() => setIsInfoModalOpen(false)} 
-        />
-
-        {/* Statistics Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <StatisticCard
-            title="Total Stakers"
-            value={statistics?.totalUsers.toLocaleString()}
-            tooltip="Total number of unique addresses that currently have STRX tokens staked"
-          />
-
-          <StatisticCard
-            title="Total Staked (Cleos Call)"
-            value={
-              <div className="flex flex-col">
-                {formatAmount(
-                  statistics?.totalStaked || 0,
-                  amountDisplays['statistics-totalStaked'] || 'strx'
-                )}
-                <span className="text-xs text-gray-500">
-                  ({((statistics?.totalStaked || 0) / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
-                </span>
-              </div>
-            }
-            tooltip="Total amount of STRX tokens currently staked in the protocol. Click to toggle between STRX and USD values."
-            onClick={() => toggleAmountDisplay('statistics', 'totalStaked')}
-          />
-
-          <StatisticCard
-            title="Global Staked (API)"
-            value={
-              <div className="flex flex-col">
-                {formatAmount(
-                  globalStaked,
-                  amountDisplays['statistics-globalStaked'] || 'strx'
-                )}
-                <span className="text-xs text-gray-500">
-                  ({(globalStaked / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
-                </span>
-              </div>
-            }
-            tooltip="Total staked amount reported by the blockchain API. May differ slightly from Cleos call due to timing differences."
-            onClick={() => toggleAmountDisplay('statistics', 'globalStaked')}
-          />
-
-          <StatisticCard
-            title="Average Stake"
-            value={formatAmount(
-              statistics?.average || 0,
-              amountDisplays['statistics-average'] || 'strx'
-            )}
-            tooltip="Average amount of STRX tokens staked per user. Click to toggle between STRX and USD values."
-            onClick={() => toggleAmountDisplay('statistics', 'average')}
-          />
-
-          <StatisticCard
-            title="Median Stake"
-            value={formatAmount(
-              statistics?.median || 0,
-              amountDisplays['statistics-median'] || 'strx'
-            )}
-            tooltip="The middle value of all stake amounts. 50% of stakers have more than this amount, 50% have less."
-            onClick={() => toggleAmountDisplay('statistics', 'median')}
-          />
-
-          <StatisticCard
-            title="Stake Range"
-            value={
-              <div className="flex flex-col">
-                <span className="text-sm">
-                  {formatAmount(
-                    statistics?.minStake || 0,
-                    amountDisplays['statistics-range'] || 'strx'
-                  )}
-                </span>
-                <span className="text-xs text-gray-500">to</span>
-                <span className="text-sm">
-                  {formatAmount(
-                    statistics?.maxStake || 0,
-                    amountDisplays['statistics-range'] || 'strx'
-                  )}
-                </span>
-              </div>
-            }
-            tooltip="The range between the smallest and largest stake amounts in the system. Click to toggle between STRX and USD values."
-            onClick={() => toggleAmountDisplay('statistics', 'range')}
-          />
-
-          <StatisticCard
-            title="STRX Price"
-            value={`$${strxPrice.toLocaleString(undefined, {
-              minimumFractionDigits: 6,
-              maximumFractionDigits: 6,
-              useGrouping: true,
-            })}`}
-            tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
-          />
-        </div>
-
-        {/* Staking Tiers Dashboard */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Staking Tiers Distribution</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {tierStatistics?.map((tier) => (
-              <div
-                key={tier.name}
-                onClick={() => {
-                  setSelectedTier(selectedTier?.name === tier.name ? null : tier);
-                  handleEasterEgg(tier);
-                }}
-                className={`tier-card bg-white p-4 rounded-lg shadow border cursor-pointer transition-colors ${
-                  selectedTier?.name === tier.name 
-                    ? 'border-purple-500 bg-purple-50' 
-                    : 'border-purple-100 hover:bg-purple-50'
-                }`}
+          {/* Last update info with info button */}
+          {response?.lastModified && (
+            <div className="flex justify-between items-center text-sm mb-4">
+              <span className="text-gray-500 italic">
+                Last updated {formatTimeDiff(response.lastModified)}
+              </span>
+              <button
+                onClick={() => setIsInfoModalOpen(true)}
+                className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
+                aria-label="Information"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-2xl">{tier.emoji}</span>
-                  <span className="text-sm text-gray-500">{tier.name}</span>
-                </div>
-                <div className="text-xl font-semibold text-purple-700">
-                  {tier.count.toLocaleString()}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {tier.minimum.toLocaleString()}+ STRX
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <TierMilestoneTracker 
-          stakersData={processedData}
-          setSearchTerm={setSearchTerm}
-          selectedTier={selectedTier}
-          sectionVisibility={sectionVisibility}
-          setSectionVisibility={setSectionVisibility}
-          SectionHeader={SectionHeader}
-        />
-
-        {/* Add the recent actions dashboard */}
-        <div className="mb-8">
-          <SectionHeader
-            title="Recent Staking Activity"
-            sectionKey="recentActivity"
-            isVisible={sectionVisibility.recentActivity}
-            onToggle={() => setSectionVisibility(prev => ({
-              ...prev,
-              recentActivity: !prev.recentActivity
-            }))}
-          />
-          
-          {sectionVisibility.recentActivity && (
-            <RecentActions 
-              strxPrice={strxPrice}
-              stakersData={response?.data}
-              setSearchTerm={setSearchTerm}
-              selectedTier={selectedTier}
-            />
+                <QuestionMarkCircleIcon className="h-6 w-6" />
+              </button>
+            </div>
           )}
-        </div>
 
-        {/* Add the new stakers panel before the leaderboard table */}
-        <NewStakersPanel 
-          newStakers={processedNewStakers}
-          strxPrice={strxPrice}
-        />
+          {/* Add the modal component */}
+          <InfoModal 
+            isOpen={isInfoModalOpen} 
+            onClose={() => setIsInfoModalOpen(false)} 
+          />
 
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-700 border-t-transparent"></div>
-          </div>
-        ) : error ? (
-          <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-            <p className="text-red-700">Error loading data. Please try again later.</p>
-          </div>
-        ) : (
-          <>
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 15 Holders Distribution</h2>
-              <div className="h-64 w-full">
-                <ResponsiveContainer>
-                  <BarChart data={topHolders} margin={{ left: 50, right: 20, top: 20, bottom: 20 }}>
-                    <XAxis dataKey="username" />
-                    <YAxis 
-                      tickFormatter={formatLargeNumber}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => [
-                        value.toLocaleString(undefined, {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4,
-                          useGrouping: true,
-                        }),
-                        sortField.charAt(0).toUpperCase() + sortField.slice(1) // Capitalize first letter
-                      ]}
-                    />
-                    <Bar dataKey={sortField} fill="#7C63CC" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+          {/* Statistics Dashboard */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <StatisticCard
+              title="Total Stakers"
+              value={statistics?.totalUsers.toLocaleString()}
+              tooltip="Total number of unique addresses that currently have STRX tokens staked"
+            />
 
-            <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search by username..."
-                  className="pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
-                <ColumnSelector 
-                  visibleColumns={visibleColumns} 
-                  setVisibleColumns={setVisibleColumns}
-                  setSortField={setSortField}
-                />
-                <div className="hidden md:flex items-center gap-2">
-                  <span className="text-gray-600">Sort by:</span>
-                  <select
-                    value={sortField}
-                    onChange={(e) => setSortField(e.target.value as SortField)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="staked">Staked Amount</option>
-                    <option value="unstaked">Unstaked Amount</option>
-                    <option value="total">Total Amount</option>
-                  </select>
-                  <button
-                    onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                    className="flex items-center gap-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
-                  >
-                    {sortOrder === 'desc' ? (
-                      <ArrowDownIcon className="h-4 w-4" />
-                    ) : (
-                      <ArrowUpIcon className="h-4 w-4" />
+            <StatisticCard
+              title="Total Staked (Cleos Call)"
+              value={
+                <div className="flex flex-col">
+                  {formatAmount(
+                    statistics?.totalStaked || 0,
+                    amountDisplays['statistics-totalStaked'] || 'strx'
+                  )}
+                  <span className="text-xs text-gray-500">
+                    ({((statistics?.totalStaked || 0) / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
+                  </span>
+                </div>
+              }
+              tooltip="Total amount of STRX tokens currently staked in the protocol. Click to toggle between STRX and USD values."
+              onClick={() => toggleAmountDisplay('statistics', 'totalStaked')}
+            />
+
+            <StatisticCard
+              title="Global Staked (API)"
+              value={
+                <div className="flex flex-col">
+                  {formatAmount(
+                    globalStaked,
+                    amountDisplays['statistics-globalStaked'] || 'strx'
+                  )}
+                  <span className="text-xs text-gray-500">
+                    ({(globalStaked / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
+                  </span>
+                </div>
+              }
+              tooltip="Total staked amount reported by the blockchain API. May differ slightly from Cleos call due to timing differences."
+              onClick={() => toggleAmountDisplay('statistics', 'globalStaked')}
+            />
+
+            <StatisticCard
+              title="Average Stake"
+              value={formatAmount(
+                statistics?.average || 0,
+                amountDisplays['statistics-average'] || 'strx'
+              )}
+              tooltip="Average amount of STRX tokens staked per user. Click to toggle between STRX and USD values."
+              onClick={() => toggleAmountDisplay('statistics', 'average')}
+            />
+
+            <StatisticCard
+              title="Median Stake"
+              value={formatAmount(
+                statistics?.median || 0,
+                amountDisplays['statistics-median'] || 'strx'
+              )}
+              tooltip="The middle value of all stake amounts. 50% of stakers have more than this amount, 50% have less."
+              onClick={() => toggleAmountDisplay('statistics', 'median')}
+            />
+
+            <StatisticCard
+              title="Stake Range"
+              value={
+                <div className="flex flex-col">
+                  <span className="text-sm">
+                    {formatAmount(
+                      statistics?.minStake || 0,
+                      amountDisplays['statistics-range'] || 'strx'
                     )}
-                  </button>
+                  </span>
+                  <span className="text-xs text-gray-500">to</span>
+                  <span className="text-sm">
+                    {formatAmount(
+                      statistics?.maxStake || 0,
+                      amountDisplays['statistics-range'] || 'strx'
+                    )}
+                  </span>
+                </div>
+              }
+              tooltip="The range between the smallest and largest stake amounts in the system. Click to toggle between STRX and USD values."
+              onClick={() => toggleAmountDisplay('statistics', 'range')}
+            />
+
+            <StatisticCard
+              title="STRX Price"
+              value={`$${strxPrice.toLocaleString(undefined, {
+                minimumFractionDigits: 6,
+                maximumFractionDigits: 6,
+                useGrouping: true,
+              })}`}
+              tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
+            />
+          </div>
+
+          {/* Staking Tiers Dashboard */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Staking Tiers Distribution</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {tierStatistics?.map((tier) => (
+                <div
+                  key={tier.name}
+                  onClick={() => {
+                    setSelectedTier(selectedTier?.name === tier.name ? null : tier);
+                    handleEasterEgg(tier);
+                  }}
+                  className={`tier-card bg-white p-4 rounded-lg shadow border cursor-pointer transition-colors ${
+                    selectedTier?.name === tier.name 
+                      ? 'border-purple-500 bg-purple-50' 
+                      : 'border-purple-100 hover:bg-purple-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-2xl">{tier.emoji}</span>
+                    <span className="text-sm text-gray-500">{tier.name}</span>
+                  </div>
+                  <div className="text-xl font-semibold text-purple-700">
+                    {tier.count.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {tier.minimum.toLocaleString()}+ STRX
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <TierMilestoneTracker 
+            stakersData={processedData}
+            setSearchTerm={setSearchTerm}
+            selectedTier={selectedTier}
+            sectionVisibility={sectionVisibility}
+            setSectionVisibility={setSectionVisibility}
+            SectionHeader={SectionHeader}
+          />
+
+          {/* Add the recent actions dashboard */}
+          <div className="mb-8">
+            <SectionHeader
+              title="Recent Staking Activity"
+              sectionKey="recentActivity"
+              isVisible={sectionVisibility.recentActivity}
+              onToggle={() => setSectionVisibility(prev => ({
+                ...prev,
+                recentActivity: !prev.recentActivity
+              }))}
+            />
+            
+            {sectionVisibility.recentActivity && (
+              <RecentActions 
+                strxPrice={strxPrice}
+                stakersData={response?.data}
+                setSearchTerm={setSearchTerm}
+                selectedTier={selectedTier}
+              />
+            )}
+          </div>
+
+          {/* Add the new stakers panel before the leaderboard table */}
+          <NewStakersPanel 
+            newStakers={processedNewStakers}
+            strxPrice={strxPrice}
+          />
+
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-700 border-t-transparent"></div>
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <p className="text-red-700">Error loading data. Please try again later.</p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 15 Holders Distribution</h2>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer>
+                    <BarChart data={topHolders} margin={{ left: 50, right: 20, top: 20, bottom: 20 }}>
+                      <XAxis dataKey="username" />
+                      <YAxis 
+                        tickFormatter={formatLargeNumber}
+                      />
+                      <Tooltip 
+                        formatter={(value: number) => [
+                          value.toLocaleString(undefined, {
+                            minimumFractionDigits: 4,
+                            maximumFractionDigits: 4,
+                            useGrouping: true,
+                          }),
+                          sortField.charAt(0).toUpperCase() + sortField.slice(1) // Capitalize first letter
+                        ]}
+                      />
+                      <Bar dataKey={sortField} fill="#7C63CC" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-purple-50">
-                  <tr>
-                    {visibleColumns.rank && (
-                      <th className="px-2 py-3 text-left text-sm font-semibold text-purple-700 w-12">
-                        Rank
-                      </th>
-                    )}
-                    {visibleColumns.username && (
-                      <th className="px-2 py-3 text-left text-sm font-semibold text-purple-700 w-40">
-                        Username
-                      </th>
-                    )}
-                    {visibleColumns.staked && (
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
-                        Staked Amount
-                      </th>
-                    )}
-                    {visibleColumns.unstaked && (
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
-                        Unstaked Amount
-                      </th>
-                    )}
-                    {visibleColumns.total && (
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
-                        Total Amount
-                      </th>
-                    )}
-                    {visibleColumns.usdValue && (
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
-                        USD Value
-                      </th>
-                    )}
-                    {visibleColumns.rewards && (
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700 min-w-[200px]">
-                        Estimated Rewards
-                      </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {currentData.map((item, index) => (
-                    <tr key={item.username} className="hover:bg-purple-50">
+              <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search by username..."
+                    className="pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
+                  <ColumnSelector 
+                    visibleColumns={visibleColumns} 
+                    setVisibleColumns={setVisibleColumns}
+                    setSortField={setSortField}
+                  />
+                  <div className="hidden md:flex items-center gap-2">
+                    <span className="text-gray-600">Sort by:</span>
+                    <select
+                      value={sortField}
+                      onChange={(e) => setSortField(e.target.value as SortField)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="staked">Staked Amount</option>
+                      <option value="unstaked">Unstaked Amount</option>
+                      <option value="total">Total Amount</option>
+                    </select>
+                    <button
+                      onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                      className="flex items-center gap-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
+                    >
+                      {sortOrder === 'desc' ? (
+                        <ArrowDownIcon className="h-4 w-4" />
+                      ) : (
+                        <ArrowUpIcon className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-purple-50">
+                    <tr>
                       {visibleColumns.rank && (
-                        <td className="px-2 py-4 text-sm text-gray-900 w-12">
-                          <div className="flex items-center gap-1">
-                            {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                            {(currentPage === 1 && index < 3) && (
-                              <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                                {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
-                              </span>
-                            )}
-                          </div>
-                        </td>
+                        <th className="px-2 py-3 text-left text-sm font-semibold text-purple-700 w-12">
+                          Rank
+                        </th>
                       )}
                       {visibleColumns.username && (
-                        <td className="px-2 py-4 text-sm text-gray-900 w-40">
-                          <div className="flex items-center gap-1">
-                            <span title={`${selectedTier?.name} Tier`}>
-                              {selectedTier?.emoji}
-                            </span>
-                            <button 
-                              onClick={() => handleUserSelect(item.username)}
-                              className="text-purple-600 hover:text-purple-800 hover:underline"
-                            >
-                              {item.username}
-                            </button>
-                            <a 
-                              href={`https://explorer.xprnetwork.org/account/${item.username}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-gray-400 hover:text-purple-600 transition-colors"
-                              title="View on Blockchain Explorer"
-                            >
-                              <CubeTransparentIcon className="h-4 w-4" />
-                            </a>
-                          </div>
-                        </td>
+                        <th className="px-2 py-3 text-left text-sm font-semibold text-purple-700 w-40">
+                          Username
+                        </th>
                       )}
                       {visibleColumns.staked && (
-                        <td 
-                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => {
-                            toggleAmountDisplay(item.username, 'staked');
-                            handleEasterEgg(null, item.username);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            {formatAmount(
-                              item.staked, 
-                              amountDisplays[`${item.username}-staked`] || 'strx'
-                            )}
-                            <span className="text-xs text-gray-500">
-                              ({(item.staked / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                            </span>
-                          </div>
-                        </td>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
+                          Staked Amount
+                        </th>
                       )}
                       {visibleColumns.unstaked && (
-                        <td 
-                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => {
-                            toggleAmountDisplay(item.username, 'unstaked');
-                            handleEasterEgg(null, item.username);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            {formatAmount(
-                              item.unstaked, 
-                              amountDisplays[`${item.username}-unstaked`] || 'strx'
-                            )}
-                            <span className="text-xs text-gray-500">
-                              ({(item.unstaked / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                            </span>
-                          </div>
-                        </td>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
+                          Unstaked Amount
+                        </th>
                       )}
                       {visibleColumns.total && (
-                        <td 
-                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => {
-                            toggleAmountDisplay(item.username, 'total');
-                            handleEasterEgg(null, item.username);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            {formatAmount(
-                              item.total, 
-                              amountDisplays[`${item.username}-total`] || 'strx'
-                            )}
-                            <span className="text-xs text-gray-500">
-                              ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                            </span>
-                          </div>
-                        </td>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
+                          Total Amount
+                        </th>
                       )}
                       {visibleColumns.usdValue && (
-                        <td 
-                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => {
-                            toggleAmountDisplay(item.username, 'usdValue');
-                            handleEasterEgg(null, item.username);
-                          }}
-                        >
-                          {formatAmount(
-                            item.total,
-                            amountDisplays[`${item.username}-usdValue`] || 'usd'
-                          )}
-                        </td>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
+                          USD Value
+                        </th>
                       )}
                       {visibleColumns.rewards && (
-                        <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[220px]">
-                          {(() => {
-                            const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
-                              ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
-                              : 0;
-                            
-                            const rewards = calculateRewards(
-                              item.staked, 
-                              rewardsPerSec, 
-                              strxPrice,
-                              blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
-                            );
-                            const isUsd = amountDisplays[`${item.username}-rewards`] === 'usd';
-
-                            return (
-                              <div className="flex flex-col items-start">
-                                <span>
-                                  Daily: {isUsd 
-                                    ? `$${rewards.dailyUsd.toFixed(2)}` 
-                                    : `${rewards.daily.toFixed(4)}`}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Monthly: {isUsd 
-                                    ? `$${rewards.monthlyUsd.toFixed(2)}` 
-                                    : `${rewards.monthly.toFixed(4)}`}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  Yearly: {isUsd 
-                                    ? `$${rewards.yearlyUsd.toFixed(2)}` 
-                                    : `${rewards.yearly.toFixed(4)}`}
-                                </span>
-                              </div>
-                            );
-                          })()}
-                        </td>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700 min-w-[200px]">
+                          Estimated Rewards
+                        </th>
                       )}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {currentData.map((item, index) => (
+                      <tr key={item.username} className="hover:bg-purple-50">
+                        {visibleColumns.rank && (
+                          <td className="px-2 py-4 text-sm text-gray-900 w-12">
+                            <div className="flex items-center gap-1">
+                              {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                              {(currentPage === 1 && index < 3) && (
+                                <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
+                                  {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.username && (
+                          <td className="px-2 py-4 text-sm text-gray-900 w-40">
+                            <div className="flex items-center gap-1">
+                              <span title={`${selectedTier?.name} Tier`}>
+                                {selectedTier?.emoji}
+                              </span>
+                              <button 
+                                onClick={() => handleUserSelect(item.username)}
+                                className="text-purple-600 hover:text-purple-800 hover:underline"
+                              >
+                                {item.username}
+                              </button>
+                              <a 
+                                href={`https://explorer.xprnetwork.org/account/${item.username}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-gray-400 hover:text-purple-600 transition-colors"
+                                title="View on Blockchain Explorer"
+                              >
+                                <CubeTransparentIcon className="h-4 w-4" />
+                              </a>
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.staked && (
+                          <td 
+                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                            onClick={() => {
+                              toggleAmountDisplay(item.username, 'staked');
+                              handleEasterEgg(null, item.username);
+                            }}
+                          >
+                            <div className="flex flex-col">
+                              {formatAmount(
+                                item.staked, 
+                                amountDisplays[`${item.username}-staked`] || 'strx'
+                              )}
+                              <span className="text-xs text-gray-500">
+                                ({(item.staked / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                              </span>
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.unstaked && (
+                          <td 
+                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                            onClick={() => {
+                              toggleAmountDisplay(item.username, 'unstaked');
+                              handleEasterEgg(null, item.username);
+                            }}
+                          >
+                            <div className="flex flex-col">
+                              {formatAmount(
+                                item.unstaked, 
+                                amountDisplays[`${item.username}-unstaked`] || 'strx'
+                              )}
+                              <span className="text-xs text-gray-500">
+                                ({(item.unstaked / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                              </span>
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.total && (
+                          <td 
+                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                            onClick={() => {
+                              toggleAmountDisplay(item.username, 'total');
+                              handleEasterEgg(null, item.username);
+                            }}
+                          >
+                            <div className="flex flex-col">
+                              {formatAmount(
+                                item.total, 
+                                amountDisplays[`${item.username}-total`] || 'strx'
+                              )}
+                              <span className="text-xs text-gray-500">
+                                ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                              </span>
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.usdValue && (
+                          <td 
+                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                            onClick={() => {
+                              toggleAmountDisplay(item.username, 'usdValue');
+                              handleEasterEgg(null, item.username);
+                            }}
+                          >
+                            {formatAmount(
+                              item.total,
+                              amountDisplays[`${item.username}-usdValue`] || 'usd'
+                            )}
+                          </td>
+                        )}
+                        {visibleColumns.rewards && (
+                          <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[220px]">
+                            {(() => {
+                              const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
+                                ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                                : 0;
+                              
+                              const rewards = calculateRewards(
+                                item.staked, 
+                                rewardsPerSec, 
+                                strxPrice,
+                                blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
+                              );
+                              const isUsd = amountDisplays[`${item.username}-rewards`] === 'usd';
 
-            <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="text-sm text-gray-600 text-center md:text-left">
-                Page Total: {currentPageTotal.toLocaleString(undefined, {
-                  minimumFractionDigits: 4,
-                  maximumFractionDigits: 4,
-                  useGrouping: true,
-                })}
+                              return (
+                                <div className="flex flex-col items-start">
+                                  <span>
+                                    Daily: {isUsd 
+                                      ? `$${rewards.dailyUsd.toFixed(2)}` 
+                                      : `${rewards.daily.toFixed(4)}`}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    Monthly: {isUsd 
+                                      ? `$${rewards.monthlyUsd.toFixed(2)}` 
+                                      : `${rewards.monthly.toFixed(4)}`}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    Yearly: {isUsd 
+                                      ? `$${rewards.yearlyUsd.toFixed(2)}` 
+                                      : `${rewards.yearly.toFixed(4)}`}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="flex items-center gap-2 justify-center md:justify-end">
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                >
-                  First
-                </button>
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                >
-                  Previous
-                </button>
-                <span className="text-sm text-gray-600 px-2">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                >
-                  Next
-                </button>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                >
-                  Last
-                </button>
+
+              <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="text-sm text-gray-600 text-center md:text-left">
+                  Page Total: {currentPageTotal.toLocaleString(undefined, {
+                    minimumFractionDigits: 4,
+                    maximumFractionDigits: 4,
+                    useGrouping: true,
+                  })}
+                </div>
+                <div className="flex items-center gap-2 justify-center md:justify-end">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-600 px-2">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                  >
+                    Last
+                  </button>
+                </div>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </UserSelectContext.Provider>
   );
 }
 
