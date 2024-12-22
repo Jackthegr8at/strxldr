@@ -514,7 +514,10 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                       `${value.toLocaleString()} STRX`,
                       'Projected Balance'
                     ]}
-                    labelFormatter={(_, data) => `Date: ${data[0].payload.fullDate}`}
+                    labelFormatter={(label, data) => {
+                      if (!data?.[0]?.payload?.fullDate) return label;
+                      return `Date: ${data[0].payload.fullDate}`;
+                    }}
                   />
                   <Legend />
                   {['No Compound', 'Daily', 'Monthly', 'Annually'].map((strategy, index) => (
