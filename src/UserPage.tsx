@@ -347,7 +347,21 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     return data;
   }, [stakingStats, userData.staked, projectionRange]);
 
-  // Update tier analysis calculation
+  // Add this with your other SWR fetches
+  const { data: rewardsPoolData } = useSWR<any>(
+    'rewards_pool',
+    () => fetch('https://proton.eosusa.io/v1/chain/get_currency_balance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: "storex",
+        account: "rewards.strx",
+        symbol: "STRX"
+      })
+    }).then(res => res.json())
+  );
+
+  // Then update the analysis section
   const tierAnalysis = useMemo(() => {
     const rewards = stakingStats?.rewards;
     if (!tierProgress || !rewards?.daily || !rewards?.monthly || !nextTier) return null;
@@ -510,10 +524,18 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                     tickFormatter={(value) => (value / 1000).toFixed(0) + 'k'}
                   />
                   <Tooltip 
-                    formatter={(value: number) => [
-                      `${value.toLocaleString()} STRX`,
-                      'Projected Balance'
-                    ]}
+                    formatter={(value: number, name: string) => {
+                      const difference = value - userData.staked;
+                      return [
+                        <div>
+                          <div>{value.toLocaleString()} STRX</div>
+                          <div className="text-xs text-gray-500">
+                            +{difference.toLocaleString()} STRX
+                          </div>
+                        </div>,
+                        'Projected Balance'
+                      ];
+                    }}
                     labelFormatter={(label, data) => {
                       if (!data?.[0]?.payload?.fullDate) return label;
                       return `Date: ${data[0].payload.fullDate}`;
@@ -584,6 +606,22 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                         </p>
                       );
                     })}
+                  </div>
+                  <div className="mt-4 text-xs text-gray-500">
+                    <p className="mb-1">
+                      Note: These projections assume current reward rates remain constant.
+                    </p>
+                    <p>
+                      Current rewards pool: {' '}
+                      <span className="font-medium">
+                        {rewardsPoolData?.[0] 
+                          ? parseFloat(rewardsPoolData[0]).toLocaleString() 
+                          : '...'} STRX
+                      </span>
+                    </p>
+                    <p>
+                      Projections may vary based on changes in reward rates and available rewards.
+                    </p>
                   </div>
                   <p className="text-sm text-gray-600 mt-3">
                     Monthly rewards contribute{' '}
