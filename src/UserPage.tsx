@@ -147,16 +147,25 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       .sort((a, b) => b.time.getTime() - a.time.getTime());
   }, [actionsData, strxPrice]);
 
-  // Now we can initialize timeRange using userActions
-  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>(() => {
-    const last7Days = userActions.filter(action => {
-      const actionDate = new Date(action.time);
+  // Fix the timeRange initialization by using useEffect
+  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d');
+
+  // Add useEffect to check transaction count and update timeRange
+  useEffect(() => {
+    if (userActions.length > 0) {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      return actionDate >= sevenDaysAgo;
-    });
-    return last7Days.length < 2 ? '30d' : '7d';
-  });
+      
+      const recentTransactions = userActions.filter(action => {
+        return action.type !== 'claim staking rewards' && 
+               action.time >= sevenDaysAgo;
+      });
+
+      if (recentTransactions.length < 2) {
+        setTimeRange('30d');
+      }
+    }
+  }, [userActions]);
 
   // We don't need to fetch the full staking data since we have the user's data
   const { data: blockchainData } = useSWR<BlockchainResponse>(
@@ -295,8 +304,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
           Back to Leaderboard
         </button>
 
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="mb-8 flex justify-between items-center">
+          <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold text-purple-700">
               {username}'s Staking Profile
             </h1>
@@ -306,7 +315,29 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
               </span>
             )}
           </div>
-          
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}?user=${username}`;
+                navigator.clipboard.writeText(url);
+                alert('URL copied to clipboard!');
+              }}
+              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+            >
+              Share
+            </button>
+            <a 
+              href={`https://explorer.xprnetwork.org/account/${username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 text-sm"
+            >
+              View on Explorer →
+            </a>
+          </div>
+        </div>
+
+        <div className="mb-8">
           {tierProgress && nextTier && (
             <div className="bg-white p-4 rounded-lg shadow border border-purple-100 mt-4">
               <div className="flex items-center gap-2 mb-2">
@@ -336,15 +367,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
               </div>
             </div>
           )}
-          
-          <a 
-            href={`https://explorer.xprnetwork.org/account/${username}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-purple-600 hover:text-purple-800 hover:underline text-sm"
-          >
-            View on Explorer →
-          </a>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
