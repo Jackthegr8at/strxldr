@@ -276,8 +276,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     };
   }, [currentTier, nextTier, userData.staked]);
 
-  // Add new state for projection range
-  const [projectionRange, setProjectionRange] = useState<'1y' | '5y' | '10y'>('1y');
+  // Update projection range type
+  const [projectionRange, setProjectionRange] = useState<'1y' | '2y' | '5y'>('1y');
 
   // Update rewards projection calculation
   const rewardsProjection = useMemo(() => {
@@ -286,18 +286,19 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     
     const dailyReward = rewards.daily;
     const data = [];
-    const years = projectionRange === '1y' ? 1 : projectionRange === '5y' ? 5 : 10;
+    const years = projectionRange === '1y' ? 1 : projectionRange === '2y' ? 2 : 5;
     const months = years * 12;
     
-    // Start from today
     const startDate = new Date();
     startDate.setHours(0, 0, 0, 0);
 
-    for (let i = 0; i <= months; i++) {
+    // Adjust interval based on projection range
+    const interval = years === 1 ? 1 : years === 2 ? 2 : 3; // months
+
+    for (let i = 0; i <= months; i += interval) {
       const date = new Date(startDate);
       date.setMonth(startDate.getMonth() + i);
       
-      // Calculate days since start for each strategy
       const daysSinceStart = Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       
       // No compound - just add daily rewards
@@ -317,7 +318,9 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       const annualCompound = userData.staked * Math.pow(1 + annualRate, annualPeriods);
 
       data.push({
-        date: date.toLocaleDateString(),
+        date: years === 1 
+          ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+          : date.toLocaleDateString(undefined, { year: 'numeric', month: 'short' }),
         amountNoCompound: noCompound,
         amountDaily: dailyCompound,
         amountMonthly: monthlyCompound,
@@ -331,18 +334,24 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
 
   // Update tier analysis calculation
   const calculateTimeToNextTier = (compoundInterval: number, dailyReward: number) => {
+    const targetAmount = nextTier.minimum;
+    const remainingAmount = targetAmount - userData.staked;
     let current = userData.staked;
     let days = 0;
     
-    while (current < nextTier.minimum) {
+    while (current < targetAmount) {
       if (compoundInterval === Infinity) {
-        // No compound - just add daily rewards
+        // No compound - linear progression
         current += dailyReward;
       } else {
-        // Use compound interest formula: A = P(1 + r)^t
-        const rate = dailyReward / current; // daily rate
-        const periods = days / compoundInterval; // number of compound periods
-        current = userData.staked * Math.pow(1 + (rate * compoundInterval), periods);
+        // Compound interest on the entire balance
+        const rate = dailyReward / current;
+        if (days % compoundInterval === 0) {
+          const accumulatedRewards = dailyReward * compoundInterval;
+          current *= (1 + (accumulatedRewards / current));
+        } else {
+          current += dailyReward;
+        }
       }
       days++;
     }
@@ -434,7 +443,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-800">Rewards Projection</h2>
             <div className="flex gap-2">
-              {(['1y', '5y', '10y'] as const).map((range) => (
+              {(['1y', '2y', '5y'] as const).map((range) => (
                 <button
                   key={range}
                   onClick={() => setProjectionRange(range)}
@@ -444,7 +453,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                       : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
                   }`}
                 >
-                  {range}
+                  {range.replace('y', ' Year')}
+                  {range !== '1y' ? 's' : ''}
                 </button>
               ))}
             </div>
