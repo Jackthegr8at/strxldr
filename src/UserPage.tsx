@@ -289,24 +289,30 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     const years = projectionRange === '1y' ? 1 : projectionRange === '5y' ? 5 : 10;
     const days = years * 365;
     const intervals = 12 * years; // Monthly intervals
+    
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0); // Start at beginning of today
 
     for (let i = 0; i <= days; i += Math.floor(days / intervals)) {
-      const date = new Date(Date.now() + i * 24 * 60 * 60 * 1000);
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
       
-      // No compound - just add daily rewards
+      // No compound
       const noCompound = userData.staked + (dailyReward * i);
       
-      // Daily compound - (1 + r)^n where r is daily rate
+      // Daily compound
       const dailyRate = dailyReward / userData.staked;
       const dailyCompound = userData.staked * Math.pow(1 + dailyRate, i);
       
-      // Monthly compound - (1 + r)^n where r is monthly rate
+      // Monthly compound
       const monthlyRate = (dailyReward * 30) / userData.staked;
-      const monthlyCompound = userData.staked * Math.pow(1 + monthlyRate, Math.floor(i / 30));
+      const monthlyPeriods = Math.floor(i / 30);
+      const monthlyCompound = userData.staked * Math.pow(1 + monthlyRate, monthlyPeriods);
       
-      // Annual compound - (1 + r)^n where r is annual rate
+      // Annual compound
       const annualRate = (dailyReward * 365) / userData.staked;
-      const annualCompound = userData.staked * Math.pow(1 + annualRate, Math.floor(i / 365));
+      const annualPeriods = Math.floor(i / 365);
+      const annualCompound = userData.staked * Math.pow(1 + annualRate, annualPeriods);
 
       data.push({
         date: date.toLocaleDateString(),
@@ -325,21 +331,17 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   const calculateTimeToNextTier = (compoundInterval: number, dailyReward: number) => {
     let current = userData.staked;
     let days = 0;
-    let accumulatedRewards = 0;
     
     while (current < nextTier.minimum) {
-      accumulatedRewards += dailyReward;
-      
       if (compoundInterval === Infinity) {
         // No compound - just add daily rewards
-        current = userData.staked + (dailyReward * days);
-      } else if (days % compoundInterval === 0 && days > 0) {
-        // On compound days, add accumulated rewards and compound them
-        current = current + accumulatedRewards;
-        // Reset accumulated rewards after compounding
-        accumulatedRewards = 0;
+        current += dailyReward;
+      } else {
+        // Use compound interest formula: A = P(1 + r)^t
+        const rate = dailyReward / current; // daily rate
+        const periods = days / compoundInterval; // number of compound periods
+        current = userData.staked * Math.pow(1 + (rate * compoundInterval), periods);
       }
-      
       days++;
     }
     
