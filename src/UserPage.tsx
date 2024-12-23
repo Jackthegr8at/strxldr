@@ -656,17 +656,24 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                         )}
 
                         <div className="mt-4 text-sm text-gray-600">
-                          <p>
-                            Projections may vary based on changes in reward rates and available rewards.
-                            <span className="inline-block ml-1 relative group">
-                              <InformationCircleIcon className="h-4 w-4 text-gray-400 inline cursor-help" />
-                              <span className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
-                                Note: These projections assume current reward rates remain constant. Current rewards pool will be depleted in approximately {Math.ceil(daysUntilEmpty)} days at current rates.
-                                {impossibleScenarios.length > 0 && 
-                                  " Some scenarios may become possible if the rewards pool is replenished, although rates might differ."}
-                              </span>
-                            </span>
-                          </p>
+                          <div className="flex justify-between items-start mb-1">
+                            <div className="text-sm text-gray-500">Note</div>
+                            <div 
+                              className="group relative"
+                              title="Projection Details"
+                            >
+                              <InformationCircleIcon 
+                                className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
+                              />
+                              <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                <p>These projections assume current reward rates remain constant.</p>
+                                <p className="mt-2">Current rewards pool will be depleted in approximately {Math.ceil(daysUntilEmpty)} days at current rates.</p>
+                                {impossibleScenarios.length > 0 && (
+                                  <p className="mt-2">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
                         <p className="text-sm text-gray-600 mt-3">
                           Monthly rewards contribute{' '}
