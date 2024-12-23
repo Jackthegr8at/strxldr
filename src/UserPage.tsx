@@ -498,36 +498,40 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-800">Rewards Projection</h2>
-            <div className="flex items-center gap-2">
-              <div 
-                className="group relative"
-                title="Projection Details"
-              >
+            <div className="flex items-center gap-4">
+              <div className="group relative">
                 <InformationCircleIcon 
                   className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
                 />
                 <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p>These projections assume current reward rates remain constant.</p>
-                  <p className="mt-2">Current rewards pool will be depleted in approximately {Math.ceil(daysUntilEmpty)} days at current rates.</p>
-                  {impossibleScenarios.length > 0 && (
-                    <p className="mt-2">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
+                  {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
+                    <div>
+                      <p>These projections assume current reward rates remain constant.</p>
+                      <p className="mt-2">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
+                        parseFloat(rewardsPoolData[0]),
+                        parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
+                        parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                      )} days at current rates.</p>
+                    </div>
                   )}
                 </div>
               </div>
-              {(['1y', '2y', '5y'] as const).map((range) => (
-                <button
-                  key={range}
-                  onClick={() => setProjectionRange(range)}
-                  className={`px-3 py-1 rounded-lg text-sm ${
-                    projectionRange === range
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                  }`}
-                >
-                  {range.replace('y', ' Year')}
-                  {range !== '1y' ? 's' : ''}
-                </button>
-              ))}
+              <div className="flex gap-2">
+                {(['1y', '2y', '5y'] as const).map((range) => (
+                  <button
+                    key={range}
+                    onClick={() => setProjectionRange(range)}
+                    className={`px-3 py-1 rounded-lg text-sm ${
+                      projectionRange === range
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                    }`}
+                  >
+                    {range.replace('y', ' Year')}
+                    {range !== '1y' ? 's' : ''}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div className="bg-white p-4 rounded-lg shadow border border-purple-100">
