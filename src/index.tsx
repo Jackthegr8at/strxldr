@@ -374,6 +374,11 @@ const RecentActions: React.FC<{
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900">
                   <div className="flex items-center gap-2">
+                    {stakersData && (
+                      <span title={getUserTier(stakersData[action.username]?.staked || 0).name}>
+                        {getUserTier(stakersData[action.username]?.staked || 0).emoji}
+                      </span>
+                    )}
                     <UsernameLink username={action.username} />
                     {action.isNewStaker && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
