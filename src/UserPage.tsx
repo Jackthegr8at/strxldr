@@ -81,6 +81,17 @@ interface DailyDataPoint {
   annualCompound: number;
 }
 
+// Add this helper function at the top of the component (like in index.tsx)
+const formatTimestamp = (timestamp: Date) => {
+  return timestamp.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true
+  });
+};
+
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
   const [transactionPage, setTransactionPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 10;
@@ -146,8 +157,10 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       })
       .map(action => {
         const amount = parseFloat(action.act.data.quantity.split(' ')[0]);
+        // Convert UTC timestamp string to local Date object
+        const time = new Date(action.timestamp.replace('.000', 'Z'));
         return {
-          time: new Date(action.timestamp),
+          time,
           amount,
           usdValue: amount * strxPrice,
           type: action.act.data.memo,
@@ -871,7 +884,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                   {paginatedTransactions.map((action, index) => (
                     <tr key={index} className="hover:bg-purple-50">
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {action.time.toLocaleString()}
+                        {formatTimestamp(action.time)}
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <span className={
