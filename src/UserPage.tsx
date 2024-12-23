@@ -81,14 +81,15 @@ interface DailyDataPoint {
   annualCompound: number;
 }
 
-// Add this helper function at the top of the component (like in index.tsx)
+// Update the formatTimestamp function
 const formatTimestamp = (timestamp: Date) => {
   return timestamp.toLocaleString(undefined, {
-    month: 'short',
+    year: 'numeric',
+    month: 'numeric',
     day: 'numeric',
     hour: 'numeric',
-    minute: 'numeric',
-    hour12: true
+    minute: '2-digit',
+    hour12: false
   });
 };
 
