@@ -691,26 +691,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                           </div>
                         )}
 
-                        <div className="mt-4 text-sm text-gray-600">
-                          <div className="flex justify-between items-start mb-1">
-                            <div className="text-sm text-gray-500">Note</div>
-                            <div 
-                              className="group relative"
-                              title="Projection Details"
-                            >
-                              <InformationCircleIcon 
-                                className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
-                              />
-                              <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                                <p>These projections assume current reward rates remain constant.</p>
-                                <p className="mt-2">Current rewards pool will be depleted in approximately {Math.ceil(daysUntilEmpty)} days at current rates.</p>
-                                {impossibleScenarios.length > 0 && (
-                                  <p className="mt-2">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
                       </>
                     );
                   })()}
