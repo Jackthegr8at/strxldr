@@ -694,42 +694,10 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                             </div>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-600 mt-3">
-                          Monthly rewards contribute{' '}
-                          <span className="font-medium text-purple-700">
-                            {tierAnalysis.monthlyProgress.toFixed(2)}%
-                          </span>
-                          {' '}towards your next tier goal
-                        </p>
                       </>
                     );
                   })()}
 
-                  <div className="mt-4 text-xs text-gray-500">
-                    <p className="mb-1">
-                      Note: These projections assume current reward rates remain constant.
-                    </p>
-                    <p>
-                      Current rewards pool: {' '}
-                      <span className="font-medium">
-                        {rewardsPoolData?.[0] 
-                          ? parseFloat(rewardsPoolData[0]).toLocaleString() 
-                          : '...'} STRX
-                      </span>
-                      {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
-                        <span className="text-gray-500">
-                          {' '}(~{calculateDaysUntilEmpty(
-                            parseFloat(rewardsPoolData[0]),
-                            parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
-                            parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
-                          ).toLocaleString()} days until empty)
-                        </span>
-                      )}
-                    </p>
-                    <p>
-                      Projections may vary based on changes in reward rates and available rewards.
-                    </p>
-                  </div>
                   <p className="text-sm text-gray-600 mt-3">
                     Monthly rewards contribute{' '}
                     <span className="font-medium text-purple-700">
