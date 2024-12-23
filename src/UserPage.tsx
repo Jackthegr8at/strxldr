@@ -504,15 +504,13 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                   className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
                 />
                 <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                  <p>These projections assume current reward rates remain constant.</p>
                   {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
-                    <div>
-                      <p>These projections assume current reward rates remain constant.</p>
-                      <p className="mt-2">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
-                        parseFloat(rewardsPoolData[0]),
-                        parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
-                        parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
-                      )} days at current rates.</p>
-                    </div>
+                    <p className="mt-2">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
+                      parseFloat(rewardsPoolData[0]),
+                      parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
+                      parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                    )} days at current rates.</p>
                   )}
                 </div>
               </div>
@@ -587,10 +585,12 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         <div className="mb-8">
           {tierProgress && nextTier && (
             <div className="bg-white p-4 rounded-lg shadow border border-purple-100 mt-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">{currentTier?.emoji}</span>
-                <span className="text-gray-400">➜</span>
-                <span className="text-2xl">{nextTier.emoji}</span>
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{currentTier?.emoji}</span>
+                  <span className="text-gray-400">➜</span>
+                  <span className="text-2xl">{nextTier.emoji}</span>
+                </div>
               </div>
 
               <div className="mb-2">
