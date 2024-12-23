@@ -20,19 +20,19 @@
 }
 
 .shake-animation {
-  animation: shake 0.5s ease-in-out infinite;
+  animation: none;
 }
 
 .splash-animation {
-  animation: splash 0.5s ease-in-out;
+  animation: none;
 }
 
 .bounce-animation {
-  animation: bounce 0.5s ease-in-out;
+  animation: none;
 }
 
 .tier-card {
-  transition: all 0.3s ease;
+  transition: none;
 }
 
 .tier-card:hover {
@@ -51,4 +51,8 @@
 
 .rainbow-text {
   animation: rainbow 5s linear infinite;
+}
+
+.hover\:text-purple-800:hover {
+  transition: none;
 }

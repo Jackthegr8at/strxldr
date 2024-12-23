@@ -57,7 +57,7 @@ type PriceResponse = {
 };
 
 // Add this type definition
-type SortField = 'staked' | 'unstaked' | 'total';
+type SortField = 'staked' | 'unstaked' | 'total' | 'rewards';
 
 // Add these types at the top of your file
 type VisibleColumns = {
@@ -955,15 +955,15 @@ function Leaderboard() {
   // Add sort type
   const [sortField, setSortField] = useState<SortField>('staked');
 
-  // Add this state near your other useState declarations
+  // Update the initial visibleColumns state
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>({
     rank: true,
     username: true,
-    staked: true,
+    staked: true, // Set this to true by default
     unstaked: false,
     total: false,
     usdValue: false,
-    rewards: true,
+    rewards: false, // Set this to false by default
   });
 
   // Add this state
@@ -1034,7 +1034,9 @@ function Leaderboard() {
       })
       .sort((a, b) => {
         const compareValue = sortOrder === 'desc' ? -1 : 1;
-        return (a[sortField] - b[sortField]) * compareValue;
+        // Special case for rewards sorting - use staked amount
+        const field = sortField === 'rewards' ? 'staked' : sortField;
+        return (a[field] - b[field]) * compareValue;
       });
   }, [response?.data, sortOrder, searchTerm, selectedTier, sortField]);
 
@@ -1613,10 +1615,15 @@ function Leaderboard() {
                             maximumFractionDigits: 4,
                             useGrouping: true,
                           }),
-                          sortField.charAt(0).toUpperCase() + sortField.slice(1) // Capitalize first letter
+                          sortField === 'rewards' 
+                            ? "Staked Amount" 
+                            : sortField.charAt(0).toUpperCase() + sortField.slice(1) // Capitalize first letter
                         ]}
                       />
-                      <Bar dataKey={sortField} fill="#7C63CC" />
+                      <Bar 
+                        dataKey={sortField === 'rewards' ? 'staked' : sortField} 
+                        fill="#7C63CC" 
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

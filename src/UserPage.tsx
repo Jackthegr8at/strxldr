@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import * as React from 'react';
 import { CubeTransparentIcon } from '@heroicons/react/24/outline';
@@ -330,7 +330,9 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       data.push({
         date: years === 1 
           ? date.toLocaleDateString(undefined, { month: 'short' })
-          : date.toLocaleDateString(undefined, { year: 'numeric', month: 'short' }),
+          : years === 2 
+            ? date.toLocaleDateString(undefined, { year: '2-digit', month: 'short' })
+            : date.toLocaleDateString(undefined, { year: '2-digit' }),
         fullDate: date.toLocaleDateString(undefined, { 
           year: 'numeric', 
           month: 'long', 
@@ -450,44 +452,46 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   return (
     <div className="min-h-screen bg-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <button
-          onClick={onBack}
-          className="mb-4 flex items-center gap-2 text-purple-600 hover:text-purple-800"
-        >
-          <ArrowLeftIcon className="h-5 w-5" />
-          Back to Leaderboard
-        </button>
-
-        <div className="mb-8 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold text-purple-700">
-              {username}'s Staking Profile
-            </h1>
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-purple-600 hover:text-purple-800"
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+              Back to Leaderboard
+            </button>
             {currentTier && (
-              <span className="text-2xl" title={currentTier.name}>
+              <span className="text-2xl ml-auto" title={currentTier.name}>
                 {currentTier.emoji}
               </span>
             )}
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                const url = `${window.location.origin}?user=${username}`;
-                navigator.clipboard.writeText(url);
-                alert('URL copied to clipboard!');
-              }}
-              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-            >
-              Share
-            </button>
-            <a 
-              href={`https://explorer.xprnetwork.org/account/${username}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 text-sm"
-            >
-              View on Explorer →
-            </a>
+
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h1 className="text-3xl font-bold text-purple-700">
+              {username}'s Staking Profile
+            </h1>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}?user=${username}`;
+                  navigator.clipboard.writeText(url);
+                  alert('URL copied to clipboard!');
+                }}
+                className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+              >
+                Share
+              </button>
+              <a 
+                href={`https://explorer.xprnetwork.org/account/${username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 text-sm"
+              >
+                View on Explorer →
+              </a>
+            </div>
           </div>
         </div>
 
@@ -518,6 +522,9 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                   <XAxis 
                     dataKey="date" 
                     interval={projectionRange === '1y' ? 1 : 2}
+                    angle={0}
+                    textAnchor="middle"
+                    height={30}
                   />
                   <YAxis 
                     domain={['dataMin', 'dataMax']}
@@ -649,12 +656,25 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                         )}
 
                         <div className="mt-4 text-sm text-gray-600">
-                          <p className="italic">
-                            Note: Reward pool will be depleted in approximately {Math.ceil(daysUntilEmpty)} days at current rates. 
-                            {impossibleScenarios.length > 0 && 
-                              " Some scenarios may become possible if the rewards pool is replenished, although rates might differ."}
+                          <p>
+                            Projections may vary based on changes in reward rates and available rewards.
+                            <span className="inline-block ml-1 relative group">
+                              <InformationCircleIcon className="h-4 w-4 text-gray-400 inline cursor-help" />
+                              <span className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                                Note: These projections assume current reward rates remain constant. Current rewards pool will be depleted in approximately {Math.ceil(daysUntilEmpty)} days at current rates.
+                                {impossibleScenarios.length > 0 && 
+                                  " Some scenarios may become possible if the rewards pool is replenished, although rates might differ."}
+                              </span>
+                            </span>
                           </p>
                         </div>
+                        <p className="text-sm text-gray-600 mt-3">
+                          Monthly rewards contribute{' '}
+                          <span className="font-medium text-purple-700">
+                            {tierAnalysis.monthlyProgress.toFixed(2)}%
+                          </span>
+                          {' '}towards your next tier goal
+                        </p>
                       </>
                     );
                   })()}
@@ -843,55 +863,57 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Transactions</h2>
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full">
-              <thead className="bg-purple-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Type</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Transaction</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {paginatedTransactions.map((action, index) => (
-                  <tr key={index} className="hover:bg-purple-50">
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {action.time.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className={
-                        action.type === 'add stake' ? 'text-green-600' :
-                        action.type === 'withdraw stake' ? 'text-red-600' :
-                        action.type === 'claim staking rewards' ? 'text-blue-600' :
-                        'text-gray-600'
-                      }>
-                        {action.type === 'add stake' ? 'Stake' :
-                         action.type === 'withdraw stake' ? 'Unstake' :
-                         action.type === 'claim staking rewards' ? 'Claim' : 
-                         'Unknown'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {action.amount.toLocaleString()} STRX
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      ${action.usdValue.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <a
-                        href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-purple-600 hover:text-purple-800 hover:underline"
-                      >
-                        <CubeTransparentIcon className="h-4 w-4" />
-                      </a>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-purple-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Type</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Transaction</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {paginatedTransactions.map((action, index) => (
+                    <tr key={index} className="hover:bg-purple-50">
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {action.time.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <span className={
+                          action.type === 'add stake' ? 'text-green-600' :
+                          action.type === 'withdraw stake' ? 'text-red-600' :
+                          action.type === 'claim staking rewards' ? 'text-blue-600' :
+                          'text-gray-600'
+                        }>
+                          {action.type === 'add stake' ? 'Stake' :
+                           action.type === 'withdraw stake' ? 'Unstake' :
+                           action.type === 'claim staking rewards' ? 'Claim' : 
+                           'Unknown'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {action.amount.toLocaleString()} STRX
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        ${action.usdValue.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <a
+                          href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-purple-600 hover:text-purple-800 hover:underline"
+                        >
+                          <CubeTransparentIcon className="h-4 w-4" />
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             
             <div className="px-6 py-4 border-t border-gray-200">
               <div className="flex justify-between items-center">
