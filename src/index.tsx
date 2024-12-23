@@ -305,11 +305,12 @@ const RecentActions: React.FC<{
     // Create Date object from UTC string and it will automatically convert to local time
     const date = new Date(timestamp.replace('.000', 'Z'));
     return date.toLocaleString(undefined, {
-      month: 'short',
+      year: 'numeric',
+      month: 'numeric',
       day: 'numeric',
       hour: 'numeric',
-      minute: 'numeric',
-      hour12: true
+      minute: '2-digit',
+      hour12: false
     });
   };
 
