@@ -512,6 +512,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                       parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
                     )} days at current rates.</p>
                   )}
+                  <p className="mt-2">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -591,6 +592,22 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                   <span className="text-gray-400">➜</span>
                   <span className="text-2xl">{nextTier.emoji}</span>
                 </div>
+                {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
+                  <div className="group relative">
+                    <InformationCircleIcon 
+                      className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
+                    />
+                    <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p>These projections assume current reward rates remain constant.</p>
+                      <p className="mt-2">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
+                        parseFloat(rewardsPoolData[0]),
+                        parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
+                        parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                      )} days at current rates.</p>
+                      <p className="mt-2">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mb-2">
