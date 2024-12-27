@@ -95,6 +95,8 @@ const formatTimestamp = (timestamp: Date) => {
 };
 
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
+  const [projectionRange, setProjectionRange] = useState<'1y' | '2y' | '5y'>('1y');
+  const [simulatedStaked, setSimulatedStaked] = useState(userData.staked);
   const [transactionPage, setTransactionPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 10;
 
@@ -239,15 +241,15 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     if (!blockchainData?.rows?.[0]) return null;
 
     const totalStaked = parseFloat(blockchainData.rows[0].stakes.split(' ')[0]);
-    const percentageOfPool = (userData.staked / totalStaked) * 100;
+    const percentageOfPool = (simulatedStaked / totalStaked) * 100;
     const percentageOfSupply = (totalAmount / TOTAL_SUPPLY) * 100;
 
     return {
       percentageOfPool,
       percentageOfSupply,
-      rewards: calculateRewards(userData.staked)
+      rewards: calculateRewards(simulatedStaked)
     };
-  }, [userData, blockchainData, totalAmount]);
+  }, [blockchainData, simulatedStaked, totalAmount, strxPrice]);
 
   const activityData = useMemo(() => {
     if (!userActions.length) return [];
@@ -301,12 +303,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     };
   }, [currentTier, nextTier, userData.staked]);
 
-  // Update projection range type
-  const [projectionRange, setProjectionRange] = useState<'1y' | '2y' | '5y'>('1y');
-
-  // Add this state near your other states
-  const [simulatedStaked, setSimulatedStaked] = useState(userData.staked);
-
   // Add this debounced function
   const debouncedSetSimulated = useCallback(
     debounce((value: number) => {
@@ -320,7 +316,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     const rewards = stakingStats?.rewards;
     if (!rewards?.daily) return [];
     
-    const dailyReward = rewards.daily * (simulatedStaked / userData.staked); // Adjust reward based on simulated amount
+    const dailyReward = rewards.daily * (simulatedStaked / userData.staked);
     const data = [];
     const years = projectionRange === '1y' ? 1 : projectionRange === '2y' ? 2 : 5;
     const months = years * 12;
@@ -328,8 +324,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     const startDate = new Date();
     startDate.setHours(0, 0, 0, 0);
 
-    // Adjust interval based on projection range
-    const interval = years === 1 ? 1 : years === 2 ? 2 : 3; // months
+    const interval = years === 1 ? 1 : years === 2 ? 2 : 3;
 
     for (let i = 0; i <= months; i += interval) {
       const date = new Date(startDate);
@@ -338,20 +333,20 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       const daysSinceStart = Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       
       // No compound - just add daily rewards
-      const noCompound = userData.staked + (dailyReward * daysSinceStart);
+      const noCompound = simulatedStaked + (dailyReward * daysSinceStart);
       
       // Daily compound
-      const dailyRate = dailyReward / userData.staked;
-      const dailyCompound = userData.staked * Math.pow(1 + dailyRate, daysSinceStart);
+      const dailyRate = dailyReward / simulatedStaked;
+      const dailyCompound = simulatedStaked * Math.pow(1 + dailyRate, daysSinceStart);
       
       // Monthly compound
-      const monthlyRate = (dailyReward * 30) / userData.staked;
-      const monthlyCompound = userData.staked * Math.pow(1 + monthlyRate, i);
+      const monthlyRate = (dailyReward * 30) / simulatedStaked;
+      const monthlyCompound = simulatedStaked * Math.pow(1 + monthlyRate, i);
       
       // Annual compound
-      const annualRate = (dailyReward * 365) / userData.staked;
+      const annualRate = (dailyReward * 365) / simulatedStaked;
       const annualPeriods = Math.floor(daysSinceStart / 365);
-      const annualCompound = userData.staked * Math.pow(1 + annualRate, annualPeriods);
+      const annualCompound = simulatedStaked * Math.pow(1 + annualRate, annualPeriods);
 
       data.push({
         date: years === 1 
@@ -373,7 +368,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     }
     
     return data;
-  }, [stakingStats, simulatedStaked, projectionRange]);
+  }, [stakingStats, simulatedStaked, projectionRange, userData.staked]);
 
   // Add this with your other SWR fetches
   const { data: rewardsPoolData } = useSWR<any>(
@@ -528,23 +523,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         <div className="mb-8">
           <div className="flex flex-col gap-4 mb-4">
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <h2 className="text-xl font-semibold text-gray-800">Rewards Projection</h2>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    defaultValue={userData.staked}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0;
-                      debouncedSetSimulated(value);
-                    }}
-                    placeholder="Staked amount"
-                    min="0"
-                  />
-                  <span className="text-sm text-gray-500">STRX</span>
-                </div>
-              </div>
+              <h2 className="text-xl font-semibold text-gray-800">Rewards Projection</h2>
               <div className="flex gap-2">
                 {(['1y', '2y', '5y'] as const).map((range) => (
                   <button
@@ -562,7 +541,21 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 ))}
               </div>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  className="w-32 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  defaultValue={userData.staked}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value) || 0;
+                    debouncedSetSimulated(value);
+                  }}
+                  placeholder="Staked amount"
+                  min="0"
+                />
+                <span className="text-sm text-gray-500">STRX</span>
+              </div>
               <div className="group relative">
                 <InformationCircleIcon 
                   className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
