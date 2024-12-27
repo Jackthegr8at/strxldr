@@ -301,17 +301,35 @@ const RecentActions: React.FC<{
     { refreshInterval: 30000 }
   );
 
+  // Update the formatTimestamp function
   const formatTimestamp = (timestamp: string) => {
-    // Create Date object from UTC string and it will automatically convert to local time
-    const date = new Date(timestamp + 'Z'); // Add Z to ensure UTC parsing
-    return date.toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: false
-    });
+    try {
+      // Remove milliseconds if present and ensure proper UTC format
+      const cleanTimestamp = timestamp
+        .replace('.000', '')  // Remove milliseconds
+        .replace(/Z$/, '')    // Remove Z if present
+        + 'Z';               // Add Z back to ensure UTC
+
+      const date = new Date(cleanTimestamp);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date:', timestamp);
+        return 'Invalid date';
+      }
+
+      return date.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: false
+      });
+    } catch (error) {
+      console.warn('Error formatting timestamp:', timestamp, error);
+      return 'Invalid date';
+    }
   };
 
   const recentActions = useMemo(() => {
@@ -337,7 +355,7 @@ const RecentActions: React.FC<{
       })
       .slice(0, 15)
       .map(action => ({
-        time: formatTimestamp(action.timestamp.replace('.000', 'Z')),
+        time: formatTimestamp(action.timestamp),
         username: action.act.data.memo === "withdraw stake" 
           ? action.act.data.to 
           : action.act.data.from,
