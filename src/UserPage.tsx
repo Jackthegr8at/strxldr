@@ -674,7 +674,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 </p>
                 {Object.entries(tierAnalysis.comparison.daysDifference).map(([strategy, diff]) => (
                   <p key={strategy}>
-                    {strategy.charAt(0).toUpperCase() + strategy.slice(1)} compound: {' '}
+                    {strategy === 'noCompound' ? 'Without compounding' : 
+                     `${strategy.charAt(0).toUpperCase() + strategy.slice(1)} compound`}: {' '}
                     <span className="font-medium text-purple-700">
                       {Math.abs(Math.ceil(diff))} days {diff > 0 ? 'faster' : 'slower'}
                     </span>
