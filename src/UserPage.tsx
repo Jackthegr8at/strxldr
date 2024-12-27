@@ -161,8 +161,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       })
       .map(action => {
         const amount = parseFloat(action.act.data.quantity.split(' ')[0]);
-        // Convert UTC timestamp string to local Date object
-        const time = new Date(action.timestamp.replace('.000', 'Z'));
+        // Properly handle UTC timestamp
+        const time = new Date(action.timestamp + 'Z'); // Add Z to ensure UTC parsing
         return {
           time,
           amount,
@@ -652,24 +652,28 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                   <span className="font-medium text-purple-700">
                     {Math.abs(tierAnalysis.comparison.stakeDifference).toLocaleString()} STRX
                   </span>
+                  {' '}({Math.abs(tierAnalysis.comparison.stakeDifference * strxPrice).toFixed(2)}$)
                   {' '}{tierAnalysis.comparison.stakeDifference > 0 ? 'increase' : 'decrease'} in staked amount
                 </p>
                 <p>
                   <span className="font-medium text-purple-700">
                     {Math.abs(tierAnalysis.comparison.dailyRewardDifference).toFixed(4)} STRX
                   </span>
+                  {' '}({Math.abs(tierAnalysis.comparison.dailyRewardDifference * strxPrice).toFixed(2)}$)
                   {' '}{tierAnalysis.comparison.dailyRewardDifference > 0 ? 'more' : 'less'} in daily rewards
                 </p>
                 <p>
                   <span className="font-medium text-purple-700">
                     {Math.abs(tierAnalysis.comparison.monthlyRewardDifference).toFixed(4)} STRX
                   </span>
+                  {' '}({Math.abs(tierAnalysis.comparison.monthlyRewardDifference * strxPrice).toFixed(2)}$)
                   {' '}{tierAnalysis.comparison.monthlyRewardDifference > 0 ? 'more' : 'less'} in monthly rewards
                 </p>
                 <p>
                   <span className="font-medium text-purple-700">
                     {Math.abs(tierAnalysis.comparison.yearlyRewardDifference).toFixed(4)} STRX
                   </span>
+                  {' '}({Math.abs(tierAnalysis.comparison.yearlyRewardDifference * strxPrice).toFixed(2)}$)
                   {' '}{tierAnalysis.comparison.yearlyRewardDifference > 0 ? 'more' : 'less'} in yearly rewards
                 </p>
                 {Object.entries(tierAnalysis.comparison.daysDifference).map(([strategy, diff]) => (
