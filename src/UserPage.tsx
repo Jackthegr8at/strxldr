@@ -392,11 +392,51 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     // Calculate scenarios for both current and simulated amounts
     const calculateScenarios = (amount: number, dailyReward: number) => {
       const dailyData: DailyDataPoint[] = [];
-      // ... existing daily data calculation ...
+      const startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+
+      // Generate 5 years of daily data (should be enough to find next tier)
+      for (let i = 0; i <= 365 * 5; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        
+        const daysSinceStart = i;
+        
+        // No compound
+        const noCompound = amount + (dailyReward * daysSinceStart);
+        
+        // Daily compound
+        const dailyRate = dailyReward / amount;
+        const dailyCompound = amount * Math.pow(1 + dailyRate, daysSinceStart);
+        
+        // Monthly compound
+        const monthsSinceStart = Math.floor(daysSinceStart / 30);
+        const monthlyRate = (dailyReward * 30) / amount;
+        const monthlyCompound = amount * Math.pow(1 + monthlyRate, monthsSinceStart);
+        
+        // Annual compound
+        const yearsSinceStart = Math.floor(daysSinceStart / 365);
+        const annualRate = (dailyReward * 365) / amount;
+        const annualCompound = amount * Math.pow(1 + annualRate, yearsSinceStart);
+
+        dailyData.push({
+          day: i,
+          date,
+          noCompound,
+          dailyCompound,
+          monthlyCompound,
+          annualCompound
+        });
+
+        // Stop if all strategies have reached the target
+        if (Math.min(noCompound, dailyCompound, monthlyCompound, annualCompound) >= nextTier.minimum) {
+          break;
+        }
+      }
 
       const findDaysToTarget = (strategy: 'noCompound' | 'dailyCompound' | 'monthlyCompound' | 'annualCompound') => {
         const dataPoint = dailyData.find(d => d[strategy] >= nextTier.minimum);
-        return dataPoint ? dataPoint.day : Infinity;
+        return dataPoint?.day || Infinity;
       };
 
       return {
@@ -602,6 +642,34 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
               </ResponsiveContainer>
             </div>
           </div>
+          
+          {tierAnalysis?.comparison && simulatedStaked !== userData.staked && (
+            <div className="mt-4 p-3 bg-purple-100 rounded-lg">
+              <h4 className="text-sm font-semibold text-purple-700 mb-2">Simulation Analysis</h4>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>
+                  <span className="font-medium text-purple-700">
+                    {Math.abs(tierAnalysis.comparison.stakeDifference).toLocaleString()} STRX
+                  </span>
+                  {' '}{tierAnalysis.comparison.stakeDifference > 0 ? 'increase' : 'decrease'} in staked amount
+                </p>
+                <p>
+                  <span className="font-medium text-purple-700">
+                    {Math.abs(tierAnalysis.comparison.dailyRewardDifference).toFixed(4)} STRX
+                  </span>
+                  {' '}{tierAnalysis.comparison.dailyRewardDifference > 0 ? 'more' : 'less'} in daily rewards
+                </p>
+                {Object.entries(tierAnalysis.comparison.daysDifference).map(([strategy, diff]) => (
+                  <p key={strategy}>
+                    {strategy.charAt(0).toUpperCase() + strategy.slice(1)} compound: {' '}
+                    <span className="font-medium text-purple-700">
+                      {Math.abs(Math.ceil(diff))} days {diff > 0 ? 'faster' : 'slower'}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mb-8">
@@ -952,34 +1020,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
             </div>
           </div>
         </div>
-
-        {tierAnalysis?.comparison && simulatedStaked !== userData.staked && (
-          <div className="mt-4 p-3 bg-purple-100 rounded-lg">
-            <h4 className="text-sm font-semibold text-purple-700 mb-2">Simulation Analysis</h4>
-            <div className="space-y-2 text-sm text-gray-600">
-              <p>
-                <span className="font-medium text-purple-700">
-                  {Math.abs(tierAnalysis.comparison.stakeDifference).toLocaleString()} STRX
-                </span>
-                {' '}{tierAnalysis.comparison.stakeDifference > 0 ? 'increase' : 'decrease'} in staked amount
-              </p>
-              <p>
-                <span className="font-medium text-purple-700">
-                  {Math.abs(tierAnalysis.comparison.dailyRewardDifference).toFixed(4)} STRX
-                </span>
-                {' '}{tierAnalysis.comparison.dailyRewardDifference > 0 ? 'more' : 'less'} in daily rewards
-              </p>
-              {Object.entries(tierAnalysis.comparison.daysDifference).map(([strategy, diff]) => (
-                <p key={strategy}>
-                  {strategy.charAt(0).toUpperCase() + strategy.slice(1)} compound: {' '}
-                  <span className="font-medium text-purple-700">
-                    {Math.abs(Math.ceil(diff))} days {diff > 0 ? 'faster' : 'slower'}
-                  </span>
-                </p>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
