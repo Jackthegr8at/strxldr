@@ -389,70 +389,50 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     const rewards = stakingStats?.rewards;
     if (!tierProgress || !rewards?.daily || !nextTier) return null;
 
-    // Generate daily data points for accurate analysis
-    const dailyData: DailyDataPoint[] = [];
-    const startDate = new Date();
-    startDate.setHours(0, 0, 0, 0);
+    // Calculate scenarios for both current and simulated amounts
+    const calculateScenarios = (amount: number, dailyReward: number) => {
+      const dailyData: DailyDataPoint[] = [];
+      // ... existing daily data calculation ...
 
-    // Adjust rewards based on simulated amount
-    const adjustedDailyReward = rewards.daily * (simulatedStaked / userData.staked);
-    const adjustedMonthlyReward = rewards.monthly * (simulatedStaked / userData.staked);
+      const findDaysToTarget = (strategy: 'noCompound' | 'dailyCompound' | 'monthlyCompound' | 'annualCompound') => {
+        const dataPoint = dailyData.find(d => d[strategy] >= nextTier.minimum);
+        return dataPoint ? dataPoint.day : Infinity;
+      };
 
-    // Generate 5 years of daily data (should be enough to find next tier)
-    for (let i = 0; i <= 365 * 5; i++) {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
-      
-      const daysSinceStart = i;
-      
-      // No compound
-      const noCompound = simulatedStaked + (adjustedDailyReward * daysSinceStart);
-      
-      // Daily compound
-      const dailyRate = adjustedDailyReward / simulatedStaked;
-      const dailyCompound = simulatedStaked * Math.pow(1 + dailyRate, daysSinceStart);
-      
-      // Monthly compound
-      const monthsSinceStart = Math.floor(daysSinceStart / 30);
-      const monthlyRate = (adjustedDailyReward * 30) / simulatedStaked;
-      const monthlyCompound = simulatedStaked * Math.pow(1 + monthlyRate, monthsSinceStart);
-      
-      // Annual compound
-      const yearsSinceStart = Math.floor(daysSinceStart / 365);
-      const annualRate = (adjustedDailyReward * 365) / simulatedStaked;
-      const annualCompound = simulatedStaked * Math.pow(1 + annualRate, yearsSinceStart);
-
-      dailyData.push({
-        day: i,
-        date,
-        noCompound,
-        dailyCompound,
-        monthlyCompound,
-        annualCompound
-      });
-
-      // Stop if all strategies have reached the target
-      if (Math.min(noCompound, dailyCompound, monthlyCompound, annualCompound) >= nextTier.minimum) {
-        break;
-      }
-    }
-
-    // Find days to reach next tier for each strategy
-    const findDaysToTarget = (strategy: 'noCompound' | 'dailyCompound' | 'monthlyCompound' | 'annualCompound') => {
-      const dataPoint = dailyData.find(d => d[strategy] >= nextTier.minimum);
-      return dataPoint ? dataPoint.day : Infinity;
-    };
-
-    return {
-      scenarios: {
+      return {
         daily: findDaysToTarget('dailyCompound'),
         monthly: findDaysToTarget('monthlyCompound'),
         annually: findDaysToTarget('annualCompound'),
         noCompound: findDaysToTarget('noCompound')
+      };
+    };
+
+    const currentScenarios = calculateScenarios(userData.staked, rewards.daily);
+    const simulatedScenarios = calculateScenarios(simulatedStaked, rewards.daily * (simulatedStaked / userData.staked));
+
+    const rewardDifference = (rewards.daily * (simulatedStaked / userData.staked)) - rewards.daily;
+
+    const adjustedDailyReward = rewards.daily * (simulatedStaked / userData.staked);
+    const adjustedMonthlyReward = adjustedDailyReward * 30;
+
+    return {
+      scenarios: simulatedScenarios,
+      currentScenarios,
+      comparison: {
+        stakeDifference: simulatedStaked - userData.staked,
+        dailyRewardDifference: rewardDifference,
+        monthlyRewardDifference: rewardDifference * 30,
+        yearlyRewardDifference: rewardDifference * 365,
+        daysDifference: {
+          daily: currentScenarios.daily - simulatedScenarios.daily,
+          monthly: currentScenarios.monthly - simulatedScenarios.monthly,
+          annually: currentScenarios.annually - simulatedScenarios.annually,
+          noCompound: currentScenarios.noCompound - simulatedScenarios.noCompound
+        }
       },
       monthlyProgress: (adjustedMonthlyReward / (nextTier.minimum - simulatedStaked)) * 100
     };
-  }, [tierProgress, stakingStats, simulatedStaked, nextTier]);
+  }, [tierProgress, stakingStats, simulatedStaked, nextTier, userData.staked]);
 
   if (!userData) {
     return (
@@ -591,7 +571,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                   />
                   <Tooltip 
                     formatter={(value: number, name: string) => {
-                      const difference = value - userData.staked;
+                      const difference = value - simulatedStaked;
                       return [
                         <div>
                           <div>{value.toLocaleString()} STRX</div>
@@ -972,6 +952,34 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
             </div>
           </div>
         </div>
+
+        {tierAnalysis?.comparison && simulatedStaked !== userData.staked && (
+          <div className="mt-4 p-3 bg-purple-100 rounded-lg">
+            <h4 className="text-sm font-semibold text-purple-700 mb-2">Simulation Analysis</h4>
+            <div className="space-y-2 text-sm text-gray-600">
+              <p>
+                <span className="font-medium text-purple-700">
+                  {Math.abs(tierAnalysis.comparison.stakeDifference).toLocaleString()} STRX
+                </span>
+                {' '}{tierAnalysis.comparison.stakeDifference > 0 ? 'increase' : 'decrease'} in staked amount
+              </p>
+              <p>
+                <span className="font-medium text-purple-700">
+                  {Math.abs(tierAnalysis.comparison.dailyRewardDifference).toFixed(4)} STRX
+                </span>
+                {' '}{tierAnalysis.comparison.dailyRewardDifference > 0 ? 'more' : 'less'} in daily rewards
+              </p>
+              {Object.entries(tierAnalysis.comparison.daysDifference).map(([strategy, diff]) => (
+                <p key={strategy}>
+                  {strategy.charAt(0).toUpperCase() + strategy.slice(1)} compound: {' '}
+                  <span className="font-medium text-purple-700">
+                    {Math.abs(Math.ceil(diff))} days {diff > 0 ? 'faster' : 'slower'}
+                  </span>
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
