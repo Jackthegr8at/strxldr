@@ -573,6 +573,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                   }}
                   placeholder="Staked amount"
                   min="0"
+                  step="50000"
                 />
                 <span className="text-sm text-gray-500">STRX</span>
               </div>
@@ -658,6 +659,18 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                     {Math.abs(tierAnalysis.comparison.dailyRewardDifference).toFixed(4)} STRX
                   </span>
                   {' '}{tierAnalysis.comparison.dailyRewardDifference > 0 ? 'more' : 'less'} in daily rewards
+                </p>
+                <p>
+                  <span className="font-medium text-purple-700">
+                    {Math.abs(tierAnalysis.comparison.monthlyRewardDifference).toFixed(4)} STRX
+                  </span>
+                  {' '}{tierAnalysis.comparison.monthlyRewardDifference > 0 ? 'more' : 'less'} in monthly rewards
+                </p>
+                <p>
+                  <span className="font-medium text-purple-700">
+                    {Math.abs(tierAnalysis.comparison.yearlyRewardDifference).toFixed(4)} STRX
+                  </span>
+                  {' '}{tierAnalysis.comparison.yearlyRewardDifference > 0 ? 'more' : 'less'} in yearly rewards
                 </p>
                 {Object.entries(tierAnalysis.comparison.daysDifference).map(([strategy, diff]) => (
                   <p key={strategy}>
