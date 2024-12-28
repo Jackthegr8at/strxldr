@@ -269,7 +269,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       .map(action => ({
         time: action.time.toLocaleDateString(),
         amount: action.type === 'add stake' ? action.amount : -action.amount
-      }));
+      }))
+      .reverse();
   }, [userActions, timeRange]);
 
   const paginatedTransactions = useMemo(() => {
