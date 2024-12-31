@@ -19,6 +19,20 @@
   50% { transform: translateY(-10px); }
 }
 
+/* Custom scrollbar for Webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-purple-50;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-purple-300 rounded-full hover:bg-purple-400;
+}
+
 .shake-animation {
   animation: none;
 }
