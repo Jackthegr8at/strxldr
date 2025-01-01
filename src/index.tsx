@@ -76,21 +76,6 @@ type ColumnSelectorProps = {
   setSortField: React.Dispatch<React.SetStateAction<SortField>>;
 };
 
-// Add this useEffect near the start of the Leaderboard component
-useEffect(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    const dropdown = document.getElementById('site-dropdown');
-    const button = event.target as Element;
-    
-    if (dropdown && !dropdown.contains(button) && !button.closest('button')) {
-      dropdown.classList.add('hidden');
-    }
-  };
-
-  document.addEventListener('mousedown', handleClickOutside);
-  return () => document.removeEventListener('mousedown', handleClickOutside);
-}, []);
-
 // Add this component
 const ColumnSelector: React.FC<ColumnSelectorProps> = ({ 
   visibleColumns, 
