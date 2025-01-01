@@ -1403,13 +1403,13 @@ function Leaderboard() {
                 className="hidden absolute left-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg p-2 z-50"
               >
                 <a 
-                  href="https://strxldr.vercel.app/"
+                  href="https://strxldr.app/"
                   className="block w-full px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-md"
                 >
                   STRX Staking Leaderboard
                 </a>
                 <a 
-                  href="https://strxldrweb.vercel.app/"
+                  href="https://mint.strxldr.app/"
                   className="block w-full px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-md"
                 >
                   STRX LEADERS MINT
