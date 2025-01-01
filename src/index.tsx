@@ -76,6 +76,21 @@ type ColumnSelectorProps = {
   setSortField: React.Dispatch<React.SetStateAction<SortField>>;
 };
 
+// Add this useEffect near the start of the Leaderboard component
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    const dropdown = document.getElementById('site-dropdown');
+    const button = event.target as Element;
+    
+    if (dropdown && !dropdown.contains(button) && !button.closest('button')) {
+      dropdown.classList.add('hidden');
+    }
+  };
+
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, []);
+
 // Add this component
 const ColumnSelector: React.FC<ColumnSelectorProps> = ({ 
   visibleColumns, 
@@ -1412,7 +1427,7 @@ function Leaderboard() {
                   href="https://strxldrweb.vercel.app/"
                   className="block w-full px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-md"
                 >
-                  STRX LDR MINT
+                  STRX LEADERS MINT
                 </a>
               </div>
             </div>
