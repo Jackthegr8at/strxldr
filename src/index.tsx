@@ -1382,12 +1382,40 @@ function Leaderboard() {
       <div className="min-h-screen bg-white p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-6">
-            {/* Title on the left */}
-            <h1 className={`text-3xl font-bold text-purple-700 ${
-              isEasterEggActive ? 'rainbow-text' : ''
-            }`}>
-              {pageTitle}
-            </h1>
+            {/* Title with dropdown on the left */}
+            <div className="relative group">
+              <button 
+                className="flex items-center gap-2 text-3xl font-bold text-purple-700 hover:text-purple-800"
+                onClick={() => {
+                  const dropdown = document.getElementById('site-dropdown');
+                  if (dropdown) {
+                    dropdown.classList.toggle('hidden');
+                  }
+                }}
+              >
+                {pageTitle}
+                <ChevronDownIcon className="h-5 w-5" />
+              </button>
+              
+              {/* Dropdown menu */}
+              <div 
+                id="site-dropdown"
+                className="hidden absolute left-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg p-2 z-50"
+              >
+                <a 
+                  href="https://strxldr.vercel.app/"
+                  className="block w-full px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-md"
+                >
+                  STRX Staking Leaderboard
+                </a>
+                <a 
+                  href="https://strxldrweb.vercel.app/"
+                  className="block w-full px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-md"
+                >
+                  STRX LDR MINT
+                </a>
+              </div>
+            </div>
             
             {/* Stake button on the right */}
             <a 
