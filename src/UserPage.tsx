@@ -419,86 +419,36 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
 
     // Calculate scenarios for both current and simulated amounts
     const calculateScenarios = (amount: number, dailyReward: number) => {
-      const dailyData: DailyDataPoint[] = [];
-      const startDate = new Date();
-      startDate.setHours(0, 0, 0, 0);
-
-      const getDaysInMonth = (date: Date) => {
-        const nextMonth = new Date(date);
-        nextMonth.setMonth(nextMonth.getMonth() + 1);
-        nextMonth.setDate(1);
-        nextMonth.setHours(-1);
-        return nextMonth.getDate();
-      };
-
-      // Generate 5 years of daily data (should be enough to find next tier)
-      for (let i = 0; i <= 365 * 5; i++) {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + i);
-        
-        const daysSinceStart = i;
-        
-        // No compound
-        const noCompound = amount + (dailyReward * daysSinceStart);
-        
-        // Daily compound
-        const dailyRate = dailyReward / amount;
-        const dailyCompound = amount * Math.pow(1 + dailyRate, daysSinceStart);
-        
-        // Monthly compound - using actual month lengths
-        const monthStart = new Date(startDate);
-        let currentAmount = amount;
-        let daysAccounted = 0;
-        let monthsCompleted = 0;
-
-        // First, do all complete month compounds
-        while (daysAccounted + getDaysInMonth(monthStart) <= daysSinceStart) {
-          const daysInMonth = getDaysInMonth(monthStart);
-          const monthlyRate = (dailyReward * daysInMonth) / currentAmount;
-          currentAmount *= (1 + monthlyRate);
-          daysAccounted += daysInMonth;
-          monthsCompleted++;
-          monthStart.setMonth(monthStart.getMonth() + 1);
-        }
-
-        // Then calculate remaining days with the new daily reward rate
-        const daysAfterLastMonth = daysSinceStart - daysAccounted;
-        const newMonthlyDailyReward = (dailyReward * currentAmount) / amount;
-        const monthlyCompound = currentAmount + (newMonthlyDailyReward * daysAfterLastMonth);
-        
-        // Annual compound - improved calculation
-        const yearsSinceStart = Math.floor(daysSinceStart / 365);
-        const annualRate = (dailyReward * 365) / amount;
-        const amountAfterAnnualCompounds = amount * Math.pow(1 + annualRate, yearsSinceStart);
-        const daysAfterLastAnnual = daysSinceStart - (yearsSinceStart * 365);
-        const newAnnualDailyReward = (dailyReward * amountAfterAnnualCompounds) / amount;
-        const annualCompound = amountAfterAnnualCompounds + (newAnnualDailyReward * daysAfterLastAnnual);
-
-        dailyData.push({
-          day: i,
-          date,
-          noCompound,
-          dailyCompound,
-          monthlyCompound,
-          annualCompound
-        });
-
-        // Stop if all strategies have reached the target
-        if (Math.min(noCompound, dailyCompound, monthlyCompound, annualCompound) >= nextTier.minimum) {
-          break;
-        }
+      const targetAmount = nextTier.minimum;
+      
+      // Without compound (linear)
+      const noCompoundDays = Math.ceil((targetAmount - amount) / dailyReward);
+      
+      // Daily compound
+      const dailyRate = dailyReward / amount;
+      const dailyDays = Math.ceil(Math.log(targetAmount / amount) / Math.log(1 + dailyRate));
+      
+      // Monthly compound (using actual month lengths)
+      let monthlyAmount = amount;
+      let monthlyDays = 0;
+      const monthStart = new Date();
+      while (monthlyAmount < targetAmount && monthlyDays < 3650) { // 10 years max
+        const daysInMonth = getDaysInMonth(monthStart);
+        const monthlyRate = (dailyReward * daysInMonth) / monthlyAmount;
+        monthlyAmount *= (1 + monthlyRate);
+        monthlyDays += daysInMonth;
+        monthStart.setMonth(monthStart.getMonth() + 1);
       }
-
-      const findDaysToTarget = (strategy: 'noCompound' | 'dailyCompound' | 'monthlyCompound' | 'annualCompound') => {
-        const dataPoint = dailyData.find(d => d[strategy] >= nextTier.minimum);
-        return dataPoint?.day || Infinity;
-      };
-
+      
+      // Annual compound
+      const annualRate = (dailyReward * 365) / amount;
+      const annualDays = Math.ceil(Math.log(targetAmount / amount) / Math.log(1 + annualRate) * 365);
+      
       return {
-        daily: findDaysToTarget('dailyCompound'),
-        monthly: findDaysToTarget('monthlyCompound'),
-        annually: findDaysToTarget('annualCompound'),
-        noCompound: findDaysToTarget('noCompound')
+        daily: dailyDays,
+        monthly: monthlyDays,
+        annually: annualDays,
+        noCompound: noCompoundDays
       };
     };
 
