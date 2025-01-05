@@ -94,6 +94,14 @@ const formatTimestamp = (timestamp: Date) => {
   });
 };
 
+const getDaysInMonth = (date: Date) => {
+  const nextMonth = new Date(date);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  nextMonth.setDate(1);
+  nextMonth.setHours(-1);
+  return nextMonth.getDate();
+};
+
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
   const [projectionRange, setProjectionRange] = useState<'1y' | '2y' | '5y'>('1y');
   const [simulatedStaked, setSimulatedStaked] = useState(userData.staked);
