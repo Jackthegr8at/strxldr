@@ -396,6 +396,14 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       const startDate = new Date();
       startDate.setHours(0, 0, 0, 0);
 
+      const getDaysInMonth = (date: Date) => {
+        const nextMonth = new Date(date);
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        nextMonth.setDate(1);
+        nextMonth.setHours(-1);
+        return nextMonth.getDate();
+      };
+
       // Generate 5 years of daily data (should be enough to find next tier)
       for (let i = 0; i <= 365 * 5; i++) {
         const date = new Date(startDate);
@@ -410,13 +418,22 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         const dailyRate = dailyReward / amount;
         const dailyCompound = amount * Math.pow(1 + dailyRate, daysSinceStart);
         
-        // Monthly compound - improved calculation
-        const monthsSinceStart = Math.floor(daysSinceStart / 30);
-        const monthlyRate = (dailyReward * 30) / amount;
-        const amountAfterMonthlyCompounds = amount * Math.pow(1 + monthlyRate, monthsSinceStart);
-        const daysAfterLastMonth = daysSinceStart - (monthsSinceStart * 30);
-        const newMonthlyDailyReward = (dailyReward * amountAfterMonthlyCompounds) / amount;
-        const monthlyCompound = amountAfterMonthlyCompounds + (newMonthlyDailyReward * daysAfterLastMonth);
+        // Monthly compound - using actual month lengths
+        const monthStart = new Date(startDate);
+        let currentAmount = amount;
+        let daysAccounted = 0;
+        
+        while (daysAccounted + getDaysInMonth(monthStart) <= daysSinceStart) {
+          const daysInMonth = getDaysInMonth(monthStart);
+          const monthlyRate = (dailyReward * daysInMonth) / currentAmount;
+          currentAmount *= (1 + monthlyRate);
+          daysAccounted += daysInMonth;
+          monthStart.setMonth(monthStart.getMonth() + 1);
+        }
+        
+        const daysAfterLastMonth = daysSinceStart - daysAccounted;
+        const newMonthlyDailyReward = (dailyReward * currentAmount) / amount;
+        const monthlyCompound = currentAmount + (newMonthlyDailyReward * daysAfterLastMonth);
         
         // Annual compound - improved calculation
         const yearsSinceStart = Math.floor(daysSinceStart / 365);
