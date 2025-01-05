@@ -415,10 +415,13 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         const monthlyRate = (dailyReward * 30) / amount;
         const monthlyCompound = amount * Math.pow(1 + monthlyRate, monthsSinceStart);
         
-        // Annual compound
+        // Annual compound - improved calculation
         const yearsSinceStart = Math.floor(daysSinceStart / 365);
         const annualRate = (dailyReward * 365) / amount;
-        const annualCompound = amount * Math.pow(1 + annualRate, yearsSinceStart);
+        const amountAfterAnnualCompounds = amount * Math.pow(1 + annualRate, yearsSinceStart);
+        const daysAfterLastAnnual = daysSinceStart - (yearsSinceStart * 365);
+        const newDailyReward = (dailyReward * amountAfterAnnualCompounds) / amount;
+        const annualCompound = amountAfterAnnualCompounds + (newDailyReward * daysAfterLastAnnual);
 
         dailyData.push({
           day: i,
