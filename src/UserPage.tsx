@@ -432,10 +432,11 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       let monthlyAmount = amount;
       let monthlyDays = 0;
       const monthStart = new Date();
-      while (monthlyAmount < targetAmount && monthlyDays < 3650) { // 10 years max
+      
+      while (monthlyAmount < targetAmount && monthlyDays < 3650) {
         const daysInMonth = getDaysInMonth(monthStart);
-        const monthlyRate = (dailyReward * daysInMonth) / monthlyAmount;
-        monthlyAmount *= (1 + monthlyRate);
+        const monthlyReward = dailyReward * daysInMonth;
+        monthlyAmount += monthlyReward * (monthlyAmount / amount);
         monthlyDays += daysInMonth;
         monthStart.setMonth(monthStart.getMonth() + 1);
       }
