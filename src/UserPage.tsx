@@ -94,6 +94,15 @@ const formatTimestamp = (timestamp: Date) => {
   });
 };
 
+// Add this function above the relevant code block
+const getDaysInMonth = (date: Date) => {
+  const nextMonth = new Date(date);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  nextMonth.setDate(1);
+  nextMonth.setHours(-1);
+  return nextMonth.getDate();
+};
+
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
   const [projectionRange, setProjectionRange] = useState<'1y' | '2y' | '5y'>('1y');
   const [simulatedStaked, setSimulatedStaked] = useState(userData.staked);
@@ -341,8 +350,26 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       const dailyCompound = simulatedStaked * Math.pow(1 + dailyRate, daysSinceStart);
       
       // Monthly compound
-      const monthlyRate = (dailyReward * 30) / simulatedStaked;
-      const monthlyCompound = simulatedStaked * Math.pow(1 + monthlyRate, i);
+      const monthStart = new Date(startDate);
+      const amount = simulatedStaked;
+      let currentAmount = amount;
+      let daysAccounted = 0;
+      let monthsCompleted = 0;
+
+      // First, do all complete month compounds
+      while (daysAccounted + getDaysInMonth(monthStart) <= daysSinceStart) {
+        const daysInMonth = getDaysInMonth(monthStart);
+        const monthlyRate = (dailyReward * daysInMonth) / currentAmount;
+        currentAmount *= (1 + monthlyRate);
+        daysAccounted += daysInMonth;
+        monthsCompleted++;
+        monthStart.setMonth(monthStart.getMonth() + 1);
+      }
+
+      // Then calculate remaining days with the new daily reward rate
+      const daysAfterLastMonth = daysSinceStart - daysAccounted;
+      const newMonthlyDailyReward = (dailyReward * currentAmount) / amount;
+      const monthlyCompound = currentAmount + (newMonthlyDailyReward * daysAfterLastMonth);
       
       // Annual compound
       const annualRate = (dailyReward * 365) / simulatedStaked;
@@ -422,15 +449,19 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
         const monthStart = new Date(startDate);
         let currentAmount = amount;
         let daysAccounted = 0;
-        
+        let monthsCompleted = 0;
+
+        // First, do all complete month compounds
         while (daysAccounted + getDaysInMonth(monthStart) <= daysSinceStart) {
           const daysInMonth = getDaysInMonth(monthStart);
           const monthlyRate = (dailyReward * daysInMonth) / currentAmount;
           currentAmount *= (1 + monthlyRate);
           daysAccounted += daysInMonth;
+          monthsCompleted++;
           monthStart.setMonth(monthStart.getMonth() + 1);
         }
-        
+
+        // Then calculate remaining days with the new daily reward rate
         const daysAfterLastMonth = daysSinceStart - daysAccounted;
         const newMonthlyDailyReward = (dailyReward * currentAmount) / amount;
         const monthlyCompound = currentAmount + (newMonthlyDailyReward * daysAfterLastMonth);
