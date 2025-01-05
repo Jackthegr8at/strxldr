@@ -94,14 +94,6 @@ const formatTimestamp = (timestamp: Date) => {
   });
 };
 
-const getDaysInMonth = (date: Date) => {
-  const nextMonth = new Date(date);
-  nextMonth.setMonth(nextMonth.getMonth() + 1);
-  nextMonth.setDate(1);
-  nextMonth.setHours(-1);
-  return nextMonth.getDate();
-};
-
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
   const [projectionRange, setProjectionRange] = useState<'1y' | '2y' | '5y'>('1y');
   const [simulatedStaked, setSimulatedStaked] = useState(userData.staked);
@@ -400,44 +392,59 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
 
     // Calculate scenarios for both current and simulated amounts
     const calculateScenarios = (amount: number, dailyReward: number) => {
-      const targetAmount = nextTier.minimum;
-      
-      // Without compound (linear)
-      const noCompoundDays = Math.ceil((targetAmount - amount) / dailyReward);
-      
-      // Daily compound
-      const dailyRate = dailyReward / amount;
-      const dailyDays = Math.ceil(Math.log(targetAmount / amount) / Math.log(1 + dailyRate));
-      
-      // Monthly compound
-      let monthlyAmount = amount;
-      let monthlyDays = 0;
-      const monthStart = new Date();
-      
-      while (monthlyAmount < targetAmount && monthlyDays < 3650) {
-        const daysInMonth = getDaysInMonth(monthStart);
-        const monthlyReward = dailyReward * daysInMonth;
-        const monthlyRate = monthlyReward / monthlyAmount;
+      const dailyData: DailyDataPoint[] = [];
+      const startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+
+      // Generate 5 years of daily data (should be enough to find next tier)
+      for (let i = 0; i <= 365 * 5; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
         
-        monthlyAmount = monthlyAmount * (1 + monthlyRate);
+        const daysSinceStart = i;
         
-        if (monthlyAmount >= targetAmount) {
-          monthlyAmount = monthlyAmount / (1 + monthlyRate);
-          const remaining = targetAmount - monthlyAmount;
-          const dailyGrowth = dailyReward;
-          const remainingDays = Math.ceil(remaining / dailyGrowth);
-          monthlyDays += remainingDays;
+        // No compound
+        const noCompound = amount + (dailyReward * daysSinceStart);
+        
+        // Daily compound
+        const dailyRate = dailyReward / amount;
+        const dailyCompound = amount * Math.pow(1 + dailyRate, daysSinceStart);
+        
+        // Monthly compound
+        const monthsSinceStart = Math.floor(daysSinceStart / 30);
+        const monthlyRate = (dailyReward * 30) / amount;
+        const monthlyCompound = amount * Math.pow(1 + monthlyRate, monthsSinceStart);
+        
+        // Annual compound
+        const yearsSinceStart = Math.floor(daysSinceStart / 365);
+        const annualRate = (dailyReward * 365) / amount;
+        const annualCompound = amount * Math.pow(1 + annualRate, yearsSinceStart);
+
+        dailyData.push({
+          day: i,
+          date,
+          noCompound,
+          dailyCompound,
+          monthlyCompound,
+          annualCompound
+        });
+
+        // Stop if all strategies have reached the target
+        if (Math.min(noCompound, dailyCompound, monthlyCompound, annualCompound) >= nextTier.minimum) {
           break;
         }
-        
-        monthlyDays += daysInMonth;
-        monthStart.setMonth(monthStart.getMonth() + 1);
       }
-      
+
+      const findDaysToTarget = (strategy: 'noCompound' | 'dailyCompound' | 'monthlyCompound' | 'annualCompound') => {
+        const dataPoint = dailyData.find(d => d[strategy] >= nextTier.minimum);
+        return dataPoint?.day || Infinity;
+      };
+
       return {
-        daily: dailyDays,
-        monthly: monthlyDays,
-        noCompound: noCompoundDays
+        daily: findDaysToTarget('dailyCompound'),
+        monthly: findDaysToTarget('monthlyCompound'),
+        annually: findDaysToTarget('annualCompound'),
+        noCompound: findDaysToTarget('noCompound')
       };
     };
 
@@ -767,7 +774,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                                   <span className="font-medium text-purple-700">
                                     {strategy === 'noCompound' ? 'Without compounding: ' :
                                      strategy === 'daily' ? 'Daily compound: ' :
-                                     strategy === 'monthly' ? 'Monthly compound: ' : 'Annual compound: '}
+                                     strategy === 'monthly' ? 'Monthly compound: ' :
+                                     strategy === 'annually' ? 'Annual compound: ' : 'Unknown'}
                                   </span>
                                   ~{Math.ceil(days)} days ({targetDate.toLocaleDateString()})
                                 </p>
@@ -784,7 +792,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                                 <span className="font-medium text-purple-700">
                                   {strategy === 'noCompound' ? 'Without compounding: ' :
                                    strategy === 'daily' ? 'Daily compound: ' :
-                                   strategy === 'monthly' ? 'Monthly compound: ' : 'Annual compound: '}
+                                   strategy === 'monthly' ? 'Monthly compound: ' : 'Unknown'}
                                 </span>
                                 ~{Math.ceil(days)} days (exceeds pool duration)
                               </p>
