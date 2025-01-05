@@ -749,16 +749,14 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                       parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
                     );
 
-                    const possibleScenarios: Array<[string, number]> = [];
-                    const impossibleScenarios: Array<[string, number]> = [];
+                    // Filter out annual scenarios when creating possible/impossible lists
+                    const possibleScenarios = Object.entries(tierAnalysis.scenarios)
+                      .filter(([strategy]) => strategy !== 'annually')
+                      .filter(([_, days]) => days <= daysUntilEmpty);
 
-                    Object.entries(tierAnalysis.scenarios).forEach(([strategy, days]) => {
-                      if (days <= daysUntilEmpty) {
-                        possibleScenarios.push([strategy, days]);
-                      } else {
-                        impossibleScenarios.push([strategy, days]);
-                      }
-                    });
+                    const impossibleScenarios = Object.entries(tierAnalysis.scenarios)
+                      .filter(([strategy]) => strategy !== 'annually')
+                      .filter(([_, days]) => days > daysUntilEmpty);
 
                     return (
                       <>
