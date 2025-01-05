@@ -428,23 +428,26 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       const dailyRate = dailyReward / amount;
       const dailyDays = Math.ceil(Math.log(targetAmount / amount) / Math.log(1 + dailyRate));
       
-      // Monthly compound (using actual month lengths)
+      // Monthly compound
       let monthlyAmount = amount;
       let monthlyDays = 0;
       const monthStart = new Date();
       
       while (monthlyAmount < targetAmount && monthlyDays < 3650) {
         const daysInMonth = getDaysInMonth(monthStart);
-        const monthlyReward = dailyReward * daysInMonth;
-        const monthlyRate = monthlyReward / monthlyAmount;
-        monthlyAmount = monthlyAmount * (1 + monthlyRate);
+        // Calculate total rewards for the month
+        const monthlyRewards = dailyReward * daysInMonth;
+        // Add rewards and compound
+        monthlyAmount += monthlyRewards;
+        // Calculate additional compound effect
+        monthlyAmount += (monthlyRewards * monthlyAmount) / amount;
         
         if (monthlyAmount >= targetAmount) {
-          // Back up and calculate partial month
-          const prevAmount = monthlyAmount / (1 + monthlyRate);
-          const remaining = targetAmount - prevAmount;
-          const dailyIncrease = dailyReward;
-          const remainingDays = Math.ceil(remaining / dailyIncrease);
+          // Back up to last month and calculate remaining days
+          monthlyAmount -= monthlyRewards;
+          const remaining = targetAmount - monthlyAmount;
+          const dailyGrowth = dailyReward * (1 + monthlyAmount / amount);
+          const remainingDays = Math.ceil(remaining / dailyGrowth);
           monthlyDays += remainingDays;
           break;
         }
