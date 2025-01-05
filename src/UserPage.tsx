@@ -435,15 +435,15 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       
       while (monthlyAmount < targetAmount && monthlyDays < 3650) {
         const daysInMonth = getDaysInMonth(monthStart);
-        // Monthly rate should be based on the full month's rewards
-        const monthlyRate = (dailyReward * daysInMonth) / monthlyAmount;
-        monthlyAmount *= (1 + monthlyRate);  // Compound once per month
+        const monthlyReward = dailyReward * daysInMonth;
+        const monthlyRate = monthlyReward / monthlyAmount;
+        monthlyAmount = monthlyAmount * (1 + monthlyRate);
         
         if (monthlyAmount >= targetAmount) {
-          // If we overshot, calculate the partial month
-          const prevAmount = monthlyAmount / (1 + monthlyRate);  // Back up one step
+          // Back up and calculate partial month
+          const prevAmount = monthlyAmount / (1 + monthlyRate);
           const remaining = targetAmount - prevAmount;
-          const dailyIncrease = dailyReward * (prevAmount / amount);
+          const dailyIncrease = dailyReward;
           const remainingDays = Math.ceil(remaining / dailyIncrease);
           monthlyDays += remainingDays;
           break;
