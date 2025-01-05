@@ -428,33 +428,14 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       const dailyRate = dailyReward / amount;
       const dailyDays = Math.ceil(Math.log(targetAmount / amount) / Math.log(1 + dailyRate));
       
-      // Monthly compound
-      let monthlyAmount = amount;
-      let monthlyDays = 0;
-      const monthStart = new Date();
-      
-      while (monthlyAmount < targetAmount && monthlyDays < 3650) {
-        const daysInMonth = getDaysInMonth(monthStart);
-        // Calculate monthly rate based on daily rewards
-        const monthlyRewards = dailyReward * daysInMonth;
-        const monthlyRate = monthlyRewards / monthlyAmount;
-        
-        // Apply compound interest formula for this month
-        monthlyAmount = monthlyAmount * (1 + monthlyRate);
-        
-        if (monthlyAmount >= targetAmount) {
-          // Back up one month and calculate remaining days
-          monthlyAmount = monthlyAmount / (1 + monthlyRate);
-          const remaining = targetAmount - monthlyAmount;
-          const dailyGrowth = dailyReward;
-          const remainingDays = Math.ceil(remaining / dailyGrowth);
-          monthlyDays += remainingDays;
-          break;
-        }
-        
-        monthlyDays += daysInMonth;
-        monthStart.setMonth(monthStart.getMonth() + 1);
-      }
+      // Monthly compound - simplified approach
+      const remainingAmount = targetAmount - amount;
+      const monthlyReward = dailyReward * 30; // approximate month
+      const monthsNeeded = Math.floor(remainingAmount / monthlyReward);
+      const amountAfterMonths = amount + (monthsNeeded * monthlyReward);
+      const finalRemainingAmount = targetAmount - amountAfterMonths;
+      const remainingDays = Math.ceil(finalRemainingAmount / dailyReward);
+      const monthlyDays = (monthsNeeded * 30) + remainingDays;
       
       // Annual compound
       const annualRate = (dailyReward * 365) / amount;
