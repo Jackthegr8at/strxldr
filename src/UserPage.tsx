@@ -428,18 +428,32 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       const dailyRate = dailyReward / amount;
       const dailyDays = Math.ceil(Math.log(targetAmount / amount) / Math.log(1 + dailyRate));
       
-      // Monthly compound - using actual month lengths
-      const remainingAmount = targetAmount - amount;
-      const monthStart = new Date();
-      const daysInMonth = getDaysInMonth(monthStart);
-      const monthlyReward = dailyReward * daysInMonth;
-      let monthsNeeded = Math.floor(remainingAmount / monthlyReward);
-      monthsNeeded = Math.max(0, monthsNeeded - 1); // Remove one month as suggested
+      // Monthly compound
+      let currentAmount = amount;
+      let totalDays = 0;
+      const startDate = new Date();
       
-      const amountAfterMonths = amount + (monthsNeeded * monthlyReward);
-      const finalRemainingAmount = targetAmount - amountAfterMonths;
-      const remainingDays = Math.ceil(finalRemainingAmount / dailyReward);
-      const monthlyDays = (monthsNeeded * daysInMonth) + remainingDays;
+      while (currentAmount < targetAmount) {
+        const daysInCurrentMonth = getDaysInMonth(startDate);
+        const monthlyReward = dailyReward * daysInCurrentMonth;
+        
+        // Project end of month amount
+        const projectedAmount = currentAmount + monthlyReward;
+        
+        // If we'll reach target this month
+        if (projectedAmount >= targetAmount) {
+          // Calculate exact days needed
+          const remaining = targetAmount - currentAmount;
+          const daysNeeded = Math.ceil(remaining / dailyReward);
+          totalDays += daysNeeded;
+          break;
+        }
+        
+        // Otherwise, complete the month with compound
+        currentAmount = projectedAmount * (1 + (monthlyReward / projectedAmount));
+        totalDays += daysInCurrentMonth;
+        startDate.setMonth(startDate.getMonth() + 1);
+      }
       
       // Annual compound
       const annualRate = (dailyReward * 365) / amount;
@@ -447,7 +461,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       
       return {
         daily: dailyDays,
-        monthly: monthlyDays,
+        monthly: totalDays,
         annually: annualDays,
         noCompound: noCompoundDays
       };
