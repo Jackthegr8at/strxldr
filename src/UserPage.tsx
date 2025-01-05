@@ -429,31 +429,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       const dailyDays = Math.ceil(Math.log(targetAmount / amount) / Math.log(1 + dailyRate));
       
       // Monthly compound
-      let currentAmount = amount;
-      let totalDays = 0;
-      const startDate = new Date();
-      
-      while (currentAmount < targetAmount) {
-        const daysInCurrentMonth = getDaysInMonth(startDate);
-        const monthlyReward = dailyReward * daysInCurrentMonth;
-        
-        // Project end of month amount
-        const projectedAmount = currentAmount + monthlyReward;
-        
-        // If we'll reach target this month
-        if (projectedAmount >= targetAmount) {
-          // Calculate exact days needed
-          const remaining = targetAmount - currentAmount;
-          const daysNeeded = Math.ceil(remaining / dailyReward);
-          totalDays += daysNeeded;
-          break;
-        }
-        
-        // Otherwise, complete the month with compound
-        currentAmount = projectedAmount * (1 + (monthlyReward / projectedAmount));
-        totalDays += daysInCurrentMonth;
-        startDate.setMonth(startDate.getMonth() + 1);
-      }
+      const monthlyRate = (dailyReward * 31) / amount; // Use max days to be conservative
+      const monthlyDays = Math.ceil(Math.log(targetAmount / amount) / Math.log(1 + monthlyRate) * 31);
       
       // Annual compound
       const annualRate = (dailyReward * 365) / amount;
@@ -461,7 +438,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       
       return {
         daily: dailyDays,
-        monthly: totalDays,
+        monthly: monthlyDays,
         annually: annualDays,
         noCompound: noCompoundDays
       };
