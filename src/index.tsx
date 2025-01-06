@@ -1644,7 +1644,7 @@ function Leaderboard() {
               value={
                 raydiumPoolData ? (
                   <div className="flex flex-col">
-                    <span>{(raydiumPoolData.data[0].price * solanaPrice).toFixed(6)} USD</span>
+                    <span>{(raydiumPoolData.data[0].price * (solanaPrice ?? 0)).toFixed(6)} USD</span>
                     <span className="text-xs text-gray-500">
                       TVL: ${raydiumPoolData.data[0].tvl.toLocaleString()}
                     </span>
