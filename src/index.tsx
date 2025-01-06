@@ -1770,7 +1770,7 @@ function Leaderboard() {
                       Liquidity:
                       <div className="flex items-center gap-1 ml-2">
                         <img 
-                          src="/strx.png" 
+                          src="public/strx.png" 
                           alt="STRX" 
                           className="w-4 h-4"
                         />

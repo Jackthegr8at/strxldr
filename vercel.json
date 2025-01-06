@@ -18,6 +18,10 @@
       "dest": "/favicon.ico"
     },
     {
+      "src": "^/(.*)\\.(?:png|jpg|jpeg|gif|ico|svg|webp)$",
+      "dest": "/public/$1"
+    },
+    {
       "src": ".*",
       "dest": "/index.html"
     }
