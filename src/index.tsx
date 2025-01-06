@@ -5,7 +5,10 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import UserPage from './UserPage';
+import UserPage from './userpage';
+import { ThemeProvider } from './components/ThemeProvider';
+import { Header } from './components/Header';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -102,11 +105,15 @@ const ColumnSelector: React.FC<ColumnSelectorProps> = ({
 
   return (
     <div className="mb-4">
-      <label className="block text-sm text-gray-600 mb-1">
+      <label className="block text-sm text-gray-600 mb-1 dark:text-gray-300">
         Select additional column:
       </label>
       <select
-        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+        className="w-full px-3 py-2 
+                   border border-gray-300 dark:border-gray-600 rounded-lg 
+                   focus:outline-none focus:ring-2 focus:ring-purple-500 
+                   bg-white dark:bg-gray-800 
+                   text-gray-900 dark:text-gray-100"
         value={Object.entries(visibleColumns)
           .filter(([key]) => !['rank', 'username'].includes(key))
           .filter(([_, value]) => value)
@@ -160,11 +167,11 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
+      <div className="bg-card rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 z-10"
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -173,17 +180,17 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
 
         {/* Content container with padding */}
         <div className="p-4 md:p-6">
-          <h2 className="text-xl md:text-2xl font-bold text-purple-700 mb-4">
+          <h2 className="text-xl md:text-2xl font-bold text-purple-700 dark:text-purple-400 mb-4">
             About STRX Staking Leaderboard
           </h2>
           
-          <div className="prose prose-sm md:prose max-w-none text-gray-600 space-y-4">
+          <div className="prose prose-sm md:prose max-w-none space-y-4">
             <p>
               Welcome to the STRX Staking Leaderboard! This platform provides real-time tracking 
               of STOREX token staking positions across the community.
             </p>
             
-            <p>Here you can:</p>
+            <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-400">Features:</h3>
             
             <ul className="list-disc pl-5 space-y-2">
               <li className="text-sm md:text-base">View detailed staking statistics and distribution</li>
@@ -197,7 +204,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
               <li className="text-sm md:text-base">Find some easter eggs</li>
             </ul>
 
-            <p className="text-sm md:text-base">
+            <p className="text-sm md:text-base mt-4">
               The leaderboard updates every 60 minutes to provide the most current staking data. 
               USD price is updated every 2 minutes. Users are categorized into tiers (Whale, 
               Shark, Dolphin, etc.) based on their total STRX holdings.
@@ -206,11 +213,12 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer with close button */}
-        <div className="border-t border-gray-200 p-4 flex justify-end">
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 
-                     transition-colors text-sm md:text-base"
+            className="px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg 
+                     hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors 
+                     text-sm md:text-base"
           >
             Close
           </button>
@@ -369,98 +377,90 @@ const RecentActions: React.FC<{
   }, [actionsData, stakersData, selectedTier]);
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full">
-          <thead className="bg-purple-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Amount</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Action</th>
-              <th className="px-3 py-3 text-left text-sm font-semibold text-purple-700"></th>
+    <div className="bg-card rounded-lg shadow overflow-hidden">
+      <table className="table-custom">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Username</th>
+            <th>Amount</th>
+            <th>USD Value</th>
+            <th>Action</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {recentActions.map((action, index) => (
+            <tr key={index} className={action.isNewStaker ? 'bg-green-50 dark:bg-green-900/20' : ''}>
+              <td>{action.time}</td>
+              <td>
+                <div className="flex items-center gap-2">
+                  {stakersData && (
+                    <span title={getUserTier(stakersData[action.username]?.staked || 0).name}>
+                      {getUserTier(stakersData[action.username]?.staked || 0).emoji}
+                    </span>
+                  )}
+                  <UsernameLink username={action.username} />
+                  {action.isNewStaker && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
+                      New Staker! 🎉
+                    </span>
+                  )}
+                </div>
+              </td>
+              <td>
+                {action.amount.toLocaleString(undefined, {
+                  minimumFractionDigits: 4,
+                  maximumFractionDigits: 4
+                })} STRX
+              </td>
+              <td>
+                ${(action.amount * strxPrice).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+              </td>
+              <td>
+                <a 
+                  href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-1 hover:underline ${
+                    action.type === 'add stake' 
+                      ? 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300' 
+                      : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300'
+                  }`}
+                >
+                  {action.type === 'add stake' ? (
+                    <>
+                      <span>👍</span> Add Stake
+                    </>
+                  ) : (
+                    <>
+                      <span>👎</span> Withdraw
+                    </>
+                  )}
+                </a>
+              </td>
+              <td>
+                <button
+                  onClick={() => {
+                    setSearchTerm(action.username);
+                    const searchInput = document.querySelector('input[type="text"]');
+                    if (searchInput) {
+                      searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }}
+                  className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
+                  title="Search this user"
+                >
+                  <MagnifyingGlassIcon className="h-5 w-5" />
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {recentActions.map((action, index) => (
-              <tr key={index} className={`hover:bg-purple-50 ${
-                action.isNewStaker ? 'bg-green-50' : ''
-              }`}>
-                <td className="px-6 py-4 text-sm text-gray-900">
-                  {action.time}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-900">
-                  <div className="flex items-center gap-2">
-                    {stakersData && (
-                      <span title={getUserTier(stakersData[action.username]?.staked || 0).name}>
-                        {getUserTier(stakersData[action.username]?.staked || 0).emoji}
-                      </span>
-                    )}
-                    <UsernameLink username={action.username} />
-                    {action.isNewStaker && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                        New Staker! 🎉
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-900">
-                  {action.amount.toLocaleString(undefined, {
-                    minimumFractionDigits: 4,
-                    maximumFractionDigits: 4
-                  })} STRX
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-900">
-                  ${(action.amount * strxPrice).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}
-                </td>
-                <td className="px-6 py-4 text-sm">
-                  <a 
-                    href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-1 hover:underline ${
-                      action.type === 'add stake' 
-                        ? 'text-green-600 hover:text-green-800' 
-                        : 'text-red-600 hover:text-red-800'
-                    }`}
-                  >
-                    {action.type === 'add stake' ? (
-                      <>
-                        <span>👍</span> Add Stake
-                      </>
-                    ) : (
-                      <>
-                        <span>👎</span> Withdraw
-                      </>
-                    )}
-                  </a>
-                </td>
-                <td className="px-3 py-4 text-sm">
-                  <button
-                    onClick={() => {
-                      setSearchTerm(action.username);
-                      
-                      // Scroll to the search input
-                      const searchInput = document.querySelector('input[type="text"]');
-                      if (searchInput) {
-                        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }
-                    }}
-                    className="text-purple-600 hover:text-purple-800"
-                    title="Search this user"
-                  >
-                    <MagnifyingGlassIcon className="h-5 w-5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
@@ -479,26 +479,26 @@ const StatisticCard: React.FC<{
   onClick?: () => void;
 }> = ({ title, value, tooltip, onClick }) => (
   <div 
-    className={`bg-white p-4 rounded-lg shadow border border-purple-100 relative ${
+    className={`bg-card p-4 rounded-lg shadow border relative ${
       onClick ? 'cursor-pointer' : ''
     }`}
     onClick={onClick}
   >
     <div className="flex justify-between items-start mb-1">
-      <div className="text-sm text-gray-500">{title}</div>
+      <div className="text-sm text-muted-foreground dark:text-gray-300">{title}</div>
       <div 
         className="group relative"
         title={tooltip}
       >
         <QuestionMarkCircleIcon 
-          className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
+          className="h-5 w-5 text-gray-400 hover:text-purple-600 transition-colors cursor-help"
         />
-        <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-popover-foreground bg-popover rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
           {tooltip}
         </div>
       </div>
     </div>
-    <div className="text-xl font-semibold text-purple-700">
+    <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
       {value}
     </div>
   </div>
@@ -526,50 +526,53 @@ const NewStakersPanel: React.FC<{
       <h2 className="text-xl font-semibold text-gray-800 mb-4">
         New Stakers 🎉
       </h2>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-purple-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Time</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Username</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">Initial Stake</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-purple-700">USD Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {newStakers.map((staker, index) => {
-                const stakerDate = new Date(staker.date);
-                const isLast24Hours = (new Date().getTime() - stakerDate.getTime()) < 24 * 60 * 60 * 1000;
+      <div className="bg-card rounded-lg shadow overflow-hidden">
+        <table className="table-custom">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Username</th>
+              <th>Initial Stake</th>
+              <th>USD Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {newStakers.map((staker, index) => {
+              const stakerDate = new Date(staker.date);
+              const isLast24Hours = (new Date().getTime() - stakerDate.getTime()) < 24 * 60 * 60 * 1000;
 
-                return (
-                  <tr key={index} className={`hover:bg-purple-50 ${
-                    isLast24Hours ? 'bg-green-50' : ''
-                  }`}>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {stakerDate.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      <UsernameLink username={staker.username} />
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {staker.total_staked.toLocaleString(undefined, {
-                        minimumFractionDigits: 4,
-                        maximumFractionDigits: 4
-                      })} STRX
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      ${(staker.total_staked * strxPrice).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                      })}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+              return (
+                <tr 
+                  key={staker.username} 
+                  className={`${
+                    isLast24Hours 
+                      ? 'bg-green-50/50 dark:bg-green-800/20' 
+                      : ''
+                  }`}
+                >
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {stakerDate.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    <UsernameLink username={staker.username} />
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {staker.total_staked.toLocaleString(undefined, {
+                      minimumFractionDigits: 4,
+                      maximumFractionDigits: 4
+                    })} STRX
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    ${(staker.total_staked * strxPrice).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -680,12 +683,12 @@ const TierMilestoneTracker: React.FC<{
       />
 
       {sectionVisibility.tierMilestones && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="rounded-lg shadow overflow-hidden">
           {/* Mobile view */}
           <div className="md:hidden">
             <div className="grid grid-cols-1 gap-4 p-4">
               {milestones.slice(0, 3).map((milestone, index) => (
-                <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
+                <div key={index} className="bg-card p-4 rounded-lg border">
                   <div className="flex justify-between items-start mb-2">
                     <UsernameLink username={milestone.username} />
                   </div>
@@ -709,8 +712,8 @@ const TierMilestoneTracker: React.FC<{
                     </div>
                   </div>
 
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium text-purple-600">
+                  <div className="text-sm text-gray-600 dark:text-gray-200">
+                    <span className="font-medium text-purple-600 dark:text-purple-400">
                       {milestone.remaining.toLocaleString()} STRX
                     </span>
                     {' '}remaining
@@ -753,7 +756,7 @@ const TierMilestoneTracker: React.FC<{
           <div className="hidden md:block p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {milestones.map((milestone, index) => (
-                <div key={index} className="bg-white p-4 rounded-lg border border-purple-100">
+                <div key={index} className="bg-card p-4 rounded-lg border">
                   <div className="flex justify-between items-start mb-2">
                     <UsernameLink username={milestone.username} />
                   </div>
@@ -765,7 +768,7 @@ const TierMilestoneTracker: React.FC<{
                   </div>
 
                   <div className="mb-2">
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-200 mb-1">
                       <span>Progress to {milestone.nextTier.name}</span>
                       <span>{milestone.percentageComplete.toFixed(1)}%</span>
                     </div>
@@ -777,8 +780,8 @@ const TierMilestoneTracker: React.FC<{
                     </div>
                   </div>
 
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium text-purple-600">
+                  <div className="text-sm text-gray-600 dark:text-gray-200">
+                    <span className="font-medium text-purple-600 dark:text-purple-400">
                       {milestone.remaining.toLocaleString()} STRX
                     </span>
                     {' '}remaining
@@ -825,34 +828,18 @@ const calculateRewards = (
 const UserSelectContext = React.createContext<(username: string) => void>(() => {});
 
 // Update UsernameLink to use context
-const UsernameLink: React.FC<{
-  username: string;
-  showExplorer?: boolean;
-  className?: string;
-}> = ({ username, showExplorer = true, className = "" }) => {
-  const handleUserSelect = React.useContext(UserSelectContext);
-  return (
-    <div className="flex items-center gap-1">
+const UsernameLink: React.FC<{ username: string }> = ({ username }) => (
+  <UserSelectContext.Consumer>
+    {onSelect => (
       <button 
-        onClick={() => handleUserSelect(username)}
-        className={`text-purple-600 hover:text-purple-800 hover:underline ${className}`}
+        onClick={() => onSelect(username)}
+        className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
       >
         {username}
       </button>
-      {showExplorer && (
-        <a 
-          href={`https://explorer.xprnetwork.org/account/${username}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-gray-400 hover:text-purple-600 transition-colors"
-          title="View on Blockchain Explorer"
-        >
-          <CubeTransparentIcon className="h-4 w-4" />
-        </a>
-      )}
-    </div>
-  );
-};
+    )}
+  </UserSelectContext.Consumer>
+);
 
 // Add this before the Leaderboard function
 const getUserTier = (stakedAmount: number): StakingTier => {
@@ -946,7 +933,7 @@ type DexScreenerData = {
   };
 };
 
-function Leaderboard() {
+function App() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
     const response = await fetch(url);
@@ -1074,7 +1061,7 @@ function Leaderboard() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTier, setSelectedTier] = useState<StakingTier | null>(null);
-  const [pageTitle, setPageTitle] = useState("STRX Staking Leaderboard");
+  const [pageTitle, setPageTitle] = useState("");
   const [isEasterEggActive, setIsEasterEggActive] = useState(false);
 
   // Reset page when search term changes
@@ -1278,7 +1265,7 @@ function Leaderboard() {
     // If no match, continue with tier checks
     if (selectedTier?.name === tier?.name) {
       setIsEasterEggActive(false);
-      setPageTitle("STRX Staking Leaderboard");
+      setPageTitle("");
       return;
     }
     
@@ -1293,9 +1280,6 @@ function Leaderboard() {
     } else if (tier?.name === 'Shrimp') {
       setPageTitle("Shrimps Together Strong 🦐");
       document.body.classList.add('bounce-animation');
-    } else if (tier) {
-      // Reset title for any other tier
-      setPageTitle("STRX Staking Leaderboard");
     }
     
     setTimeout(() => {
@@ -1410,7 +1394,6 @@ function Leaderboard() {
   // Update the selectedUser handler
   const handleUserSelect = (username: string) => {
     setSelectedUser(username);
-    // Update URL without page reload
     const newUrl = `${window.location.pathname}?user=${username}`;
     window.history.pushState({ username }, '', newUrl);
   };
@@ -1484,43 +1467,19 @@ function Leaderboard() {
   }
 
   return (
-    <UserSelectContext.Provider value={handleUserSelect}>
-      <div className="min-h-screen bg-white p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
+    <ThemeProvider>
+      <div className="min-h-screen bg-background text-foreground">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
           <div className="flex justify-between items-center mb-6">
             {/* Title with dropdown on the left */}
             <div className="relative group">
               <button 
                 className="flex items-center gap-2 text-3xl font-bold text-purple-700 hover:text-purple-800"
-                onClick={() => {
-                  const dropdown = document.getElementById('site-dropdown');
-                  if (dropdown) {
-                    dropdown.classList.toggle('hidden');
-                  }
-                }}
               >
                 {pageTitle}
-                <ChevronDownIcon className="h-5 w-5" />
               </button>
               
-              {/* Dropdown menu */}
-              <div 
-                id="site-dropdown"
-                className="hidden absolute left-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg p-2 z-50"
-              >
-                <a 
-                  href="https://strxldr.app/"
-                  className="block w-full px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-md"
-                >
-                  STRX Staking Leaderboard
-                </a>
-                <a 
-                  href="https://mint.strxldr.app/"
-                  className="block w-full px-4 py-2 text-gray-700 hover:bg-purple-50 rounded-md"
-                >
-                  STRX LEADERS MINT
-                </a>
-              </div>
             </div>
             
             {/* Stake button on the right */}
@@ -1540,12 +1499,12 @@ function Leaderboard() {
           {/* Last update info with info button */}
           {response?.lastModified && (
             <div className="flex justify-between items-center text-sm mb-4">
-              <span className="text-gray-500 italic">
+              <span className="text-gray-500 italic dark:text-gray-300">
                 Last updated {formatTimeDiff(response.lastModified)}
               </span>
               <button
                 onClick={() => setIsInfoModalOpen(true)}
-                className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
+                className="p-2 text-purple-600 hover:text-purpleinline-flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors-800 transition-colors"
                 aria-label="Information"
               >
                 <QuestionMarkCircleIcon className="h-6 w-6" />
@@ -1575,7 +1534,7 @@ function Leaderboard() {
                     statistics?.totalStaked || 0,
                     amountDisplays['statistics-totalStaked'] || 'strx'
                   )}
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-gray-300">
                     ({((statistics?.totalStaked || 0) / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
                   </span>
                 </div>
@@ -1592,7 +1551,7 @@ function Leaderboard() {
                     globalStaked,
                     amountDisplays['statistics-globalStaked'] || 'strx'
                   )}
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-500 dark:text-gray-300">
                     ({(globalStaked / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
                   </span>
                 </div>
@@ -1631,7 +1590,7 @@ function Leaderboard() {
                       amountDisplays['statistics-range'] || 'strx'
                     )}
                   </span>
-                  <span className="text-xs text-gray-500">to</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-300">to</span>
                   <span className="text-sm">
                     {formatAmount(
                       statistics?.maxStake || 0,
@@ -1654,7 +1613,7 @@ function Leaderboard() {
                       : '...'} STRX
                   </span>
                   {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-300">
                       ~{calculateDaysUntilEmpty(
                         parseFloat(rewardsPoolData[0]),
                         parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
@@ -1701,18 +1660,34 @@ function Leaderboard() {
             <StatisticCard
               title="STRX/SOL Pool"
               value={
-                raydiumPoolData && xsolPriceData ? (
+                dexScreenerData && raydiumPoolData && xsolPriceData ? (
                   <div className="flex flex-col">
                     <span>{raydiumPoolData.data[0].price.toFixed(8)} SOL</span>
-                    <span className="text-sm text-gray-600">
-                      ≈ ${(raydiumPoolData.data[0].price * xsolPriceData[0].price.usd).toFixed(6)}
-                    </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-300">
                       TVL: ${raydiumPoolData.data[0].tvl.toLocaleString()}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-300">
                       24h Vol: ${raydiumPoolData.data[0].day.volume.toLocaleString()}
                     </span>
+                    <div className="text-xs text-gray-500 dark:text-gray-300 mt-1">
+                      Liquidity:
+                      <div className="flex items-center gap-1 ml-2">
+                        <img 
+                          src="/strx.png" 
+                          alt="STRX" 
+                          className="w-4 h-4"
+                        />
+                        {dexScreenerData.pair.liquidity.base.toLocaleString()} {dexScreenerData.pair.baseToken.symbol}
+                      </div>
+                      <div className="flex items-center gap-1 ml-2">
+                        <img 
+                          src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" 
+                          alt="SOL" 
+                          className="w-4 h-4 rounded-full" // Add rounded-full class for a circular shape
+                        />
+                        {dexScreenerData.pair.liquidity.quote.toLocaleString()} {dexScreenerData.pair.quoteToken.symbol}
+                      </div>
+                    </div>
                   </div>
                 ) : 'Loading...'
               }
@@ -1727,7 +1702,7 @@ function Leaderboard() {
                     <span className="text-xs text-green-500">
                       Reward APR: {raydiumPoolData.data[0].day.rewardApr[0].toFixed(2)}%
                     </span>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs  text-gray-500 dark:text-gray-300 mt-1">
                       Volume:
                       <div className="ml-2">
                         24h: ${raydiumPoolData.data[0].day.volume.toLocaleString()}<br/>
@@ -1757,33 +1732,14 @@ function Leaderboard() {
                         {dexScreenerData.pair.priceChange.h24.toFixed(2)}%
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-300">
                       MCap: ${(dexScreenerData.pair.marketCap / 1000000).toFixed(2)}M
                     </span>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-gray-300">
                       24h Trades: {dexScreenerData.pair.txns.h24.buys + dexScreenerData.pair.txns.h24.sells}
                       <span className="ml-2">
                         ({dexScreenerData.pair.txns.h24.buys} 📈 / {dexScreenerData.pair.txns.h24.sells} 📉)
                       </span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      Liquidity:
-                      <div className="flex items-center gap-1 ml-2">
-                        <img 
-                          src="public/strx.png" 
-                          alt="STRX" 
-                          className="w-4 h-4"
-                        />
-                        {dexScreenerData.pair.liquidity.base.toLocaleString()} {dexScreenerData.pair.baseToken.symbol}
-                      </div>
-                      <div className="flex items-center gap-1 ml-2">
-                        <img 
-                          src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" 
-                          alt="SOL" 
-                          className="w-4 h-4"
-                        />
-                        {dexScreenerData.pair.liquidity.quote.toLocaleString()} {dexScreenerData.pair.quoteToken.symbol}
-                      </div>
                     </div>
                   </div>
                 ) : 'Loading...'
@@ -1803,20 +1759,20 @@ function Leaderboard() {
                     setSelectedTier(selectedTier?.name === tier.name ? null : tier);
                     handleEasterEgg(tier);
                   }}
-                  className={`tier-card bg-white p-4 rounded-lg shadow border cursor-pointer transition-colors ${
+                  className={`tier-card bg-card bg-white dark:bg-gray-800 p-4 rounded-lg shadow border cursor-pointer transition-colors ${
                     selectedTier?.name === tier.name 
-                      ? 'border-purple-500 bg-purple-50' 
-                      : 'border-purple-100 hover:bg-purple-50'
+                      ? 'border-primary bg-accent' 
+                      : 'hover:bg-accent'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-2xl">{tier.emoji}</span>
-                    <span className="text-sm text-gray-500">{tier.name}</span>
+                    <span className="text-sm text-muted-foreground dark:text-gray-300">{tier.name}</span>
                   </div>
-                  <div className="text-xl font-semibold text-purple-700">
+                  <div className="text-xl font-semibold text-primary dark:text-purple-400">
                     {tier.count.toLocaleString()}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-foreground dark:text-gray-300">
                     {tier.minimum.toLocaleString()}+ STRX
                   </div>
                 </div>
@@ -1876,9 +1832,13 @@ function Leaderboard() {
                 <div className="h-64 w-full">
                   <ResponsiveContainer>
                     <BarChart data={topHolders} margin={{ left: 50, right: 20, top: 20, bottom: 20 }}>
-                      <XAxis dataKey="username" />
+                      <XAxis 
+                        dataKey="username" 
+                        tick={{ fill: 'var(--axis-color)' }}
+                      />
                       <YAxis 
                         tickFormatter={formatLargeNumber}
+                        tick={{ fill: 'var(--axis-color)' }}
                       />
                       <Tooltip 
                         formatter={(value: number) => [
@@ -1889,7 +1849,7 @@ function Leaderboard() {
                           }),
                           sortField === 'rewards' 
                             ? "Staked Amount" 
-                            : sortField.charAt(0).toUpperCase() + sortField.slice(1) // Capitalize first letter
+                            : sortField.charAt(0).toUpperCase() + sortField.slice(1)
                         ]}
                       />
                       <Bar 
@@ -1906,11 +1866,14 @@ function Leaderboard() {
                   <input
                     type="text"
                     placeholder="Search by username..."
-                    className="pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+                             focus:outline-none focus:ring-2 focus:ring-purple-500 
+                             bg-white dark:bg-gray-800 
+                             text-gray-900 dark:text-gray-100 
+                             placeholder-gray-500 dark:placeholder-gray-400"
                   />
-                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
                   {searchTerm && (
                     <button
                       onClick={() => setSearchTerm('')}
@@ -1930,71 +1893,83 @@ function Leaderboard() {
                   />
                   <div className="hidden md:flex items-center gap-2">
                     <span className="text-gray-600">Sort by:</span>
-                    <select
-                      value={sortField}
-                      onChange={(e) => setSortField(e.target.value as SortField)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="staked">Staked Amount</option>
-                      <option value="unstaked">Unstaked Amount</option>
-                      <option value="total">Total Amount</option>
-                    </select>
-                    <button
-                      onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                      className="flex items-center gap-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
-                    >
-                      {sortOrder === 'desc' ? (
-                        <ArrowDownIcon className="h-4 w-4" />
-                      ) : (
-                        <ArrowUpIcon className="h-4 w-4" />
-                      )}
-                    </button>
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <button className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300">
+                          Sort by
+                          <ChevronDownIcon className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent 
+                        className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 min-w-[150px] mt-2 z-50 border border-purple-100 dark:border-purple-800"
+                        sideOffset={5}
+                      >
+                        <DropdownMenuItem className="outline-none">
+                          <button 
+                            onClick={() => setSortField('staked')}
+                            className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
+                          >
+                            Staked Amount
+                          </button>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="outline-none">
+                          <button 
+                            onClick={() => setSortField('unstaked')}
+                            className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
+                          >
+                            Unstaked Amount
+                          </button>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="outline-none">
+                          <button 
+                            onClick={() => setSortField('total')}
+                            className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
+                          >
+                            Total Amount
+                          </button>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="outline-none">
+                          <button 
+                            onClick={() => setSortField('rewards')}
+                            className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
+                          >
+                            Estimated Rewards
+                          </button>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-purple-50">
+              <div className="bg-card rounded-lg shadow overflow-hidden">
+                <table className="table-custom">
+                  <thead>
                     <tr>
                       {visibleColumns.rank && (
-                        <th className="px-2 py-3 text-left text-sm font-semibold text-purple-700 w-12">
-                          Rank
-                        </th>
+                        <th className="w-12">Rank</th>
                       )}
                       {visibleColumns.username && (
-                        <th className="px-2 py-3 text-left text-sm font-semibold text-purple-700 w-40">
-                          Username
-                        </th>
+                        <th className="w-40">Username</th>
                       )}
                       {visibleColumns.staked && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
-                          Staked Amount
-                        </th>
+                        <th>Staked Amount</th>
                       )}
                       {visibleColumns.unstaked && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
-                          Unstaked Amount
-                        </th>
+                        <th>Unstaked Amount</th>
                       )}
                       {visibleColumns.total && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
-                          Total Amount
-                        </th>
+                        <th>Total Amount</th>
                       )}
                       {visibleColumns.usdValue && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700">
-                          USD Value
-                        </th>
+                        <th>USD Value</th>
                       )}
                       {visibleColumns.rewards && (
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-700 min-w-[200px]">
-                          Estimated Rewards
-                        </th>
+                        <th className="min-w-[200px]">Estimated Rewards</th>
                       )}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody>
                     {currentData.map((item, index) => (
                       <tr key={item.username} className="hover:bg-purple-50">
                         {visibleColumns.rank && (
@@ -2015,12 +1990,7 @@ function Leaderboard() {
                               <span title={getUserTier(item.staked).name}>
                                 {getUserTier(item.staked).emoji}
                               </span>
-                              <button 
-                                onClick={() => handleUserSelect(item.username)}
-                                className="text-purple-600 hover:text-purple-800 hover:underline"
-                              >
-                                {item.username}
-                              </button>
+                              <UsernameLink username={item.username} />
                               <a 
                                 href={`https://explorer.xprnetwork.org/account/${item.username}`}
                                 target="_blank"
@@ -2046,7 +2016,7 @@ function Leaderboard() {
                                 item.staked, 
                                 amountDisplays[`${item.username}-staked`] || 'strx'
                               )}
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-gray-500 dark:text-gray-300">
                                 ({(item.staked / TOTAL_SUPPLY * 100).toFixed(4)}%)
                               </span>
                             </div>
@@ -2065,7 +2035,7 @@ function Leaderboard() {
                                 item.unstaked, 
                                 amountDisplays[`${item.username}-unstaked`] || 'strx'
                               )}
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-gray-500 dark:text-gray-300">
                                 ({(item.unstaked / TOTAL_SUPPLY * 100).toFixed(4)}%)
                               </span>
                             </div>
@@ -2084,7 +2054,7 @@ function Leaderboard() {
                                 item.total, 
                                 amountDisplays[`${item.username}-total`] || 'strx'
                               )}
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-gray-500 dark:text-gray-300">
                                 ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
                               </span>
                             </div>
@@ -2126,12 +2096,12 @@ function Leaderboard() {
                                       ? `$${rewards.dailyUsd.toFixed(2)}` 
                                       : `${rewards.daily.toFixed(4)}`}
                                   </span>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-gray-500 dark:text-gray-300">
                                     Monthly: {isUsd 
                                       ? `$${rewards.monthlyUsd.toFixed(2)}` 
                                       : `${rewards.monthly.toFixed(4)}`}
                                   </span>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-gray-500 dark:text-gray-300">
                                     Yearly: {isUsd 
                                       ? `$${rewards.yearlyUsd.toFixed(2)}` 
                                       : `${rewards.yearly.toFixed(4)}`}
@@ -2148,7 +2118,7 @@ function Leaderboard() {
               </div>
 
               <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="text-sm text-gray-600 text-center md:text-left">
+                <div className="text-sm text-gray-600 text-center md:text-left dark:text-gray-300">
                   Page Total: {currentPageTotal.toLocaleString(undefined, {
                     minimumFractionDigits: 4,
                     maximumFractionDigits: 4,
@@ -2170,7 +2140,7 @@ function Leaderboard() {
                   >
                     Previous
                   </button>
-                  <span className="text-sm text-gray-600 px-2">
+                  <span className="text-sm text-gray-600 px-2 dark:text-gray-300">
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
@@ -2193,7 +2163,7 @@ function Leaderboard() {
           )}
         </div>
       </div>
-    </UserSelectContext.Provider>
+    </ThemeProvider>
   );
 }
 
@@ -2201,9 +2171,19 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
+const handleUserSelect = (username: string) => {
+  // Update URL with selected user
+  const newUrl = `${window.location.pathname}?user=${username}`;
+  window.location.href = newUrl;  // This will trigger a page reload with the new URL
+};
+
 root.render(
   <React.StrictMode>
-    <Leaderboard />
+    <ThemeProvider>
+      <UserSelectContext.Provider value={handleUserSelect}>
+        <App />
+      </UserSelectContext.Provider>
+    </ThemeProvider>
   </React.StrictMode>
 );
 // smapshot version

@@ -1,11 +1,14 @@
 import React from 'react';
+import { ThemeProvider } from './components/ThemeProvider';
 
 const App: React.FC = () => {
   return (
-    <div>
-      <h1>Welcome to the Staking Dashboard</h1>
-      {/* Add your main content here */}
-    </div>
+    <ThemeProvider>
+      <div>
+        <h1>Welcome to the Staking Dashboard</h1>
+        {/* Add your main content here */}
+      </div>
+    </ThemeProvider>
   );
 };
 
