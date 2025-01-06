@@ -6,6 +6,10 @@
       "dest": "/api/$1"
     },
     {
+      "src": "/strx.png",
+      "dest": "/strx.png"
+    },
+    {
       "src": "^/static/(.*)",
       "dest": "/static/$1"
     },
