@@ -1760,11 +1760,17 @@ function Leaderboard() {
                     <span className="text-xs text-gray-500">
                       MCap: ${(dexScreenerData.pair.marketCap / 1000000).toFixed(2)}M
                     </span>
+                    <div className="text-xs text-gray-500">
+                      24h Trades: {dexScreenerData.pair.txns.h24.buys + dexScreenerData.pair.txns.h24.sells}
+                      <span className="ml-2">
+                        ({dexScreenerData.pair.txns.h24.buys} 📈 / {dexScreenerData.pair.txns.h24.sells} 📉)
+                      </span>
+                    </div>
                     <div className="text-xs text-gray-500 mt-1">
                       Liquidity:
                       <div className="flex items-center gap-1 ml-2">
                         <img 
-                          src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/STRXzrUKLEpXTVN5oyXaSZgt38MUcWN8VRAZUAVFX3j/logo.png" 
+                          src="/strx.png" 
                           alt="STRX" 
                           className="w-4 h-4"
                         />
@@ -1778,12 +1784,6 @@ function Leaderboard() {
                         />
                         {dexScreenerData.pair.liquidity.quote.toLocaleString()} {dexScreenerData.pair.quoteToken.symbol}
                       </div>
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      24h Trades: {dexScreenerData.pair.txns.h24.buys + dexScreenerData.pair.txns.h24.sells}
-                      <span className="ml-2">
-                        ({dexScreenerData.pair.txns.h24.buys} 📈 / {dexScreenerData.pair.txns.h24.sells} 📉)
-                      </span>
                     </div>
                   </div>
                 ) : 'Loading...'
