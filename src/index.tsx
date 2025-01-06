@@ -7,6 +7,10 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import UserPage from './UserPage';
 
+// Add these imports at the top
+import { Connection, PublicKey } from "@solana/web3.js";
+import { PoolInfoLayout, SqrtPriceMath } from "@raydium-io/raydium-sdk";
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type StakeData = {
@@ -990,6 +994,37 @@ function Leaderboard() {
     () => fetch('/api/raydium-data').then(res => res.json())
   );
 
+  // Add these imports at the top
+  import { Connection, PublicKey } from "@solana/web3.js";
+  import { PoolInfoLayout, SqrtPriceMath } from "@raydium-io/raydium-sdk";
+
+  // Inside your Leaderboard component
+  const { data: solanaPrice } = useSWR(
+    'solana_price',
+    async () => {
+      try {
+        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const id = new PublicKey('8sLbNZoA1cfnvMJLPfp98ZLAnFSYCFApfJKMbiXNLwxj');
+        const accountInfo = await connection.getAccountInfo(id);
+
+        if (accountInfo === null) throw Error('Get pool info error');
+
+        const poolData = PoolInfoLayout.decode(accountInfo.data);
+        const price = SqrtPriceMath.sqrtPriceX64ToPrice(
+          poolData.sqrtPriceX64, 
+          poolData.mintDecimalsA, 
+          poolData.mintDecimalsB
+        ).toFixed(2);
+
+        return parseFloat(price);
+      } catch (error) {
+        console.error('Error fetching Solana price:', error);
+        return null;
+      }
+    },
+    { refreshInterval: 30000 } // Refresh every 30 seconds
+  );
+
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchTerm, setSearchTerm] = useState('');
@@ -1631,6 +1666,12 @@ function Leaderboard() {
                 ) : '...'
               }
               tooltip="STRX price and liquidity on Raydium DEX"
+            />
+
+            <StatisticCard
+              title="SOL Price"
+              value={solanaTokenData ? `$${solanaTokenData.rows[0].quantity}` : 'Loading...'}
+              tooltip="Current SOL price from Raydium pool"
             />
           </div>
 
