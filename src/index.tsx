@@ -878,7 +878,7 @@ export const calculateDaysUntilEmpty = (rewardsPool: number, totalStaked: number
   return days;
 };
 
-// Add this type near your other types
+// Add near other type definitions
 type RaydiumPoolData = {
   data: [{
     price: number;
@@ -893,22 +893,6 @@ type RaydiumPoolData = {
     };
   }];
 };
-
-// Add this SWR hook in your Leaderboard component
-const { data: raydiumPoolData } = useSWR<RaydiumPoolData>(
-  'raydium_pool_v3',
-  () => fetch('https://api-v3.raydium.io/pools/info/ids?ids=5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
-    .then(res => res.json()),
-  { refreshInterval: 30000 }
-);
-
-const { data: solanaPrice } = useSWR<number>(
-  'solana_price',
-  () => fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd')
-    .then(res => res.json())
-    .then(data => data.solana.usd),
-  { refreshInterval: 30000 }
-);
 
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
@@ -1010,6 +994,13 @@ function Leaderboard() {
     }).then(res => res.json())
   );
 
+  // Add with other SWR hooks
+  const { data: raydiumPoolData } = useSWR<RaydiumPoolData>(
+    'raydium_pool_v3',
+    () => fetch('https://api-v3.raydium.io/pools/info/ids?ids=5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
+      .then(res => res.json()),
+    { refreshInterval: 30000 }
+  );
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -1644,7 +1635,7 @@ function Leaderboard() {
               value={
                 raydiumPoolData ? (
                   <div className="flex flex-col">
-                    <span>{(raydiumPoolData.data[0].price * (solanaPrice ?? 0)).toFixed(6)} USD</span>
+                    <span>{raydiumPoolData.data[0].price.toFixed(8)} SOL</span>
                     <span className="text-xs text-gray-500">
                       TVL: ${raydiumPoolData.data[0].tvl.toLocaleString()}
                     </span>

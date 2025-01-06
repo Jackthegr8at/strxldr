@@ -8,8 +8,6 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/lodash": "^4.17.7",
-    "@solana/web3.js": "latest",
-    "@raydium-io/raydium-sdk": "latest",
     "lodash": "^4.17.21",
     "react": "^18.2.0",
     "react-app": "^1.0.0",
