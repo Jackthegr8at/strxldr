@@ -888,8 +888,18 @@ type RaydiumPoolData = {
     day: {
       volume: number;
       apr: number;
+      feeApr: number;
+      rewardApr: number[];
       priceMin: number;
       priceMax: number;
+    };
+    week: {
+      volume: number;
+      rewardApr: number[];
+    };
+    month: {
+      volume: number;
+      rewardApr: number[];
     };
   }];
 };
@@ -1672,6 +1682,28 @@ function Leaderboard() {
                 ) : 'Loading...'
               }
               tooltip="STRX price and pool stats from Raydium"
+            />
+
+            <StatisticCard
+              title="Trading Activity"
+              value={
+                raydiumPoolData ? (
+                  <div className="flex flex-col">
+                    <span className="text-xs text-green-500">
+                      Reward APR: {raydiumPoolData.data[0].day.rewardApr[0].toFixed(2)}%
+                    </span>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Volume:
+                      <div className="ml-2">
+                        24h: ${raydiumPoolData.data[0].day.volume.toLocaleString()}<br/>
+                        7d: ${raydiumPoolData.data[0].week.volume.toLocaleString()}<br/>
+                        30d: ${raydiumPoolData.data[0].month.volume.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                ) : 'Loading...'
+              }
+              tooltip="Trading volume and APR stats from Raydium"
             />
           </div>
 
