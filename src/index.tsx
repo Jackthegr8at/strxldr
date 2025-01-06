@@ -6,10 +6,10 @@ import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import UserPage from './UserPage';
-
-// Add these imports at the top
 import { Connection, PublicKey } from "@solana/web3.js";
 import { PoolInfoLayout, SqrtPriceMath } from "@raydium-io/raydium-sdk";
+import { LIQUIDITY_STATE_LAYOUT_V4 } from "@raydium-io/raydium-sdk";
+import { getTokenBalance } from "@raydium-io/raydium-sdk";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -882,6 +882,11 @@ export const calculateDaysUntilEmpty = (rewardsPool: number, totalStaked: number
   return days;
 };
 
+async function getTokenBalance(connection: Connection, vault: PublicKey, decimals: number): Promise<number> {
+  const balance = await connection.getTokenAccountBalance(vault);
+  return parseFloat(balance.value.amount) / Math.pow(10, decimals);
+}
+
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
@@ -982,21 +987,7 @@ function Leaderboard() {
     }).then(res => res.json())
   );
 
-  // Add these SWR hooks for Solana data
-  const { data: solanaTokenData } = useSWR<any>(
-    'solana_token_data',
-    () => fetch('/api/solana-data').then(res => res.json())
-  );
 
-  // Add near your other useSWR hooks
-  const { data: raydiumData } = useSWR<any>(
-    'raydium_pool_data',
-    () => fetch('/api/raydium-data').then(res => res.json())
-  );
-
-  // Add these imports at the top
-  import { Connection, PublicKey } from "@solana/web3.js";
-  import { PoolInfoLayout, SqrtPriceMath } from "@raydium-io/raydium-sdk";
 
   // Inside your Leaderboard component
   const { data: solanaPrice } = useSWR(
@@ -1023,6 +1014,32 @@ function Leaderboard() {
       }
     },
     { refreshInterval: 30000 } // Refresh every 30 seconds
+  );
+
+  const { data: solanaTokenData } = useSWR(
+    'solana_price',
+    async () => {
+      try {
+        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
+        const id = new PublicKey('8sLbNZoA1cfnvMJLPfp98ZLAnFSYCFApfJKMbiXNLwxj');
+        const accountInfo = await connection.getAccountInfo(id);
+        if (!accountInfo) throw Error('Get pool info error');
+        const poolData = PoolInfoLayout.decode(accountInfo.data);
+        return {
+          rows: [{
+            quantity: SqrtPriceMath.sqrtPriceX64ToPrice(
+              poolData.sqrtPriceX64,
+              poolData.mintDecimalsA,
+              poolData.mintDecimalsB
+            ).toFixed(2)
+          }]
+        };
+      } catch (error) {
+        console.error('Error fetching Solana price:', error);
+        return null;
+      }
+    },
+    { refreshInterval: 30000 }
   );
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -1651,27 +1668,6 @@ function Leaderboard() {
                 useGrouping: true,
               })}`}
               tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
-            />
-
-            <StatisticCard
-              title="STRX Raydium Pool"
-              value={
-                raydiumData ? (
-                  <div className="flex flex-col">
-                    <span>{raydiumData.strxPriceInSol.toFixed(6)} SOL</span>
-                    <span className="text-xs text-gray-500">
-                      Liquidity: {raydiumData.totalLiquidityInSol.toFixed(2)} SOL
-                    </span>
-                  </div>
-                ) : '...'
-              }
-              tooltip="STRX price and liquidity on Raydium DEX"
-            />
-
-            <StatisticCard
-              title="SOL Price"
-              value={solanaTokenData ? `$${solanaTokenData.rows[0].quantity}` : 'Loading...'}
-              tooltip="Current SOL price from Raydium pool"
             />
           </div>
 
