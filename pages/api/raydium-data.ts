@@ -11,8 +11,10 @@ async function getTokenBalance(connection: Connection, vault: PublicKey, decimal
 
 export default async function handler(req, res) {
   try {
+    console.log('Starting Raydium data fetch...');
     const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
     
+    console.log('Getting account info...');
     const info = await connection.getAccountInfo(new PublicKey(STRX_SOL_POOL_ID));
     if (!info) {
       throw new Error("Pool not found");
@@ -37,7 +39,7 @@ export default async function handler(req, res) {
     });
     
   } catch (error) {
-    console.error('Error fetching Raydium data:', error);
-    res.status(500).json({ error: 'Failed to fetch Raydium data' });
+    console.error('Detailed error:', error);
+    res.status(500).json({ error: error.message });
   }
 } 
