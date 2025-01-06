@@ -984,6 +984,12 @@ function Leaderboard() {
     () => fetch('/api/solana-data').then(res => res.json())
   );
 
+  // Add near your other useSWR hooks
+  const { data: raydiumData } = useSWR<any>(
+    'raydium_pool_data',
+    () => fetch('/api/raydium-data').then(res => res.json())
+  );
+
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchTerm, setSearchTerm] = useState('');
@@ -1610,6 +1616,21 @@ function Leaderboard() {
                 useGrouping: true,
               })}`}
               tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
+            />
+
+            <StatisticCard
+              title="STRX Raydium Pool"
+              value={
+                raydiumData ? (
+                  <div className="flex flex-col">
+                    <span>{raydiumData.strxPriceInSol.toFixed(6)} SOL</span>
+                    <span className="text-xs text-gray-500">
+                      Liquidity: {raydiumData.totalLiquidityInSol.toFixed(2)} SOL
+                    </span>
+                  </div>
+                ) : '...'
+              }
+              tooltip="STRX price and liquidity on Raydium DEX"
             />
           </div>
 
