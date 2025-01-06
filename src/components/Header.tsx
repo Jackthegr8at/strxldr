@@ -5,7 +5,7 @@ import { ChevronDownIcon } from '@heroicons/react/24/outline';
 export function Header() {
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm">
-      <div className="mx-auto grid grid-cols-[1fr,max-content] p-5 items-center sticky top-0 z-50 border-b border-purple-100 dark:border-purple-800">
+      <div className="mx-auto grid grid-cols-[1fr,max-content] p-4 items-center sticky top-0 z-50 border-b border-purple-100 dark:border-purple-800">
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <DropdownMenu modal={false}>
