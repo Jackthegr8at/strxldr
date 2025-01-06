@@ -916,6 +916,36 @@ type XSolPriceData = {
   };
 };
 
+// Add new type definition
+type DexScreenerData = {
+  pair: {
+    priceUsd: string;
+    priceChange: {
+      m5: number;
+      h1: number;
+      h6: number;
+      h24: number;
+    };
+    txns: {
+      h24: {
+        buys: number;
+        sells: number;
+      };
+      h6: {
+        buys: number;
+        sells: number;
+      };
+    };
+    volume: {
+      h24: number;
+      h6: number;
+      h1: number;
+      m5: number;
+    };
+    marketCap: number;
+  };
+};
+
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
@@ -1028,6 +1058,14 @@ function Leaderboard() {
   const { data: xsolPriceData } = useSWR<XSolPriceData>(
     'xsol_price',
     () => fetch('https://www.api.bloks.io/proton/tokens/XSOL-proton-xtokens')
+      .then(res => res.json()),
+    { refreshInterval: 30000 }
+  );
+
+  // Add new SWR hook in Leaderboard component
+  const { data: dexScreenerData } = useSWR<DexScreenerData>(
+    'dexscreener_data',
+    () => fetch('https://api.dexscreener.com/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
       .then(res => res.json()),
     { refreshInterval: 30000 }
   );
@@ -1704,6 +1742,37 @@ function Leaderboard() {
                 ) : 'Loading...'
               }
               tooltip="Trading volume and APR stats from Raydium"
+            />
+
+            <StatisticCard
+              title="Market Stats"
+              value={
+                dexScreenerData ? (
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span>${parseFloat(dexScreenerData.pair.priceUsd).toFixed(6)}</span>
+                      <span className={`text-sm ${
+                        dexScreenerData.pair.priceChange.h24 >= 0 
+                          ? 'text-green-500' 
+                          : 'text-red-500'
+                      }`}>
+                        {dexScreenerData.pair.priceChange.h24 > 0 ? '+' : ''}
+                        {dexScreenerData.pair.priceChange.h24.toFixed(2)}%
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      MCap: ${(dexScreenerData.pair.marketCap / 1000000).toFixed(2)}M
+                    </span>
+                    <div className="text-xs text-gray-500 mt-1">
+                      24h Trades: {dexScreenerData.pair.txns.h24.buys + dexScreenerData.pair.txns.h24.sells}
+                      <span className="ml-2">
+                        ({dexScreenerData.pair.txns.h24.buys} 📈 / {dexScreenerData.pair.txns.h24.sells} 📉)
+                      </span>
+                    </div>
+                  </div>
+                ) : 'Loading...'
+              }
+              tooltip="Market statistics from DexScreener"
             />
           </div>
 
