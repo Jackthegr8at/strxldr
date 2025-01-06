@@ -902,6 +902,14 @@ const { data: raydiumPoolData } = useSWR<RaydiumPoolData>(
   { refreshInterval: 30000 }
 );
 
+const { data: solanaPrice } = useSWR<number>(
+  'solana_price',
+  () => fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd')
+    .then(res => res.json())
+    .then(data => data.solana.usd),
+  { refreshInterval: 30000 }
+);
+
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
@@ -1629,6 +1637,27 @@ function Leaderboard() {
                 useGrouping: true,
               })}`}
               tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
+            />
+
+            <StatisticCard
+              title="STRX/SOL Pool"
+              value={
+                raydiumPoolData ? (
+                  <div className="flex flex-col">
+                    <span>{(raydiumPoolData.data[0].price * solanaPrice).toFixed(6)} USD</span>
+                    <span className="text-xs text-gray-500">
+                      TVL: ${raydiumPoolData.data[0].tvl.toLocaleString()}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      24h Vol: ${raydiumPoolData.data[0].day.volume.toLocaleString()}
+                    </span>
+                    <span className="text-xs text-green-500">
+                      APR: {raydiumPoolData.data[0].day.apr.toFixed(2)}%
+                    </span>
+                  </div>
+                ) : 'Loading...'
+              }
+              tooltip="STRX price and pool stats from Raydium"
             />
           </div>
 
