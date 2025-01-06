@@ -894,6 +894,18 @@ type RaydiumPoolData = {
   }];
 };
 
+// Add near other type definitions
+type XSolPriceData = {
+  0: {
+    price: {
+      quotes: {
+        USD: number;
+      };
+      usd: number;
+    };
+  };
+};
+
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
@@ -998,6 +1010,14 @@ function Leaderboard() {
   const { data: raydiumPoolData } = useSWR<RaydiumPoolData>(
     'raydium_pool_v3',
     () => fetch('https://api-v3.raydium.io/pools/info/ids?ids=5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
+      .then(res => res.json()),
+    { refreshInterval: 30000 }
+  );
+
+  // Add with other SWR hooks in Leaderboard component
+  const { data: xsolPriceData } = useSWR<XSolPriceData>(
+    'xsol_price',
+    () => fetch('https://www.api.bloks.io/proton/tokens/XSOL-proton-xtokens')
       .then(res => res.json()),
     { refreshInterval: 30000 }
   );
@@ -1633,9 +1653,12 @@ function Leaderboard() {
             <StatisticCard
               title="STRX/SOL Pool"
               value={
-                raydiumPoolData ? (
+                raydiumPoolData && xsolPriceData ? (
                   <div className="flex flex-col">
                     <span>{raydiumPoolData.data[0].price.toFixed(8)} SOL</span>
+                    <span className="text-sm text-gray-600">
+                      ≈ ${(raydiumPoolData.data[0].price * xsolPriceData[0].price.usd).toFixed(6)}
+                    </span>
                     <span className="text-xs text-gray-500">
                       TVL: ${raydiumPoolData.data[0].tvl.toLocaleString()}
                     </span>
