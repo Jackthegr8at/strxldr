@@ -6,10 +6,6 @@ import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import UserPage from './UserPage';
-import { Connection, PublicKey } from "@solana/web3.js";
-import { PoolInfoLayout, SqrtPriceMath } from "@raydium-io/raydium-sdk";
-import { LIQUIDITY_STATE_LAYOUT_V4 } from "@raydium-io/raydium-sdk";
-import { getTokenBalance } from "@raydium-io/raydium-sdk";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -882,10 +878,29 @@ export const calculateDaysUntilEmpty = (rewardsPool: number, totalStaked: number
   return days;
 };
 
-async function getTokenBalance(connection: Connection, vault: PublicKey, decimals: number): Promise<number> {
-  const balance = await connection.getTokenAccountBalance(vault);
-  return parseFloat(balance.value.amount) / Math.pow(10, decimals);
-}
+// Add this type near your other types
+type RaydiumPoolData = {
+  data: [{
+    price: number;
+    mintAmountA: number;
+    mintAmountB: number;
+    tvl: number;
+    day: {
+      volume: number;
+      apr: number;
+      priceMin: number;
+      priceMax: number;
+    };
+  }];
+};
+
+// Add this SWR hook in your Leaderboard component
+const { data: raydiumPoolData } = useSWR<RaydiumPoolData>(
+  'raydium_pool_v3',
+  () => fetch('https://api-v3.raydium.io/pools/info/ids?ids=5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
+    .then(res => res.json()),
+  { refreshInterval: 30000 }
+);
 
 function Leaderboard() {
   // Update the SWR fetcher to include last-modified time
@@ -987,60 +1002,6 @@ function Leaderboard() {
     }).then(res => res.json())
   );
 
-
-
-  // Inside your Leaderboard component
-  const { data: solanaPrice } = useSWR(
-    'solana_price',
-    async () => {
-      try {
-        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
-        const id = new PublicKey('8sLbNZoA1cfnvMJLPfp98ZLAnFSYCFApfJKMbiXNLwxj');
-        const accountInfo = await connection.getAccountInfo(id);
-
-        if (accountInfo === null) throw Error('Get pool info error');
-
-        const poolData = PoolInfoLayout.decode(accountInfo.data);
-        const price = SqrtPriceMath.sqrtPriceX64ToPrice(
-          poolData.sqrtPriceX64, 
-          poolData.mintDecimalsA, 
-          poolData.mintDecimalsB
-        ).toFixed(2);
-
-        return parseFloat(price);
-      } catch (error) {
-        console.error('Error fetching Solana price:', error);
-        return null;
-      }
-    },
-    { refreshInterval: 30000 } // Refresh every 30 seconds
-  );
-
-  const { data: solanaTokenData } = useSWR(
-    'solana_price',
-    async () => {
-      try {
-        const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
-        const id = new PublicKey('8sLbNZoA1cfnvMJLPfp98ZLAnFSYCFApfJKMbiXNLwxj');
-        const accountInfo = await connection.getAccountInfo(id);
-        if (!accountInfo) throw Error('Get pool info error');
-        const poolData = PoolInfoLayout.decode(accountInfo.data);
-        return {
-          rows: [{
-            quantity: SqrtPriceMath.sqrtPriceX64ToPrice(
-              poolData.sqrtPriceX64,
-              poolData.mintDecimalsA,
-              poolData.mintDecimalsB
-            ).toFixed(2)
-          }]
-        };
-      } catch (error) {
-        console.error('Error fetching Solana price:', error);
-        return null;
-      }
-    },
-    { refreshInterval: 30000 }
-  );
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
