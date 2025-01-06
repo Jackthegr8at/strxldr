@@ -964,6 +964,20 @@ function Leaderboard() {
     }).then(res => res.json())
   );
 
+  // Add this SWR hook near your other data fetches
+  const { data: bridgeData } = useSWR<any>(
+    'bridge_balance',
+    () => fetch('https://proton.eosusa.io/v1/chain/get_currency_balance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code: "storex",
+        account: "bridge.strx",
+        symbol: "STRX"
+      })
+    }).then(res => res.json())
+  );
+
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchTerm, setSearchTerm] = useState('');
@@ -1559,6 +1573,27 @@ function Leaderboard() {
                 </div>
               }
               tooltip="Current rewards pool balance and estimated days until depletion assuming daily compounding"
+            />
+
+            <StatisticCard
+              title="Bridge Balance"
+              value={
+                bridgeData?.[0] ? (
+                  <div className="flex flex-col">
+                    <span>
+                      {amountDisplays['statistics-bridge'] === 'usd' 
+                        ? `$${(parseFloat(bridgeData[0]) * strxPrice).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          })}`
+                        : `${parseFloat(bridgeData[0]).toLocaleString()} STRX`
+                      }
+                    </span>
+                  </div>
+                ) : '...'
+              }
+              tooltip="Current STRX balance in the bridge contract. Click to toggle between STRX and USD values."
+              onClick={() => toggleAmountDisplay('statistics', 'bridge')}
             />
 
             <StatisticCard
