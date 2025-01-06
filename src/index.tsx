@@ -978,6 +978,12 @@ function Leaderboard() {
     }).then(res => res.json())
   );
 
+  // Add these SWR hooks for Solana data
+  const { data: solanaTokenData } = useSWR<any>(
+    'solana_token_data',
+    () => fetch('/api/solana-data').then(res => res.json())
+  );
+
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchTerm, setSearchTerm] = useState('');
