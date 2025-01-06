@@ -919,11 +919,16 @@ type XSolPriceData = {
 // Add new type definition
 type DexScreenerData = {
   pair: {
+    baseToken: {
+      symbol: string;
+      name: string;
+    };
+    quoteToken: {
+      symbol: string;
+      name: string;
+    };
     priceUsd: string;
     priceChange: {
-      m5: number;
-      h1: number;
-      h6: number;
       h24: number;
     };
     txns: {
@@ -931,16 +936,11 @@ type DexScreenerData = {
         buys: number;
         sells: number;
       };
-      h6: {
-        buys: number;
-        sells: number;
-      };
     };
-    volume: {
-      h24: number;
-      h6: number;
-      h1: number;
-      m5: number;
+    liquidity: {
+      usd: number;
+      base: number;
+      quote: number;
     };
     marketCap: number;
   };
@@ -1713,9 +1713,6 @@ function Leaderboard() {
                     <span className="text-xs text-gray-500">
                       24h Vol: ${raydiumPoolData.data[0].day.volume.toLocaleString()}
                     </span>
-                    <span className="text-xs text-green-500">
-                      APR: {raydiumPoolData.data[0].day.apr.toFixed(2)}%
-                    </span>
                   </div>
                 ) : 'Loading...'
               }
@@ -1764,6 +1761,25 @@ function Leaderboard() {
                       MCap: ${(dexScreenerData.pair.marketCap / 1000000).toFixed(2)}M
                     </span>
                     <div className="text-xs text-gray-500 mt-1">
+                      Liquidity:
+                      <div className="flex items-center gap-1 ml-2">
+                        <img 
+                          src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/STRXzrUKLEpXTVN5oyXaSZgt38MUcWN8VRAZUAVFX3j/logo.png" 
+                          alt="STRX" 
+                          className="w-4 h-4"
+                        />
+                        {dexScreenerData.pair.liquidity.base.toLocaleString()} {dexScreenerData.pair.baseToken.symbol}
+                      </div>
+                      <div className="flex items-center gap-1 ml-2">
+                        <img 
+                          src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" 
+                          alt="SOL" 
+                          className="w-4 h-4"
+                        />
+                        {dexScreenerData.pair.liquidity.quote.toLocaleString()} {dexScreenerData.pair.quoteToken.symbol}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500">
                       24h Trades: {dexScreenerData.pair.txns.h24.buys + dexScreenerData.pair.txns.h24.sells}
                       <span className="ml-2">
                         ({dexScreenerData.pair.txns.h24.buys} 📈 / {dexScreenerData.pair.txns.h24.sells} 📉)
