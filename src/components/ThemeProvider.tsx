@@ -23,7 +23,6 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
-      console.log('Reading cookie:', Cookies.get('strxldr-theme'))
       const saved = Cookies.get('strxldr-theme')
       return (saved as Theme) || defaultTheme
     }
@@ -46,8 +45,7 @@ export function ThemeProvider({
     }
     
     Cookies.set('strxldr-theme', theme, cookieOptions)
-    
-    console.log('Cookie set:', Cookies.get('strxldr-theme'))
+  
   }, [theme]);
 
   const toggleTheme = () => {
