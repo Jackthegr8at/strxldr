@@ -1024,45 +1024,47 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
               Transaction History
             </h2>
             <div className="bg-card rounded-lg shadow overflow-hidden">
-              <table className="table-custom">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Amount</th>
-                    <th>USD Value</th>
-                    <th>Type</th>
-                    <th>Transaction</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedTransactions.map((tx, index) => (
-                    <tr key={index}>
-                      <td>{formatTimestamp(tx.time)}</td>
-                      <td>{tx.amount.toFixed(4)} STRX</td>
-                      <td>${tx.usdValue.toFixed(2)}</td>
-                      <td>
-                        <span className={
-                          tx.type === 'add stake'
-                            ? 'text-green-600 dark:text-green-400'
-                            : 'text-red-600 dark:text-red-400'
-                        }>
-                          {tx.type}
-                        </span>
-                      </td>
-                      <td>
-                        <a
-                          href={`https://explorer.xprnetwork.org/transaction/${tx.trxId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
-                        >
-                          View →
-                        </a>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="table-custom">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Amount</th>
+                      <th>USD Value</th>
+                      <th>Type</th>
+                      <th>Transaction</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {paginatedTransactions.map((tx, index) => (
+                      <tr key={index}>
+                        <td>{formatTimestamp(tx.time)}</td>
+                        <td>{tx.amount.toFixed(4)} STRX</td>
+                        <td>${tx.usdValue.toFixed(2)}</td>
+                        <td>
+                          <span className={
+                            tx.type === 'add stake'
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-red-600 dark:text-red-400'
+                          }>
+                            {tx.type}
+                          </span>
+                        </td>
+                        <td>
+                          <a
+                            href={`https://explorer.xprnetwork.org/transaction/${tx.trxId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
+                          >
+                            View →
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
