@@ -6,17 +6,36 @@
       "dest": "/api/$1"
     },
     {
+      "src": "/strx.png",
+      "dest": "/strx.png"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
       "src": "^/static/(.*)",
       "dest": "/static/$1"
     },
     {
       "src": "^/assets/(.*)",
       "dest": "/assets/$1"
+    },
+    {
+      "src": "^/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "^/favicon-128.webp",
+      "dest": "/favicon-128.webp"
+    },
+    {
+      "src": "^/(.*)\\.(?:png|jpg|jpeg|gif|ico|svg|webp|json)$",
+      "dest": "/$1"
+    },
+    {
+      "src": ".*",
+      "dest": "/index.html"
     }
-  ],
-  "buildOutput": {
-    "public": true
-  },
-  "public": true,
-  "cleanUrls": true
+  ]
 }
