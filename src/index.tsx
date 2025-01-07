@@ -1677,7 +1677,7 @@ function App() {
                       Liquidity:
                       <div className="flex items-center gap-1 ml-2">
                         <img 
-                          src="/strx.png" 
+                          src="/favicon-128.webp" 
                           alt="STRX" 
                           className="w-4 h-4"
                         />
