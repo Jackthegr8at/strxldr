@@ -26,7 +26,11 @@
       "dest": "/favicon.ico"
     },
     {
-      "src": "^/(.*)\\.(?:png|jpg|jpeg|gif|ico|svg|webp)$",
+      "src": "^/favicon-128.webp",
+      "dest": "/favicon-128.webp"
+    },
+    {
+      "src": "^/(.*)\\.(?:png|jpg|jpeg|gif|ico|svg|webp|json)$",
       "dest": "/public/$1"
     },
     {
