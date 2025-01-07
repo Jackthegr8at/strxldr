@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import Cookies from 'js-cookie'
 
 type Theme = "dark" | "light";
 
@@ -22,7 +23,8 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('strxldr-theme')
+      console.log('Reading cookie:', Cookies.get('strxldr-theme'))
+      const saved = Cookies.get('strxldr-theme')
       return (saved as Theme) || defaultTheme
     }
     return defaultTheme
@@ -32,7 +34,20 @@ export function ThemeProvider({
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(theme);
-    localStorage.setItem('strxldr-theme', theme);
+    
+    // Set cookie options based on environment
+    const cookieOptions = {
+      expires: 365,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as 'lax' | 'strict' | 'none',
+      ...(process.env.NODE_ENV === 'production' && {
+        domain: 'strxldr.app'
+      })
+    }
+    
+    Cookies.set('strxldr-theme', theme, cookieOptions)
+    
+    console.log('Cookie set:', Cookies.get('strxldr-theme'))
   }, [theme]);
 
   const toggleTheme = () => {
