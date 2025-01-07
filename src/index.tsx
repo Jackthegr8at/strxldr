@@ -378,89 +378,91 @@ const RecentActions: React.FC<{
 
   return (
     <div className="bg-card rounded-lg shadow overflow-hidden">
-      <table className="table-custom">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Username</th>
-            <th>Amount</th>
-            <th>USD Value</th>
-            <th>Action</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {recentActions.map((action, index) => (
-            <tr key={index} className={action.isNewStaker ? 'bg-green-50 dark:bg-green-900/20' : ''}>
-              <td>{action.time}</td>
-              <td>
-                <div className="flex items-center gap-2">
-                  {stakersData && (
-                    <span title={getUserTier(stakersData[action.username]?.staked || 0).name}>
-                      {getUserTier(stakersData[action.username]?.staked || 0).emoji}
-                    </span>
-                  )}
-                  <UsernameLink username={action.username} />
-                  {action.isNewStaker && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
-                      New Staker! 🎉
-                    </span>
-                  )}
-                </div>
-              </td>
-              <td>
-                {action.amount.toLocaleString(undefined, {
-                  minimumFractionDigits: 4,
-                  maximumFractionDigits: 4
-                })} STRX
-              </td>
-              <td>
-                ${(action.amount * strxPrice).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })}
-              </td>
-              <td>
-                <a 
-                  href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`inline-flex items-center gap-1 hover:underline ${
-                    action.type === 'add stake' 
-                      ? 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300' 
-                      : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300'
-                  }`}
-                >
-                  {action.type === 'add stake' ? (
-                    <>
-                      <span>👍</span> Add Stake
-                    </>
-                  ) : (
-                    <>
-                      <span>👎</span> Withdraw
-                    </>
-                  )}
-                </a>
-              </td>
-              <td>
-                <button
-                  onClick={() => {
-                    setSearchTerm(action.username);
-                    const searchInput = document.querySelector('input[type="text"]');
-                    if (searchInput) {
-                      searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                  }}
-                  className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
-                  title="Search this user"
-                >
-                  <MagnifyingGlassIcon className="h-5 w-5" />
-                </button>
-              </td>
+      <div className="overflow-x-auto">
+        <table className="table-custom">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Username</th>
+              <th>Amount</th>
+              <th>USD Value</th>
+              <th>Action</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {recentActions.map((action, index) => (
+              <tr key={index} className={action.isNewStaker ? 'bg-green-50 dark:bg-green-900/20' : ''}>
+                <td>{action.time}</td>
+                <td>
+                  <div className="flex items-center gap-2">
+                    {stakersData && (
+                      <span title={getUserTier(stakersData[action.username]?.staked || 0).name}>
+                        {getUserTier(stakersData[action.username]?.staked || 0).emoji}
+                      </span>
+                    )}
+                    <UsernameLink username={action.username} />
+                    {action.isNewStaker && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
+                        New Staker! 🎉
+                      </span>
+                    )}
+                  </div>
+                </td>
+                <td>
+                  {action.amount.toLocaleString(undefined, {
+                    minimumFractionDigits: 4,
+                    maximumFractionDigits: 4
+                  })} STRX
+                </td>
+                <td>
+                  ${(action.amount * strxPrice).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </td>
+                <td>
+                  <a 
+                    href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center gap-1 hover:underline ${
+                      action.type === 'add stake' 
+                        ? 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300' 
+                        : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300'
+                    }`}
+                  >
+                    {action.type === 'add stake' ? (
+                      <>
+                        <span>👍</span> Add Stake
+                      </>
+                    ) : (
+                      <>
+                        <span>👎</span> Withdraw
+                      </>
+                    )}
+                  </a>
+                </td>
+                <td>
+                  <button
+                    onClick={() => {
+                      setSearchTerm(action.username);
+                      const searchInput = document.querySelector('input[type="text"]');
+                      if (searchInput) {
+                        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }
+                    }}
+                    className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
+                    title="Search this user"
+                  >
+                    <MagnifyingGlassIcon className="h-5 w-5" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
@@ -527,52 +529,57 @@ const NewStakersPanel: React.FC<{
         New Stakers 🎉
       </h2>
       <div className="bg-card rounded-lg shadow overflow-hidden">
-        <table className="table-custom">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Username</th>
-              <th>Initial Stake</th>
-              <th>USD Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {newStakers.map((staker, index) => {
-              const stakerDate = new Date(staker.date);
-              const isLast24Hours = (new Date().getTime() - stakerDate.getTime()) < 24 * 60 * 60 * 1000;
+        <div className="overflow-x-auto">
+          <table className="table-custom">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Username</th>
+                <th>Initial Stake</th>
+                <th>USD Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {newStakers.map((staker, index) => {
+                const stakerDate = new Date(staker.date);
+                const isLast24Hours = (new Date().getTime() - stakerDate.getTime()) < 24 * 60 * 60 * 1000;
 
-              return (
-                <tr 
-                  key={staker.username} 
-                  className={`${
-                    isLast24Hours 
-                      ? 'bg-green-50/50 dark:bg-green-800/20' 
-                      : ''
-                  }`}
-                >
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {stakerDate.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    <UsernameLink username={staker.username} />
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {staker.total_staked.toLocaleString(undefined, {
-                      minimumFractionDigits: 4,
-                      maximumFractionDigits: 4
-                    })} STRX
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    ${(staker.total_staked * strxPrice).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                // Format the date
+                const formattedDate = `${stakerDate.getFullYear()}-${String(stakerDate.getMonth() + 1).padStart(2, '0')}-${String(stakerDate.getDate()).padStart(2, '0')} ${stakerDate.getHours()} h ${stakerDate.getMinutes()}`;
+
+                return (
+                  <tr 
+                    key={staker.username} 
+                    className={`${
+                      isLast24Hours 
+                        ? 'bg-green-50/50 dark:bg-green-800/20' 
+                        : ''
+                    }`}
+                  >
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {formattedDate} {/* Use the formatted date */}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <UsernameLink username={staker.username} />
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {staker.total_staked.toLocaleString(undefined, {
+                        minimumFractionDigits: 4,
+                        maximumFractionDigits: 4
+                      })} STRX
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      ${(staker.total_staked * strxPrice).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      })}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
