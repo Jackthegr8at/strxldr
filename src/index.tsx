@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import UserPage from './userpage';
+import UserPage from './UserPage';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Header } from './components/Header';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
