@@ -12,14 +12,11 @@
     {
       "src": "^/assets/(.*)",
       "dest": "/assets/$1"
-    },
-    {
-      "src": "^/(.*)\\.(?:png|jpg|jpeg|gif|ico|svg|webp|json)$",
-      "dest": "/$1"
-    },
-    {
-      "src": ".*",
-      "dest": "/index.html"
     }
-  ]
+  ],
+  "buildOutput": {
+    "public": true
+  },
+  "public": true,
+  "cleanUrls": true
 }
