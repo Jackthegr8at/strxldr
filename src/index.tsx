@@ -544,8 +544,8 @@ const NewStakersPanel: React.FC<{
                 const stakerDate = new Date(staker.date);
                 const isLast24Hours = (new Date().getTime() - stakerDate.getTime()) < 24 * 60 * 60 * 1000;
 
-                // Format the date
-                const formattedDate = `${stakerDate.getFullYear()}-${String(stakerDate.getMonth() + 1).padStart(2, '0')}-${String(stakerDate.getDate()).padStart(2, '0')} ${stakerDate.getHours()} h ${stakerDate.getMinutes()}`;
+                // Format the date with leading zeros for hours and minutes
+                const formattedDate = `${stakerDate.getFullYear()}-${String(stakerDate.getMonth() + 1).padStart(2, '0')}-${String(stakerDate.getDate()).padStart(2, '0')} ${String(stakerDate.getHours()).padStart(2, '0')} h ${String(stakerDate.getMinutes()).padStart(2, '0')} m`;
 
                 return (
                   <tr 
