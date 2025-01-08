@@ -9,6 +9,7 @@ import debounce from 'lodash/debounce';
 import { ThemeToggle } from './components/ThemeToggle';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
+import { Header } from './components/Header';
 
 // Reuse types from index.tsx
 type StakeData = {
@@ -499,577 +500,544 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="mx-auto grid grid-cols-[1fr,max-content] p-4 items-center sticky top-0 z-50 border-b border-purple-100 dark:border-purple-800">
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-3xl font-bold text-purple-700 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300">
-                  <span className="md:hidden text-2xl">STRX LDRBDS</span>
-                  <span className="hidden md:inline">STRX Staking Leaderboard</span>
-                  <ChevronDownIcon className="h-5 w-5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent 
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 min-w-[200px] mt-2 z-50 border border-purple-100 dark:border-purple-800"
-                sideOffset={5}
-              >
-                <DropdownMenuItem className="outline-none">
-                  <a 
-                    href="https://strxldr.app/"
-                    className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
+    <>
+      <Header />
+      <main className="container mx-auto px-16 py-8">
+        <div className="min-h-screen bg-background">
+          <div className="">
+            <div className="container mx-auto px-4 py-8">
+              <div className="mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <button
+                    onClick={onBack}
+                    className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
                   >
-                    STRX Staking Leaderboard
-                  </a>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="outline-none">
-                  <a 
-                    href="https://mint.strxldr.app/"
-                    className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
-                  >
-                    STRX LEADERS MINT
-                  </a>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </header>
+                    <ArrowLeftIcon className="h-5 w-5" />
+                    Back to Leaderboard
+                  </button>
+                  {currentTier && (
+                    <span className="text-2xl ml-auto" title={currentTier.name}>
+                      {currentTier.emoji}
+                    </span>
+                  )}
+                </div>
 
-      <div className="p-4 md:p-8">
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <button
-                onClick={onBack}
-                className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
-              >
-                <ArrowLeftIcon className="h-5 w-5" />
-                Back to Leaderboard
-              </button>
-              {currentTier && (
-                <span className="text-2xl ml-auto" title={currentTier.name}>
-                  {currentTier.emoji}
-                </span>
-              )}
-            </div>
-
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h1 className="text-3xl font-bold text-purple-700 dark:text-purple-400">
-                {username}'s Staking Profile
-              </h1>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    const url = `${window.location.origin}?user=${username}`;
-                    navigator.clipboard.writeText(url);
-                    alert('URL copied to clipboard!');
-                  }}
-                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600"
-                >
-                  Share
-                </button>
-                <a 
-                  href={`https://explorer.xprnetwork.org/account/${username}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-400 rounded hover:bg-purple-200 dark:hover:bg-purple-800 text-sm"
-                >
-                  View on Explorer →
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <div className="flex flex-col gap-4 mb-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Rewards Projection</h2>
-                <div className="flex gap-2">
-                  {(['1y', '2y', '5y'] as const).map((range) => (
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <h1 className="text-3xl font-bold text-purple-700 dark:text-purple-400">
+                    {username}'s Staking Profile
+                  </h1>
+                  <div className="flex gap-2">
                     <button
-                      key={range}
-                      onClick={() => setProjectionRange(range)}
-                      className={`px-3 py-1 rounded-lg text-sm ${
-                        projectionRange === range
-                          ? 'bg-purple-600 text-white dark:bg-purple-500'
-                          : 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-400 dark:hover:bg-purple-800'
-                      }`}
+                      onClick={() => {
+                        const url = `${window.location.origin}?user=${username}`;
+                        navigator.clipboard.writeText(url);
+                        alert('URL copied to clipboard!');
+                      }}
+                      className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600"
                     >
-                      {range.replace('y', ' Year')}
-                      {range !== '1y' ? 's' : ''}
+                      Share
                     </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    className="w-32 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded 
-                             focus:outline-none focus:ring-2 focus:ring-purple-500 
-                             bg-white dark:bg-gray-800 
-                             text-gray-900 dark:text-gray-100"
-                    defaultValue={userData.staked}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value) || 0;
-                      debouncedSetSimulated(value);
-                    }}
-                    placeholder="Staked amount"
-                    min="0"
-                    step="50000"
-                  />
-                  <span className="text-sm text-gray-500 dark:text-gray-400">STRX</span>
-                </div>
-                <div className="group relative">
-                  <InformationCircleIcon 
-                    className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
-                  />
-                  <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-popover-foreground bg-popover rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                    <p>These projections assume current reward rates remain constant.</p>
-                    {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
-                      <p className="mt-2">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
-                        parseFloat(rewardsPoolData[0]),
-                        parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
-                        parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
-                      )} days at current rates.</p>
-                    )}
-                    <p className="mt-2">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
+                    <a 
+                      href={`https://explorer.xprnetwork.org/account/${username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-400 rounded hover:bg-purple-200 dark:hover:bg-purple-800 text-sm"
+                    >
+                      View on Explorer →
+                    </a>
                   </div>
                 </div>
               </div>
-            </div>
-            <div className="bg-card rounded-lg shadow p-4">
-              <div className="h-64">
-                <ResponsiveContainer>
-                  <LineChart data={rewardsProjection}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--axis-color)" />
-                    <XAxis 
-                      dataKey="date" 
-                      interval={projectionRange === '1y' ? 1 : 2}
-                      angle={0}
-                      textAnchor="middle"
-                      height={30}
-                      tick={{ fill: 'var(--axis-color)' }}
-                    />
-                    <YAxis 
-                      domain={['dataMin', 'dataMax']}
-                      tickFormatter={(value) => (value / 1000).toFixed(0) + 'k'}
-                      tick={{ fill: 'var(--axis-color)' }}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: 'var(--bg-card)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '0.5rem'
-                      }}
-                      labelStyle={{
-                        color: 'var(--text-color)'
-                      }}
-                    />
-                    <Legend />
-                    {['No Compound', 'Daily', 'Monthly', 'Annually'].map((strategy, index) => (
-                      <Line 
-                        key={strategy}
-                        type="monotone" 
-                        dataKey={`amount${strategy.replace(' ', '')}`}
-                        name={`${strategy} Compound`}
-                        stroke={['#7C63CC', '#10B981', '#3B82F6', '#F59E0B'][index]}
-                        dot={false}
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            
-            {tierAnalysis?.comparison && simulatedStaked !== userData.staked && (
-              <div className="mt-4 p-4 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
-                <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
-                  Simulation Analysis
-                </h4>
-                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                  <p>
-                    <span className="font-medium text-purple-700 dark:text-purple-400">
-                      {Math.abs(tierAnalysis.comparison.stakeDifference).toLocaleString()} STRX
-                    </span>
-                    {' '}({Math.abs(tierAnalysis.comparison.stakeDifference * strxPrice).toFixed(2)}$)
-                    {' '}{tierAnalysis.comparison.stakeDifference > 0 ? 'increase' : 'decrease'} in staked amount
-                  </p>
-                  <p>
-                    <span className="font-medium text-purple-700 dark:text-purple-400">
-                      {Math.abs(tierAnalysis.comparison.dailyRewardDifference).toFixed(4)} STRX
-                    </span>
-                    {' '}({Math.abs(tierAnalysis.comparison.dailyRewardDifference * strxPrice).toFixed(2)}$)
-                    {' '}{tierAnalysis.comparison.dailyRewardDifference > 0 ? 'more' : 'less'} in daily rewards
-                  </p>
-                  <p>
-                    <span className="font-medium text-purple-700 dark:text-purple-400">
-                      {Math.abs(tierAnalysis.comparison.monthlyRewardDifference).toFixed(4)} STRX
-                    </span>
-                    {' '}({Math.abs(tierAnalysis.comparison.monthlyRewardDifference * strxPrice).toFixed(2)}$)
-                    {' '}{tierAnalysis.comparison.monthlyRewardDifference > 0 ? 'more' : 'less'} in monthly rewards
-                  </p>
-                  <p>
-                    <span className="font-medium text-purple-700 dark:text-purple-400">
-                      {Math.abs(tierAnalysis.comparison.yearlyRewardDifference).toFixed(4)} STRX
-                    </span>
-                    {' '}({Math.abs(tierAnalysis.comparison.yearlyRewardDifference * strxPrice).toFixed(2)}$)
-                    {' '}{tierAnalysis.comparison.yearlyRewardDifference > 0 ? 'more' : 'less'} in yearly rewards
-                  </p>
-                  {Object.entries(tierAnalysis.comparison.daysDifference).map(([strategy, diff]) => (
-                    <p key={strategy}>
-                      {strategy === 'noCompound' ? 'Without compounding' : 
-                       `${strategy.charAt(0).toUpperCase() + strategy.slice(1)} compound`}: {' '}
-                      <span className="font-medium text-purple-700 dark:text-purple-400">
-                        {Math.abs(Math.ceil(diff))} days {diff > 0 ? 'faster' : 'slower'}
-                      </span>
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
 
-          <div className="mb-8">
-            {tierProgress && nextTier && (
-              <div className="bg-card rounded-lg shadow p-4 mb-8">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{currentTier?.emoji}</span>
-                    <span className="text-gray-400 dark:text-gray-500">➜</span>
-                    <span className="text-2xl">{nextTier.emoji}</span>
+              <div className="mb-8">
+                <div className="flex flex-col gap-4 mb-4">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Rewards Projection</h2>
+                    <div className="flex gap-2">
+                      {(['1y', '2y', '5y'] as const).map((range) => (
+                        <button
+                          key={range}
+                          onClick={() => setProjectionRange(range)}
+                          className={`px-3 py-1 rounded-lg text-sm ${
+                            projectionRange === range
+                              ? 'bg-purple-600 text-white dark:bg-purple-500'
+                              : 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-400 dark:hover:bg-purple-800'
+                          }`}
+                        >
+                          {range.replace('y', ' Year')}
+                          {range !== '1y' ? 's' : ''}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        className="w-32 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded 
+                                 focus:outline-none focus:ring-2 focus:ring-purple-500 
+                                 bg-white dark:bg-gray-800 
+                                 text-gray-900 dark:text-gray-100"
+                        defaultValue={userData.staked}
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value) || 0;
+                          debouncedSetSimulated(value);
+                        }}
+                        placeholder="Staked amount"
+                        min="0"
+                        step="50000"
+                      />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">STRX</span>
+                    </div>
                     <div className="group relative">
                       <InformationCircleIcon 
                         className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
                       />
                       <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-popover-foreground bg-popover rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                         <p>These projections assume current reward rates remain constant.</p>
-                        <p className="mt-2">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
-                          parseFloat(rewardsPoolData[0]),
-                          parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
-                          parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
-                        )} days at current rates.</p>
+                        {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
+                          <p className="mt-2">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
+                            parseFloat(rewardsPoolData[0]),
+                            parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
+                            parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                          )} days at current rates.</p>
+                        )}
                         <p className="mt-2">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
                       </div>
                     </div>
-                  )}
-                </div>
-
-                <div className="mb-2">
-                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    <span>Progress to {nextTier.name}</span>
-                    <span>{tierProgress.percentageComplete.toFixed(1)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                    <div 
-                      className="bg-purple-600 dark:bg-purple-500 h-2.5 rounded-full transition-all duration-500"
-                      style={{ width: `${tierProgress.percentageComplete}%` }}
-                    ></div>
                   </div>
                 </div>
-
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <span className="font-medium text-purple-600 dark:text-purple-400">
-                    {tierProgress.remaining.toLocaleString()} STRX
-                  </span>
-                  {' '}remaining to {nextTier.name}
+                <div className="bg-card rounded-lg shadow p-4">
+                  <div className="h-64">
+                    <ResponsiveContainer>
+                      <LineChart data={rewardsProjection}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--axis-color)" />
+                        <XAxis 
+                          dataKey="date" 
+                          interval={projectionRange === '1y' ? 1 : 2}
+                          angle={0}
+                          textAnchor="middle"
+                          height={30}
+                          tick={{ fill: 'var(--axis-color)' }}
+                        />
+                        <YAxis 
+                          domain={['dataMin', 'dataMax']}
+                          tickFormatter={(value) => (value / 1000).toFixed(0) + 'k'}
+                          tick={{ fill: 'var(--axis-color)' }}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'var(--bg-card)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '0.5rem'
+                          }}
+                          labelStyle={{
+                            color: 'var(--text-color)'
+                          }}
+                        />
+                        <Legend />
+                        {['No Compound', 'Daily', 'Monthly', 'Annually'].map((strategy, index) => (
+                          <Line 
+                            key={strategy}
+                            type="monotone" 
+                            dataKey={`amount${strategy.replace(' ', '')}`}
+                            name={`${strategy} Compound`}
+                            stroke={['#7C63CC', '#10B981', '#3B82F6', '#F59E0B'][index]}
+                            dot={false}
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-
-                {tierAnalysis && (
-                  <div className="mt-4 p-3 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
+                
+                {tierAnalysis?.comparison && simulatedStaked !== userData.staked && (
+                  <div className="mt-4 p-4 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
                     <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
-                      Time to Next Tier Analysis
+                      Simulation Analysis
                     </h4>
-                    
-                    {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (() => {
-                      const daysUntilEmpty = calculateDaysUntilEmpty(
-                        parseFloat(rewardsPoolData[0]),
-                        parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
-                        parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
-                      );
-
-                      // Filter out annual scenarios when creating possible/impossible lists
-                      const possibleScenarios = Object.entries(tierAnalysis.scenarios)
-                        .filter(([strategy]) => strategy !== 'annually')
-                        .filter(([_, days]) => days <= daysUntilEmpty);
-
-                      const impossibleScenarios = Object.entries(tierAnalysis.scenarios)
-                        .filter(([strategy]) => strategy !== 'annually')
-                        .filter(([_, days]) => days > daysUntilEmpty);
-
-                      return (
-                        <>
-                          {possibleScenarios.length > 0 && (
-                            <div className="mb-4">
-                              <div className="text-sm text-green-700 dark:text-green-400 mb-2">
-                                Possible with current reward rates:
-                              </div>
-                              {possibleScenarios.map(([strategy, days]) => {
-                                const targetDate = new Date();
-                                targetDate.setDate(targetDate.getDate() + Math.ceil(days));
-                                
-                                return (
-                                  <p key={strategy} className="text-sm text-gray-600 dark:text-gray-400 ml-2">
-                                    <span className="font-medium text-purple-700 dark:text-purple-400">
-                                      {strategy === 'noCompound' ? 'Without compounding: ' :
-                                       strategy === 'daily' ? 'Daily compound: ' :
-                                       strategy === 'monthly' ? 'Monthly compound: ' :
-                                       strategy === 'annually' ? 'Annual compound: ' : 'Unknown'}
-                                    </span>
-                                    ~{Math.ceil(days)} days ({targetDate.toLocaleDateString()})
-                                  </p>
-                                );
-                              })}
-                            </div>
-                          )}
-                          
-                          {impossibleScenarios.length > 0 && (
-                            <div>
-                              <div className="text-sm text-red-700 dark:text-red-400 mb-2">
-                                Not possible with current reward rates:
-                              </div>
-                              {impossibleScenarios.map(([strategy, days]) => (
-                                <p key={strategy} className="text-sm text-gray-600 dark:text-gray-400 ml-2">
-                                  <span className="font-medium text-purple-700 dark:text-purple-400">
-                                    {strategy === 'noCompound' ? 'Without compounding: ' :
-                                     strategy === 'daily' ? 'Daily compound: ' :
-                                     strategy === 'monthly' ? 'Monthly compound: ' : 'Unknown'}
-                                  </span>
-                                  ~{Math.ceil(days)} days (exceeds pool duration)
-                                </p>
-                              ))}
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
-                      Monthly rewards contribute{' '}
-                      <span className="font-medium text-purple-700 dark:text-purple-400">
-                        {tierAnalysis.monthlyProgress.toFixed(2)}%
-                      </span>
-                      {' '}towards your next tier goal
-                    </p>
+                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                      <p>
+                        <span className="font-medium text-purple-700 dark:text-purple-400">
+                          {Math.abs(tierAnalysis.comparison.stakeDifference).toLocaleString()} STRX
+                        </span>
+                        {' '}({Math.abs(tierAnalysis.comparison.stakeDifference * strxPrice).toFixed(2)}$)
+                        {' '}{tierAnalysis.comparison.stakeDifference > 0 ? 'increase' : 'decrease'} in staked amount
+                      </p>
+                      <p>
+                        <span className="font-medium text-purple-700 dark:text-purple-400">
+                          {Math.abs(tierAnalysis.comparison.dailyRewardDifference).toFixed(4)} STRX
+                        </span>
+                        {' '}({Math.abs(tierAnalysis.comparison.dailyRewardDifference * strxPrice).toFixed(2)}$)
+                        {' '}{tierAnalysis.comparison.dailyRewardDifference > 0 ? 'more' : 'less'} in daily rewards
+                      </p>
+                      <p>
+                        <span className="font-medium text-purple-700 dark:text-purple-400">
+                          {Math.abs(tierAnalysis.comparison.monthlyRewardDifference).toFixed(4)} STRX
+                        </span>
+                        {' '}({Math.abs(tierAnalysis.comparison.monthlyRewardDifference * strxPrice).toFixed(2)}$)
+                        {' '}{tierAnalysis.comparison.monthlyRewardDifference > 0 ? 'more' : 'less'} in monthly rewards
+                      </p>
+                      <p>
+                        <span className="font-medium text-purple-700 dark:text-purple-400">
+                          {Math.abs(tierAnalysis.comparison.yearlyRewardDifference).toFixed(4)} STRX
+                        </span>
+                        {' '}({Math.abs(tierAnalysis.comparison.yearlyRewardDifference * strxPrice).toFixed(2)}$)
+                        {' '}{tierAnalysis.comparison.yearlyRewardDifference > 0 ? 'more' : 'less'} in yearly rewards
+                      </p>
+                      {Object.entries(tierAnalysis.comparison.daysDifference).map(([strategy, diff]) => (
+                        <p key={strategy}>
+                          {strategy === 'noCompound' ? 'Without compounding' : 
+                           `${strategy.charAt(0).toUpperCase() + strategy.slice(1)} compound`}: {' '}
+                          <span className="font-medium text-purple-700 dark:text-purple-400">
+                            {Math.abs(Math.ceil(diff))} days {diff > 0 ? 'faster' : 'slower'}
+                          </span>
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
-            )}
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-card rounded-lg shadow p-4">
-              <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Staked</div>
-              <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-                {userData.staked.toLocaleString()} STRX
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                ${(userData.staked * strxPrice).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })}
-              </div>
-            </div>
+              <div className="mb-8">
+                {tierProgress && nextTier && (
+                  <div className="bg-card rounded-lg shadow p-4 mb-8">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{currentTier?.emoji}</span>
+                        <span className="text-gray-400 dark:text-gray-500">➜</span>
+                        <span className="text-2xl">{nextTier.emoji}</span>
+                      </div>
+                      {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
+                        <div className="group relative">
+                          <InformationCircleIcon 
+                            className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
+                          />
+                          <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-popover-foreground bg-popover rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                            <p>These projections assume current reward rates remain constant.</p>
+                            <p className="mt-2">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
+                              parseFloat(rewardsPoolData[0]),
+                              parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
+                              parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                            )} days at current rates.</p>
+                            <p className="mt-2">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
-            <div className="bg-card rounded-lg shadow p-4">
-              <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Unstaked</div>
-              <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-                {userData.unstaked.toLocaleString()} STRX
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                ${(userData.unstaked * strxPrice).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })}
-              </div>
-            </div>
+                    <div className="mb-2">
+                      <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
+                        <span>Progress to {nextTier.name}</span>
+                        <span>{tierProgress.percentageComplete.toFixed(1)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                        <div 
+                          className="bg-purple-600 dark:bg-purple-500 h-2.5 rounded-full transition-all duration-500"
+                          style={{ width: `${tierProgress.percentageComplete}%` }}
+                        ></div>
+                      </div>
+                    </div>
 
-            <div className="bg-card rounded-lg shadow p-4">
-              <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Pool Share</div>
-              <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-                {stakingStats?.percentageOfPool.toFixed(4)}%
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                of total staked STRX
-              </div>
-            </div>
-          </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      <span className="font-medium text-purple-600 dark:text-purple-400">
+                        {tierProgress.remaining.toLocaleString()} STRX
+                      </span>
+                      {' '}remaining to {nextTier.name}
+                    </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div className="bg-card rounded-lg shadow p-4">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Estimated Rewards</h2>
-              <div className="space-y-4">
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Daily</div>
-                  <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
-                    {stakingStats?.rewards?.daily.toFixed(4)} STRX
+                    {tierAnalysis && (
+                      <div className="mt-4 p-3 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
+                        <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
+                          Time to Next Tier Analysis
+                        </h4>
+                        
+                        {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (() => {
+                          const daysUntilEmpty = calculateDaysUntilEmpty(
+                            parseFloat(rewardsPoolData[0]),
+                            parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
+                            parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                          );
+
+                          // Filter out annual scenarios when creating possible/impossible lists
+                          const possibleScenarios = Object.entries(tierAnalysis.scenarios)
+                            .filter(([strategy]) => strategy !== 'annually')
+                            .filter(([_, days]) => days <= daysUntilEmpty);
+
+                          const impossibleScenarios = Object.entries(tierAnalysis.scenarios)
+                            .filter(([strategy]) => strategy !== 'annually')
+                            .filter(([_, days]) => days > daysUntilEmpty);
+
+                          return (
+                            <>
+                              {possibleScenarios.length > 0 && (
+                                <div className="mb-4">
+                                  <div className="text-sm text-green-700 dark:text-green-400 mb-2">
+                                    Possible with current reward rates:
+                                  </div>
+                                  {possibleScenarios.map(([strategy, days]) => {
+                                    const targetDate = new Date();
+                                    targetDate.setDate(targetDate.getDate() + Math.ceil(days));
+                                    
+                                    return (
+                                      <p key={strategy} className="text-sm text-gray-600 dark:text-gray-400 ml-2">
+                                        <span className="font-medium text-purple-700 dark:text-purple-400">
+                                          {strategy === 'noCompound' ? 'Without compounding: ' :
+                                           strategy === 'daily' ? 'Daily compound: ' :
+                                           strategy === 'monthly' ? 'Monthly compound: ' :
+                                           strategy === 'annually' ? 'Annual compound: ' : 'Unknown'}
+                                        </span>
+                                        ~{Math.ceil(days)} days ({targetDate.toLocaleDateString()})
+                                      </p>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              
+                              {impossibleScenarios.length > 0 && (
+                                <div>
+                                  <div className="text-sm text-red-700 dark:text-red-400 mb-2">
+                                    Not possible with current reward rates:
+                                  </div>
+                                  {impossibleScenarios.map(([strategy, days]) => (
+                                    <p key={strategy} className="text-sm text-gray-600 dark:text-gray-400 ml-2">
+                                      <span className="font-medium text-purple-700 dark:text-purple-400">
+                                        {strategy === 'noCompound' ? 'Without compounding: ' :
+                                         strategy === 'daily' ? 'Daily compound: ' :
+                                         strategy === 'monthly' ? 'Monthly compound: ' : 'Unknown'}
+                                      </span>
+                                      ~{Math.ceil(days)} days (exceeds pool duration)
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
+                          Monthly rewards contribute{' '}
+                          <span className="font-medium text-purple-700 dark:text-purple-400">
+                            {tierAnalysis.monthlyProgress.toFixed(2)}%
+                          </span>
+                          {' '}towards your next tier goal
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="bg-card rounded-lg shadow p-4">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Staked</div>
+                  <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
+                    {userData.staked.toLocaleString()} STRX
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    ≈ ${stakingStats?.rewards?.dailyUsd.toFixed(2)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Monthly</div>
-                  <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
-                    {stakingStats?.rewards?.monthly.toFixed(4)} STRX
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    ≈ ${stakingStats?.rewards?.monthlyUsd.toFixed(2)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Yearly</div>
-                  <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
-                    {stakingStats?.rewards?.yearly.toFixed(4)} STRX
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    ≈ ${stakingStats?.rewards?.yearlyUsd.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-card rounded-lg shadow p-4">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Supply Statistics</h2>
-              <div className="space-y-4">
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Total Balance</div>
-                  <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
-                    {totalAmount.toLocaleString()} STRX
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    ≈ ${(totalAmount * strxPrice).toLocaleString(undefined, {
+                    ${(userData.staked * strxPrice).toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2
                     })}
                   </div>
                 </div>
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">% of Total Supply</div>
-                  <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
-                    {(totalAmount / TOTAL_SUPPLY * 100).toFixed(4)}%
+
+                <div className="bg-card rounded-lg shadow p-4">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Unstaked</div>
+                  <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
+                    {userData.unstaked.toLocaleString()} STRX
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    of 2B STRX
+                    ${(userData.unstaked * strxPrice).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-card rounded-lg shadow p-4">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Pool Share</div>
+                  <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
+                    {stakingStats?.percentageOfPool.toFixed(4)}%
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    of total staked STRX
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div className="bg-card rounded-lg shadow p-4">
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Estimated Rewards</h2>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Daily</div>
+                      <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                        {stakingStats?.rewards?.daily.toFixed(4)} STRX
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        ≈ ${stakingStats?.rewards?.dailyUsd.toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Monthly</div>
+                      <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                        {stakingStats?.rewards?.monthly.toFixed(4)} STRX
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        ≈ ${stakingStats?.rewards?.monthlyUsd.toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Yearly</div>
+                      <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                        {stakingStats?.rewards?.yearly.toFixed(4)} STRX
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        ≈ ${stakingStats?.rewards?.yearlyUsd.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-card rounded-lg shadow p-4">
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Supply Statistics</h2>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Total Balance</div>
+                      <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                        {totalAmount.toLocaleString()} STRX
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        ≈ ${(totalAmount * strxPrice).toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">% of Total Supply</div>
+                      <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                        {(totalAmount / TOTAL_SUPPLY * 100).toFixed(4)}%
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        of 2B STRX
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Staking Activity</h2>
+                  <div className="flex gap-2">
+                    {(['24h', '7d', '30d'] as const).map((range) => (
+                      <button
+                        key={range}
+                        onClick={() => setTimeRange(range)}
+                        className={`px-3 py-1 rounded-lg text-sm ${
+                          timeRange === range
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                        }`}
+                      >
+                        {range}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-card rounded-lg shadow p-4">
+                  <div className="h-64">
+                    <ResponsiveContainer>
+                      <LineChart data={activityData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--axis-color)" />
+                        <XAxis 
+                          dataKey="time" 
+                          tick={{ fill: 'var(--axis-color)' }}
+                        />
+                        <YAxis 
+                          tick={{ fill: 'var(--axis-color)' }}
+                        />
+                        <Tooltip 
+                          formatter={(value: number) => [
+                            `${Math.abs(value).toLocaleString()} STRX`,
+                            value > 0 ? 'Staked' : 'Unstaked'
+                          ]}
+                          contentStyle={{
+                            backgroundColor: 'var(--bg-card)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '0.5rem'
+                          }}
+                          labelStyle={{
+                            color: 'var(--text-color)'
+                          }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="amount" 
+                          stroke="#7C63CC"
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                  Transaction History
+                </h2>
+                <div className="bg-card rounded-lg shadow overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="table-custom">
+                      <thead>
+                        <tr>
+                          <th>Time</th>
+                          <th>Amount</th>
+                          <th>USD Value</th>
+                          <th>Type</th>
+                          <th>Transaction</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedTransactions.map((tx, index) => (
+                          <tr key={index}>
+                            <td>{formatTimestamp(tx.time)}</td>
+                            <td>{tx.amount.toFixed(4)} STRX</td>
+                            <td>${tx.usdValue.toFixed(2)}</td>
+                            <td>
+                              <span className={
+                                tx.type === 'add stake'
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : 'text-red-600 dark:text-red-400'
+                              }>
+                                {tx.type}
+                              </span>
+                            </td>
+                            <td>
+                              <a
+                                href={`https://explorer.xprnetwork.org/transaction/${tx.trxId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
+                              >
+                                View →
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Staking Activity</h2>
-              <div className="flex gap-2">
-                {(['24h', '7d', '30d'] as const).map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => setTimeRange(range)}
-                    className={`px-3 py-1 rounded-lg text-sm ${
-                      timeRange === range
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                    }`}
-                  >
-                    {range}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="bg-card rounded-lg shadow p-4">
-              <div className="h-64">
-                <ResponsiveContainer>
-                  <LineChart data={activityData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--axis-color)" />
-                    <XAxis 
-                      dataKey="time" 
-                      tick={{ fill: 'var(--axis-color)' }}
-                    />
-                    <YAxis 
-                      tick={{ fill: 'var(--axis-color)' }}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => [
-                        `${Math.abs(value).toLocaleString()} STRX`,
-                        value > 0 ? 'Staked' : 'Unstaked'
-                      ]}
-                      contentStyle={{
-                        backgroundColor: 'var(--bg-card)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '0.5rem'
-                      }}
-                      labelStyle={{
-                        color: 'var(--text-color)'
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="amount" 
-                      stroke="#7C63CC"
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
-              Transaction History
-            </h2>
-            <div className="bg-card rounded-lg shadow overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="table-custom">
-                  <thead>
-                    <tr>
-                      <th>Time</th>
-                      <th>Amount</th>
-                      <th>USD Value</th>
-                      <th>Type</th>
-                      <th>Transaction</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedTransactions.map((tx, index) => (
-                      <tr key={index}>
-                        <td>{formatTimestamp(tx.time)}</td>
-                        <td>{tx.amount.toFixed(4)} STRX</td>
-                        <td>${tx.usdValue.toFixed(2)}</td>
-                        <td>
-                          <span className={
-                            tx.type === 'add stake'
-                              ? 'text-green-600 dark:text-green-400'
-                              : 'text-red-600 dark:text-red-400'
-                          }>
-                            {tx.type}
-                          </span>
-                        </td>
-                        <td>
-                          <a
-                            href={`https://explorer.xprnetwork.org/transaction/${tx.trxId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
-                          >
-                            View →
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
-    </div>
+      </main>
+    </>
   );
 };
 

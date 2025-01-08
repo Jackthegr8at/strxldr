@@ -26,6 +26,10 @@
       "dest": "/favicon.ico"
     },
     {
+      "src": "^/icon-512x512.png",
+      "dest": "/icon-512x512.png"
+    },
+    {
       "src": "^/favicon-128.webp",
       "dest": "/favicon-128.webp"
     },
