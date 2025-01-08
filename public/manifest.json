@@ -3,9 +3,9 @@
   "name": "Storex LeaderBoard",
   "icons": [
     {
-      "src": "/favicon-128.webp",
+      "src": "/favicon.ico",
       "sizes": "128x128",
-      "type": "image/webp"
+      "type": "image/ico"
     }
   ],
   "start_url": ".",
