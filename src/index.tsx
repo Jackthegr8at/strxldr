@@ -1477,7 +1477,7 @@ function App() {
     <ThemeProvider>
       <div className="min-h-screen bg-background text-foreground">
         <Header />
-        <div className="container mx-auto px-16 py-12">
+        <div className="container mx-auto px-4 md:px-16 md:py-8 py-4">
           <div className="flex justify-between items-center mb-6">
             {/* Title with dropdown on the left */}
             <div className="relative group">
