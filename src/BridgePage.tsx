@@ -230,7 +230,10 @@ export function BridgePage() {
           setHasMoreData(false);
         }
 
-        return [...prev, ...newActions];
+        // Sort all actions by timestamp to ensure correct order
+        return [...prev, ...newActions].sort(
+          (a, b) => new Date(b.timestamp + 'Z').getTime() - new Date(a.timestamp + 'Z').getTime()
+        );
       });
     }
   }, [bridgeActions]);
@@ -248,7 +251,7 @@ export function BridgePage() {
     });
   };
 
-  // Update the processedActions to include search filtering
+  // Update the processedActions to remove the sort since it's already sorted
   const processedActions = useMemo(() => {
     const filtered = allActions
       .filter(action => !action.act.data.memo.includes('Cross-chain wrap fee'))
@@ -260,8 +263,7 @@ export function BridgePage() {
         memo: cleanMemo(action.act.data.memo),
         trxId: action.trx_id,
         type: getTransactionType(action.act.data.memo)
-      }))
-      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+      }));
 
     if (!searchTerm) return filtered;
 
