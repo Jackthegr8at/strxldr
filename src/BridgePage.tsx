@@ -478,25 +478,63 @@ export function BridgePage() {
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center space-x-1">
                               {action.type === 'inbound' ? '📥' : '📤'}
-                              <a
-                                href={`https://explorer.xprnetwork.org/account/${action.from}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
-                              >
-                                {action.from}
-                              </a>
+                              {action.from === 'bridge.strx' ? (
+                                <a
+                                  href={`https://explorer.xprnetwork.org/account/${action.from}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
+                                >
+                                  {action.from}
+                                </a>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <a
+                                    href={`./userpage?user=${action.from}`}
+                                    className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
+                                  >
+                                    {action.from}
+                                  </a>
+                                  <a
+                                    href={`https://explorer.xprnetwork.org/account/${action.from}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-gray-400 hover:text-purple-600 dark:hover:text-purple-400"
+                                  >
+                                    <CubeTransparentIcon className="h-4 w-4" />
+                                  </a>
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center space-x-1 text-gray-500 dark:text-gray-400">
                               <span>→</span>
-                              <a
-                                href={`https://explorer.xprnetwork.org/account/${action.to}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
-                              >
-                                {action.to}
-                              </a>
+                              {action.to === 'bridge.strx' ? (
+                                <a
+                                  href={`https://explorer.xprnetwork.org/account/${action.to}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
+                                >
+                                  {action.to}
+                                </a>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <a
+                                    href={`./userpage?user=${action.to}`}
+                                    className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
+                                  >
+                                    {action.to}
+                                  </a>
+                                  <a
+                                    href={`https://explorer.xprnetwork.org/account/${action.to}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-gray-400 hover:text-purple-600 dark:hover:text-purple-400"
+                                  >
+                                    <CubeTransparentIcon className="h-4 w-4" />
+                                  </a>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>

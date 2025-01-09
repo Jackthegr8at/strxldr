@@ -11,6 +11,7 @@ import { Header } from './components/Header';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
 // Near the top of the file, import BridgePage
 import { BridgePage } from './BridgePage';
+import UserPageNoStake from './UserPageNoStake';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -1430,7 +1431,6 @@ function App() {
 
   // Then the existing user page check
   if (selectedUser) {
-    // Add loading state check
     if (isLoading || !response) {
       return (
         <div className="min-h-screen bg-white p-4 md:p-8">
@@ -1445,30 +1445,20 @@ function App() {
 
     const userData = response?.data?.[selectedUser];
     
-    // Show not found state instead of returning null
+    // If no staking data, show the no-stake version
     if (!userData) {
       return (
-        <div className="min-h-screen bg-white p-4 md:p-8">
-          <div className="max-w-4xl mx-auto">
-            <button
-              onClick={() => {
-                setSelectedUser(null);
-                window.history.pushState({}, '', window.location.pathname);
-              }}
-              className="mb-4 flex items-center gap-2 text-purple-600 hover:text-purple-800"
-            >
-              <ArrowLeftIcon className="h-5 w-5" />
-              Back to Leaderboard
-            </button>
-            <div className="text-center py-12">
-              <h2 className="text-2xl font-bold text-gray-800">User not found</h2>
-              <p className="text-gray-600 mt-2">No staking data available for {selectedUser}</p>
-            </div>
-          </div>
-        </div>
+        <UserPageNoStake 
+          username={selectedUser}
+          onBack={() => {
+            setSelectedUser(null);
+            window.history.pushState({}, '', window.location.pathname);
+          }}
+        />
       );
     }
 
+    // Otherwise show the regular user page
     return (
       <UserPage 
         username={selectedUser} 

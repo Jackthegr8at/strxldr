@@ -1,9 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import useSWR from 'swr';
-import { ArrowLeftIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, InformationCircleIcon, MagnifyingGlassIcon, CubeTransparentIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid } from 'recharts';
 import * as React from 'react';
-import { CubeTransparentIcon } from '@heroicons/react/24/outline';
 import { STAKING_TIERS, type StakingTier, calculateDaysUntilEmpty } from './index';
 import debounce from 'lodash/debounce';
 import { ThemeToggle } from './components/ThemeToggle';
@@ -60,6 +59,17 @@ type PriceResponse = {
   }];
 };
 
+type DexScreenerData = {
+  pairs: Array<{
+    priceUsd: string;
+    volume24h: number;
+    txns24h: {
+      buys: number;
+      sells: number;
+    };
+  }>;
+};
+
 const TOTAL_SUPPLY = 2000000000;
 
 // Update the component props to include initial data
@@ -87,8 +97,9 @@ interface DailyDataPoint {
 }
 
 // Update the formatTimestamp function
-const formatTimestamp = (timestamp: Date) => {
-  return timestamp.toLocaleString(undefined, {
+const formatTimestamp = (timestamp: Date | string) => {
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+  return date.toLocaleString(undefined, {
     year: 'numeric',
     month: 'numeric',
     day: 'numeric',
@@ -98,11 +109,71 @@ const formatTimestamp = (timestamp: Date) => {
   });
 };
 
+// Add BridgeAction type
+type BridgeAction = {
+  "@timestamp": string;
+  timestamp: string;
+  act: {
+    name: string;
+    data: {
+      from: string;
+      to: string;
+      amount: number;
+      symbol: string;
+      memo: string;
+      quantity: string;
+    };
+  };
+  trx_id: string;
+};
+
+// Add helper functions
+const cleanMemo = (memo: string) => {
+  if (memo.startsWith('STRX-SPL@')) {
+    return memo.replace('STRX-SPL@', '');
+  }
+  
+  const solanaMatch = memo.match(/Cross-chain wrap from Solana \((.*?)\)/);
+  if (solanaMatch) {
+    return solanaMatch[1];
+  }
+  
+  return memo;
+};
+
+const getTransactionType = (memo: string) => {
+  if (memo.startsWith('STRX-SPL@')) {
+    return 'outbound';
+  }
+  if (memo.includes('Cross-chain wrap from Solana')) {
+    return 'inbound';
+  }
+  return 'other';
+};
+
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
   const [projectionRange, setProjectionRange] = useState<'1y' | '2y' | '5y'>('1y');
   const [simulatedStaked, setSimulatedStaked] = useState(userData.staked);
   const [transactionPage, setTransactionPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 10;
+
+  // Add bridge-related states here
+  const [allUserBridgeActions, setAllUserBridgeActions] = useState<BridgeAction[]>([]);
+  const [isLoadingBridge, setIsLoadingBridge] = useState(false);
+  const [hasMoreBridgeData, setHasMoreBridgeData] = useState(true);
+  const [skipBridge, setSkipBridge] = useState(0);
+  const [showAllUsd, setShowAllUsd] = useState(false);
+  const [showUsd, setShowUsd] = useState<{[key: string]: boolean}>({});
+  const FETCH_LIMIT = 300;
+
+  // Update the transaction type to use string for time
+  type Transaction = {
+    time: string;
+    amount: number;
+    usdValue: number;
+    type: string;
+    trxId: string;
+  };
 
   // First, get the actions data
   const { data: actionsData } = useSWR<ActionResponse>(
@@ -479,6 +550,92 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     };
   }, [tierProgress, stakingStats, simulatedStaked, nextTier, userData.staked]);
 
+  // Add the bridge actions fetching
+  const { data: bridgeActions, mutate: refetchBridgeActions } = useSWR<ActionResponse>(
+    ['bridge_actions', skipBridge, username],
+    async () => {
+      setIsLoadingBridge(true);
+      const baseUrl = `${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v2/history/get_actions`;
+      const params = new URLSearchParams({
+        limit: FETCH_LIMIT.toString(),
+        account: 'bridge.strx',
+        'act.name': 'transfer',
+        skip: skipBridge.toString()
+      });
+      
+      const response = await fetch(`${baseUrl}?${params}`);
+      const data = await response.json();
+      setIsLoadingBridge(false);
+      return data;
+    },
+    { refreshInterval: 30000 }
+  );
+
+  // Effect to accumulate and filter user's bridge actions
+  useEffect(() => {
+    if (bridgeActions?.actions) {
+      setAllUserBridgeActions(prev => {
+        const existingIds = new Set(prev.map(a => a.trx_id));
+        
+        // Filter for user's transactions and remove duplicates
+        const newActions = bridgeActions.actions.filter(a => 
+          !existingIds.has(a.trx_id) && 
+          (a.act.data.from === username || a.act.data.to === username)
+        );
+        
+        // If no new user-related actions, we've reached the end
+        if (newActions.length === 0) {
+          setHasMoreBridgeData(false);
+        }
+
+        return [...prev, ...newActions].sort(
+          (a, b) => new Date(b.timestamp + 'Z').getTime() - new Date(a.timestamp + 'Z').getTime()
+        );
+      });
+    }
+  }, [bridgeActions, username]);
+
+  // Process bridge actions
+  const processedBridgeActions = useMemo(() => {
+    return allUserBridgeActions
+      .filter(action => !action.act.data.memo.includes('Cross-chain wrap fee'))
+      .map(action => ({
+        time: formatTimestamp(action.timestamp),
+        from: action.act.data.from,
+        to: action.act.data.to,
+        amount: parseFloat(action.act.data.quantity.split(' ')[0]),
+        memo: cleanMemo(action.act.data.memo),
+        trxId: action.trx_id,
+        type: getTransactionType(action.act.data.memo)
+      }));
+  }, [allUserBridgeActions]);
+
+  // Add pagination states for bridge actions
+  const [currentBridgePage, setCurrentBridgePage] = useState(1);
+  const ITEMS_PER_PAGE = 30;
+
+  const totalBridgePages = Math.ceil(processedBridgeActions.length / ITEMS_PER_PAGE);
+  const currentBridgePageData = processedBridgeActions.slice(
+    (currentBridgePage - 1) * ITEMS_PER_PAGE,
+    currentBridgePage * ITEMS_PER_PAGE
+  );
+
+  // Add toggle function for USD display
+  const toggleAmountDisplay = (trxId: string) => {
+    setShowUsd(prev => ({
+      ...prev,
+      [trxId]: !prev[trxId]
+    }));
+  };
+
+  // Add near other SWR hooks
+  const { data: dexScreenerData } = useSWR<DexScreenerData>(
+    'dexscreener_data',
+    () => fetch('https://api.dexscreener.com/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
+      .then(res => res.json()),
+    { refreshInterval: 30000 }
+  );
+
   if (!userData) {
     return (
       <div className="min-h-screen bg-background p-4 md:p-8">
@@ -526,21 +683,11 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                     {username}'s Staking Profile
                   </h1>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        const url = `${window.location.origin}?user=${username}`;
-                        navigator.clipboard.writeText(url);
-                        alert('URL copied to clipboard!');
-                      }}
-                      className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600"
-                    >
-                      Share
-                    </button>
                     <a 
                       href={`https://explorer.xprnetwork.org/account/${username}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-400 rounded hover:bg-purple-200 dark:hover:bg-purple-800 text-sm"
+                      className="flex items-center gap-2 px-4 py-2 text-sm bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/40 transition-colors"
                     >
                       View on Explorer →
                     </a>
@@ -1030,6 +1177,236 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                       </tbody>
                     </table>
                   </div>
+                </div>
+              </div>
+
+              <div className="mt-8">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Recent Bridge Activity</h2>
+                
+                <div className="mb-4 flex items-center justify-end">
+                  <button
+                    onClick={() => setShowAllUsd(prev => !prev)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/40 transition-colors"
+                  >
+                    <span>Show in {showAllUsd ? 'STRX' : 'USD'}</span>
+                    <span className="text-xs">
+                      {showAllUsd ? '' : '$'}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="bg-card rounded-lg shadow overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full table-fixed md:table-auto">
+                      <thead>
+                        <tr className="bg-purple-50 dark:bg-purple-900/20">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                            Time
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                            From/To
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                            Amount
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                            Address
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                            Explorer
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentBridgePageData.map((action, index) => (
+                          <tr 
+                            key={index} 
+                            className={`
+                              border-l-[6px] border-solid
+                              ${
+                                action.type === 'inbound'
+                                  ? 'border-l-green-500 dark:border-l-green-400 bg-green-50 dark:bg-green-900/10'
+                                  : action.type === 'outbound'
+                                    ? 'border-l-red-500 dark:border-l-red-400 bg-red-50 dark:bg-red-900/10'
+                                    : 'border-l-transparent'
+                              }
+                              hover:bg-white dark:hover:bg-white/5
+                            `}
+                          >
+                            <td className="px-2 md:px-4 py-3 text-sm whitespace-nowrap">
+                              <div className="flex flex-col md:flex-row md:gap-1">
+                                {action.time}
+                              </div>
+                            </td>
+                            <td className="px-2 md:px-4 py-3 text-sm">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center space-x-1">
+                                  {action.type === 'inbound' ? '📥' : '📤'}
+                                  {action.from === 'bridge.strx' ? (
+                                    <a
+                                      href={`https://explorer.xprnetwork.org/account/${action.from}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
+                                    >
+                                      {action.from}
+                                    </a>
+                                  ) : (
+                                    <div className="flex items-center gap-1">
+                                      <a
+                                        href={`/user/${action.from}`}
+                                        className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
+                                      >
+                                        {action.from}
+                                      </a>
+                                      <a
+                                        href={`https://explorer.xprnetwork.org/account/${action.from}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-gray-400 hover:text-purple-600 dark:hover:text-purple-400"
+                                      >
+                                        <CubeTransparentIcon className="h-4 w-4" />
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center space-x-1 text-gray-500 dark:text-gray-400">
+                                  <span>→</span>
+                                  {action.to === 'bridge.strx' ? (
+                                    <a
+                                      href={`https://explorer.xprnetwork.org/account/${action.to}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
+                                    >
+                                      {action.to}
+                                    </a>
+                                  ) : (
+                                    <div className="flex items-center gap-1">
+                                      <a
+                                        href={`/user/${action.to}`}
+                                        className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
+                                      >
+                                        {action.to}
+                                      </a>
+                                      <a
+                                        href={`https://explorer.xprnetwork.org/account/${action.to}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-gray-400 hover:text-purple-600 dark:hover:text-purple-400"
+                                      >
+                                        <CubeTransparentIcon className="h-4 w-4" />
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td 
+                              className="px-2 md:px-4 py-3 text-sm cursor-pointer"
+                              onClick={() => toggleAmountDisplay(action.trxId)}
+                            >
+                              <div className="flex flex-col">
+                                <span>
+                                  {(showAllUsd || showUsd[action.trxId])
+                                    ? `$${(action.amount * (dexScreenerData?.pairs[0]?.priceUsd ? parseFloat(dexScreenerData.pairs[0].priceUsd) : 0)).toLocaleString(undefined, {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                      })}`
+                                    : action.amount.toLocaleString()
+                                  }
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {(showAllUsd || showUsd[action.trxId]) ? 'USD' : 'STRX'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-2 md:px-4 py-3 text-sm">
+                              {action.type !== 'other' ? (
+                                <div className="flex items-center space-x-1">
+                                  <a
+                                    href={`https://solscan.io/account/${action.memo}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
+                                  >
+                                    {action.memo}
+                                  </a>
+                                  <img 
+                                    src="/favicon_solscan.png" 
+                                    alt="Solscan" 
+                                    className="h-4 w-4"
+                                  />
+                                </div>
+                              ) : (
+                                action.memo
+                              )}
+                            </td>
+                            <td className="px-2 md:px-4 py-3 text-sm">
+                              <a
+                                href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
+                              >
+                                View →
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Pagination */}
+                <div className="mt-4 flex justify-end items-center gap-2">
+                  <button
+                    onClick={() => setCurrentBridgePage(1)}
+                    disabled={currentBridgePage === 1}
+                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (currentBridgePage > 1) {
+                        setCurrentBridgePage(prev => prev - 1);
+                      }
+                    }}
+                    disabled={currentBridgePage === 1}
+                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-600 px-2">
+                    Page {currentBridgePage} of {totalBridgePages}
+                  </span>
+                  <button
+                    onClick={async () => {
+                      const nextPage = currentBridgePage + 1;
+                      const maxCurrentPage = Math.ceil(processedBridgeActions.length / ITEMS_PER_PAGE);
+
+                      if (nextPage <= maxCurrentPage) {
+                        setCurrentBridgePage(nextPage);
+                      } else if (hasMoreBridgeData && !isLoadingBridge) {
+                        setSkipBridge(prev => prev + FETCH_LIMIT);
+                        await refetchBridgeActions();
+                        setCurrentBridgePage(nextPage);
+                      }
+                    }}
+                    disabled={isLoadingBridge || (!hasMoreBridgeData && currentBridgePage === totalBridgePages)}
+                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                  >
+                    {isLoadingBridge ? 'Loading...' : 'Next'}
+                  </button>
+                  <button
+                    onClick={() => setCurrentBridgePage(totalBridgePages)}
+                    disabled={currentBridgePage === totalBridgePages}
+                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                  >
+                    Last
+                  </button>
                 </div>
               </div>
           </div>
