@@ -26,6 +26,10 @@
       "dest": "/favicon.ico"
     },
     {
+      "src": "^/favicon_solscan.png",
+      "dest": "/favicon_solscan.png"
+    },
+    {
       "src": "^/icon-512x512.png",
       "dest": "/icon-512x512.png"
     },

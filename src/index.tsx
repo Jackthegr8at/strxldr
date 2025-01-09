@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
-import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon, CubeTransparentIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon, CubeTransparentIcon, ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -9,6 +9,8 @@ import UserPage from './UserPage';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Header } from './components/Header';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
+// Near the top of the file, import BridgePage
+import { BridgePage } from './BridgePage';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -479,7 +481,8 @@ const StatisticCard: React.FC<{
   value: React.ReactNode;
   tooltip: string;
   onClick?: () => void;
-}> = ({ title, value, tooltip, onClick }) => (
+  children?: React.ReactNode;
+}> = ({ title, value, tooltip, onClick, children }) => (
   <div 
     className={`bg-card p-4 rounded-lg shadow border relative ${
       onClick ? 'cursor-pointer' : ''
@@ -503,6 +506,7 @@ const StatisticCard: React.FC<{
     <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
       {value}
     </div>
+    {children}
   </div>
 );
 
@@ -1416,7 +1420,15 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Update the return statement at the start of the Leaderboard component
+  // Check if we're on the bridge page
+  const isBridgePage = window.location.pathname === '/bridge';
+  
+  // If we're on bridge page, render BridgePage
+  if (isBridgePage) {
+    return <BridgePage />;
+  }
+
+  // Then the existing user page check
   if (selectedUser) {
     // Add loading state check
     if (isLoading || !response) {
@@ -1633,23 +1645,28 @@ function App() {
             <StatisticCard
               title="Bridge Balance"
               value={
-                bridgeData?.[0] ? (
+                bridgeData?.[0] && dexScreenerData?.pair.priceUsd ? (
                   <div className="flex flex-col">
-                    <span>
-                      {amountDisplays['statistics-bridge'] === 'usd' 
-                        ? `$${(parseFloat(bridgeData[0]) * strxPrice).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                          })}`
-                        : `${parseFloat(bridgeData[0]).toLocaleString()} STRX`
-                      }
+                    <span>{parseFloat(bridgeData[0]).toLocaleString()} STRX</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      ≈ ${(parseFloat(bridgeData[0]) * parseFloat(dexScreenerData.pair.priceUsd)).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      })}
                     </span>
                   </div>
                 ) : '...'
               }
-              tooltip="Current STRX balance in the bridge contract. Click to toggle between STRX and USD values."
-              onClick={() => toggleAmountDisplay('statistics', 'bridge')}
-            />
+              tooltip="Current STRX balance in the bridge contract. Click to view bridge dashboard."
+              onClick={() => {
+                window.location.pathname = '/bridge';
+              }}
+            >
+              <ArrowTopRightOnSquareIcon 
+                className="absolute bottom-2 right-2 h-5 w-5 text-gray-400 hover:text-purple-600 transition-colors" 
+                title="View Bridge Dashboard"
+              />
+            </StatisticCard>
 
             <StatisticCard
               title="STRX Price"
