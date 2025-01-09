@@ -356,52 +356,54 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
           </div>
 
           {/* Transaction History Section */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
-              Transaction History
-            </h2>
-            <div className="bg-card rounded-lg shadow overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full table-fixed md:table-auto">
-                  <thead>
-                    <tr className="bg-purple-50 dark:bg-purple-900/20">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Time</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Amount</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Type</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Transaction</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedTransactions.map((tx, index) => (
-                      <tr key={index} className="hover:bg-white dark:hover:bg-white/5">
-                        <td className="px-4 py-3 text-sm">{formatTimestamp(tx.time.toISOString())}</td>
-                        <td className="px-4 py-3 text-sm">{tx.amount.toFixed(4)} STRX</td>
-                        <td className="px-4 py-3 text-sm">
-                          <span className={tx.type === 'add stake' ? 'text-green-600' : 'text-red-600'}>
-                            {tx.type}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <a
-                            href={`https://explorer.xprnetwork.org/transaction/${tx.trxId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-purple-600 hover:text-purple-800"
-                          >
-                            View →
-                          </a>
-                        </td>
+          {paginatedTransactions.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                Transaction History
+              </h2>
+              <div className="bg-card rounded-lg shadow overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full table-fixed md:table-auto">
+                    <thead>
+                      <tr className="bg-purple-50 dark:bg-purple-900/20">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Time</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Amount</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Transaction</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {paginatedTransactions.map((tx, index) => (
+                        <tr key={index} className="hover:bg-white dark:hover:bg-white/5">
+                          <td className="px-4 py-3 text-sm">{formatTimestamp(tx.time.toISOString())}</td>
+                          <td className="px-4 py-3 text-sm">{tx.amount.toFixed(4)} STRX</td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={tx.type === 'add stake' ? 'text-green-600' : 'text-red-600'}>
+                              {tx.type}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <a
+                              href={`https://explorer.xprnetwork.org/transaction/${tx.trxId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-purple-600 hover:text-purple-800"
+                            >
+                              View →
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Bridge Activity Section */}
           <div className="mt-8">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Bridge Activity</h2>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Recent Bridge Activity</h2>
             
             <div className="mb-4 flex items-center justify-end">
               <button

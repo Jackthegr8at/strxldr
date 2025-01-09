@@ -636,6 +636,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     { refreshInterval: 30000 }
   );
 
+  const isMobile = window.innerWidth < 768; // Adjust the breakpoint as needed
+
   if (!userData) {
     return (
       <div className="min-h-screen bg-background p-4 md:p-8">
@@ -770,16 +772,24 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                           domain={['dataMin', 'dataMax']}
                           tickFormatter={(value) => (value / 1000).toFixed(0) + 'k'}
                           tick={{ fill: 'var(--axis-color)' }}
+                          width={50}
                         />
                         <Tooltip 
                           contentStyle={{
-                            backgroundColor: 'var(--bg-card)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '0.5rem'
+                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                            border: '1px solid #6B21A8',
+                            borderRadius: '0.5rem',
+                            padding: '10px',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
                           }}
                           labelStyle={{
-                            color: 'var(--text-color)'
+                            color: 'white',
+                            fontWeight: 'bold',
                           }}
+                          formatter={(value: number) => [
+                            `${value > 0 ? '+' : '-'}${Math.abs(value).toLocaleString()} STRX`
+                          ]}
+                          position={isMobile ? { x: 10, y: 0 } : undefined}
                         />
                         <Legend />
                         {['No Compound', 'Daily', 'Monthly', 'Annually'].map((strategy, index) => (
@@ -787,7 +797,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                             key={strategy}
                             type="monotone" 
                             dataKey={`amount${strategy.replace(' ', '')}`}
-                            name={`${strategy} Compound`}
+                            name={strategy === 'No Compound' ? 'No Compound' : `${strategy} Compound`}
                             stroke={['#7C63CC', '#10B981', '#3B82F6', '#F59E0B'][index]}
                             dot={false}
                           />
@@ -1094,39 +1104,57 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                   </div>
                 </div>
                 <div className="bg-card rounded-lg shadow p-4">
-                  <div className="h-64">
-                    <ResponsiveContainer>
-                      <LineChart data={activityData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--axis-color)" />
-                        <XAxis 
-                          dataKey="time" 
-                          tick={{ fill: 'var(--axis-color)' }}
-                        />
-                        <YAxis 
-                          tick={{ fill: 'var(--axis-color)' }}
-                        />
-                        <Tooltip 
-                          formatter={(value: number) => [
-                            `${Math.abs(value).toLocaleString()} STRX`,
-                            value > 0 ? 'Staked' : 'Unstaked'
-                          ]}
-                          contentStyle={{
-                            backgroundColor: 'var(--bg-card)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '0.5rem'
-                          }}
-                          labelStyle={{
-                            color: 'var(--text-color)'
-                          }}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="amount" 
-                          stroke="#7C63CC"
-                          dot={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  <div>
+                    {isMobile ? (
+                      <ResponsiveContainer>
+                        <LineChart data={activityData}>
+                          {/* Chart configuration for mobile */}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-64">
+                        <ResponsiveContainer>
+                          <LineChart 
+                            data={activityData}
+                            margin={{ left: 20, right: 20, top: 10, bottom: 10 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--axis-color)" />
+                            <XAxis 
+                              dataKey="time" 
+                              tick={{ fill: 'var(--axis-color)' }}
+                            />
+                            <YAxis 
+                              tick={{ fill: 'var(--axis-color)' }}
+                              tickFormatter={(value) => (value / 1000).toFixed(0) + 'k'}
+                              width={50}
+                            />
+                            <Tooltip 
+                              contentStyle={{
+                                backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                                border: '1px solid #6B21A8',
+                                borderRadius: '0.5rem',
+                                padding: '10px',
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                              }}
+                              labelStyle={{
+                                color: 'white',
+                                fontWeight: 'bold',
+                              }}
+                              formatter={(value: number) => [
+                                `${value > 0 ? '+' : '-'}${Math.abs(value).toLocaleString()} STRX`
+                              ]}
+                              position={isMobile ? { x: 10, y: 0 } : undefined}
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="amount" 
+                              stroke="#7C63CC"
+                              dot={false}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
