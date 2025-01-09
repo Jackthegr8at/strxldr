@@ -978,12 +978,10 @@ function App() {
   };
 
   const { data: blockchainData } = useSWR<BlockchainResponse>(
-    'https://proton.eosusa.io/v1/chain/get_table_rows',
-    (url) => fetch(url, {
+    'blockchain_data',
+    () => fetch(`${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v1/chain/get_table_rows`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=UTF-8',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         json: true,
         code: "storexstake",
@@ -1019,7 +1017,7 @@ function App() {
   // Add this with your other SWR fetches
   const { data: rewardsPoolData } = useSWR<any>(
     'rewards_pool',
-    () => fetch('https://proton.eosusa.io/v1/chain/get_currency_balance', {
+    () => fetch(`${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v1/chain/get_currency_balance`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1027,13 +1025,14 @@ function App() {
         account: "rewards.strx",
         symbol: "STRX"
       })
-    }).then(res => res.json())
+    }).then(res => res.json()),
+    { refreshInterval: 30000 }
   );
 
   // Add this SWR hook near your other data fetches
   const { data: bridgeData } = useSWR<any>(
     'bridge_balance',
-    () => fetch('https://proton.eosusa.io/v1/chain/get_currency_balance', {
+    () => fetch(`${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v1/chain/get_currency_balance`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1041,7 +1040,8 @@ function App() {
         account: "bridge.strx",
         symbol: "STRX"
       })
-    }).then(res => res.json())
+    }).then(res => res.json()),
+    { refreshInterval: 30000 }
   );
 
   // Add with other SWR hooks

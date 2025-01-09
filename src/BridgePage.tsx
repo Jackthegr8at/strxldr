@@ -147,7 +147,7 @@ export function BridgePage() {
   // SWR hooks for data fetching
   const { data: bridgeData } = useSWR<any>(
     'bridge_balance',
-    () => fetch('https://proton.eosusa.io/v1/chain/get_currency_balance', {
+    () => fetch(`${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v1/chain/get_currency_balance`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -199,7 +199,7 @@ export function BridgePage() {
     ['bridge_actions', skip],
     async () => {
       setIsLoading(true);
-      const baseUrl = 'https://proton.eosusa.io/v2/history/get_actions';
+      const baseUrl = `${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v2/history/get_actions`;
       const params = new URLSearchParams({
         limit: FETCH_LIMIT.toString(),
         account: 'bridge.strx',
