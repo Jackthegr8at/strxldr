@@ -50,7 +50,7 @@ export function Header() {
         </div>
       </header>
 
-      <div className="hidden md:block fixed bottom-8 left-8 z-50">
+      <div className="hidden md:block fixed bottom-4 left-4 z-50">
         <a href="/">
           <img 
             src="/icon-512x512.png" 

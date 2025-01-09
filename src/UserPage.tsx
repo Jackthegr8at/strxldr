@@ -502,10 +502,9 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   return (
     <>
       <Header />
-      <main className="container mx-auto px-4 md:px-16 md:py-8 py-8">
+      <main className="container mx-auto px-4 md:px-20 md:py-12 py-8">
         <div className="min-h-screen bg-background">
           <div className="">
-            <div className="container mx-auto px-4 py-8">
               <div className="mb-8">
                 <div className="flex items-center gap-2 mb-4">
                   <button
@@ -1033,7 +1032,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                   </div>
                 </div>
               </div>
-            </div>
           </div>
         </div>
       </main>
