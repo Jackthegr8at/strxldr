@@ -736,7 +736,7 @@ const TierMilestoneTracker: React.FC<{
                   <table className="min-w-full">
                     <tbody className="divide-y divide-gray-200 dark:divide-purple-500">
                       {milestones.slice(3).map((milestone, index) => (
-                        <tr key={index} className="hover:bg-purple-50">
+                        <tr key={index} className="hover:bg-purple-50 dark:hover:bg-purple-900">
                           <td className="px-4 py-2 text-sm">
                             <UsernameLink username={milestone.username} />
                           </td>
