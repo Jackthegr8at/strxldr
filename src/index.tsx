@@ -690,7 +690,7 @@ const TierMilestoneTracker: React.FC<{
       />
 
       {sectionVisibility.tierMilestones && (
-        <div className="rounded-lg shadow dark:shadow-purple-500 overflow-hidden">
+        <div className="rounded-lg border-t shadow dark:shadow-purple-500 overflow-hidden">
           {/* Mobile view */}
           <div className="md:hidden">
             <div className="grid grid-cols-1 gap-4 p-4">
@@ -746,7 +746,7 @@ const TierMilestoneTracker: React.FC<{
                             </span>
                           </td>
                           <td className="px-4 py-2 text-sm text-right">
-                            <span className="text-purple-600">
+                            <span className="text-gray-600 dark:text-gray-200">
                               {milestone.remaining.toLocaleString()}
                             </span>
                           </td>
