@@ -1,8 +1,36 @@
 import { ThemeToggle } from './ThemeToggle';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
-import { ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, ShareIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
 
 export function Header() {
+  const [showShareToast, setShowShareToast] = useState(false);
+
+  const handleShare = async () => {
+    const currentUrl = window.location.href;
+    
+    if (navigator.share) {
+      // Use native share on mobile devices
+      try {
+        await navigator.share({
+          title: 'STRX Leaderboard',
+          url: currentUrl
+        });
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    } else {
+      // Fallback to clipboard copy on desktop
+      try {
+        await navigator.clipboard.writeText(currentUrl);
+        setShowShareToast(true);
+        setTimeout(() => setShowShareToast(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    }
+  };
+
   return (
     <>
       <header className="bg-white dark:bg-gray-800 shadow-sm">
@@ -47,8 +75,24 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/40 transition-colors"
+            >
+              <ShareIcon className="h-5 w-5" />
+              <span className="hidden md:inline">Share</span>
+            </button>
+          </div>
         </div>
       </header>
+
+      {showShareToast && (
+        <div className="fixed top-20 right-4 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-2 rounded-lg shadow-lg transition-opacity duration-200">
+          Link copied to clipboard!
+        </div>
+      )}
 
       <div className="hidden md:block fixed bottom-4 left-4 z-50">
         <a href="/">
