@@ -18,6 +18,10 @@
       }
     },
     {
+      "src": "/serviceWorkerRegistration.ts",
+      "dest": "/serviceWorkerRegistration.ts"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },
