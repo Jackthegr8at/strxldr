@@ -58,8 +58,8 @@
       "dest": "/$1"
     },
     {
-      "src": "/workbox-(.+)\\.js",
-      "dest": "/workbox-$1.js"
+      "src": "/workbox-sw.js",
+      "dest": "/workbox-sw.js"
     },
     {
       "src": "/service-worker\\.js",
