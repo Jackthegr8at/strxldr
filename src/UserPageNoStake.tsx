@@ -139,8 +139,10 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
     return 'other';
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp + 'Z');
+
+  // Update the formatTimestamp function
+  const formatTimestamp = (timestamp: Date | string) => {
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
     return date.toLocaleString(undefined, {
       year: 'numeric',
       month: 'numeric',
@@ -236,16 +238,17 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
       })
       .map(action => {
         const amount = parseFloat(action.act.data.quantity.split(' ')[0]);
-        const time = new Date(action.timestamp + 'Z');
+        // Properly handle UTC timestamp
+        const time = new Date(action.timestamp + 'Z'); // Add Z to ensure UTC parsing
         return {
-          time,
+          time: time,
           amount,
-          usdValue: amount * (dexScreenerData?.pair?.priceUsd ? parseFloat(dexScreenerData.pair.priceUsd) : 0),
+          usdValue: amount * (dexScreenerData?.pairs[0]?.priceUsd ? parseFloat(dexScreenerData.pairs[0].priceUsd) : 0),
           type: action.act.data.memo,
           trxId: action.trx_id
         };
       })
-      .sort((a, b) => b.time.getTime() - a.time.getTime());
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
   }, [actionsData, dexScreenerData]);
 
   // Add this with other useMemo hooks
@@ -356,50 +359,54 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
           </div>
 
           {/* Transaction History Section */}
-          {paginatedTransactions.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
-                Transaction History
-              </h2>
-              <div className="bg-card rounded-lg shadow overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full table-fixed md:table-auto">
-                    <thead>
-                      <tr className="bg-purple-50 dark:bg-purple-900/20">
-                        <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Time</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Amount</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">Transaction</th>
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+              Transaction History
+            </h2>
+            <div className="bg-card rounded-lg shadow overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="table-custom">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Amount</th>
+                      <th>USD Value</th>
+                      <th>Type</th>
+                      <th>Transaction</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedTransactions.map((tx, index) => (
+                      <tr key={index}>
+                        <td>{formatTimestamp(tx.time)}</td>
+                        <td>{tx.amount.toFixed(4)} STRX</td>
+                        <td>${tx.usdValue.toFixed(2)}</td>
+                        <td>
+                          <span className={
+                            tx.type === 'add stake'
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-red-600 dark:text-red-400'
+                          }>
+                            {tx.type}
+                          </span>
+                        </td>
+                        <td>
+                          <a
+                            href={`https://explorer.xprnetwork.org/transaction/${tx.trxId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
+                          >
+                            View →
+                          </a>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedTransactions.map((tx, index) => (
-                        <tr key={index} className="hover:bg-white dark:hover:bg-white/5">
-                          <td className="px-4 py-3 text-sm">{formatTimestamp(tx.time.toISOString())}</td>
-                          <td className="px-4 py-3 text-sm">{tx.amount.toFixed(4)} STRX</td>
-                          <td className="px-4 py-3 text-sm">
-                            <span className={tx.type === 'add stake' ? 'text-green-600' : 'text-red-600'}>
-                              {tx.type}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <a
-                              href={`https://explorer.xprnetwork.org/transaction/${tx.trxId}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-purple-600 hover:text-purple-800"
-                            >
-                              View →
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Bridge Activity Section */}
           <div className="mt-8">

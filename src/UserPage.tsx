@@ -706,10 +706,10 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                         <button
                           key={range}
                           onClick={() => setProjectionRange(range)}
-                          className={`px-3 py-1 rounded-lg text-sm ${
+                          className={`flex items-center gap-2 px-4 py-1 text-sm rounded-lg ${
                             projectionRange === range
                               ? 'bg-purple-600 text-white dark:bg-purple-500'
-                              : 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-400 dark:hover:bg-purple-800'
+                              : 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/40 transition-colors'
                           }`}
                         >
                           {range.replace('y', ' Year')}
@@ -741,16 +741,22 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                       <InformationCircleIcon 
                         className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
                       />
-                      <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-popover-foreground bg-popover rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 
+                        text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity
+                        text-gray-100 dark:text-gray-100
+                        bg-gray-800/90 dark:bg-black/70
+                        border border-purple-200/20 dark:border-purple-900
+                        backdrop-blur-sm
+                        [&>p]:text-gray-100">
                         <p>These projections assume current reward rates remain constant.</p>
                         {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
-                          <p className="mt-2">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
+                          <p className="mt-2 text-gray-100">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
                             parseFloat(rewardsPoolData[0]),
                             parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
                             parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
                           )} days at current rates.</p>
                         )}
-                        <p className="mt-2">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
+                        <p className="mt-2 text-gray-100">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
                       </div>
                     </div>
                   </div>
@@ -776,7 +782,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                         />
                         <Tooltip 
                           contentStyle={{
-                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
                             border: '1px solid #6B21A8',
                             borderRadius: '0.5rem',
                             padding: '10px',
@@ -786,8 +792,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                             color: 'white',
                             fontWeight: 'bold',
                           }}
-                          formatter={(value: number) => [
-                            `${value > 0 ? '+' : '-'}${Math.abs(value).toLocaleString()} STRX`
+                          formatter={(value: number, name: string) => [
+                            `${name}: ${value > 0 ? '+' : '-'}${Math.abs(value).toLocaleString()} STRX`
                           ]}
                           position={isMobile ? { x: 10, y: 0 } : undefined}
                         />
@@ -869,14 +875,20 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                           <InformationCircleIcon 
                             className="h-5 w-5 text-gray-400 hover:text-purple-600 cursor-help"
                           />
-                          <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-popover-foreground bg-popover rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 
+                              text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity
+                              text-gray-100 dark:text-gray-100
+                              bg-gray-800/90 dark:bg-black/70
+                              border border-purple-200/20 dark:border-purple-900
+                              backdrop-blur-sm
+                              [&>p]:text-gray-100">
                             <p>These projections assume current reward rates remain constant.</p>
-                            <p className="mt-2">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
+                            <p className="mt-2 text-gray-100">Current rewards pool will be depleted in approximately {calculateDaysUntilEmpty(
                               parseFloat(rewardsPoolData[0]),
                               parseFloat(blockchainData.rows[0].stakes.split(' ')[0]),
                               parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
                             )} days at current rates.</p>
-                            <p className="mt-2">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
+                            <p className="mt-2 text-gray-100">Some scenarios may become possible if the rewards pool is replenished, although rates might differ.</p>
                           </div>
                         </div>
                       )}
@@ -896,7 +908,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                     </div>
 
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      <span className="font-medium text-purple-600 dark:text-purple-400">
+                      <span className="font-medium text-purple-700 dark:text-purple-400">
                         {tierProgress.remaining.toLocaleString()} STRX
                       </span>
                       {' '}remaining to {nextTier.name}
@@ -1100,10 +1112,10 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                       <button
                         key={range}
                         onClick={() => setTimeRange(range)}
-                        className={`px-3 py-1 rounded-lg text-sm ${
+                        className={`flex items-center gap-2 px-4 py-1 text-sm rounded-lg  ${
                           timeRange === range
-                            ? 'bg-purple-600 text-white'
-                            : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                            ? 'bg-purple-600 text-white dark:bg-purple-500'
+                            : 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/40 transition-colors'
                         }`}
                       >
                         {range}

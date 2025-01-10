@@ -51,7 +51,8 @@ export const STAKING_TIERS: StakingTier[] = [
   { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
   { name: 'Fish', minimum: 1000000, emoji: '🐟' },
   { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
-  { name: 'Free', minimum: 0, emoji: '🆓' },
+  { name: 'Free', minimum: 0.000001, emoji: '🆓' },
+  { name: 'No Stake', minimum: 0, emoji: '🤷' },
 ];
 
 // Add this type for the price response
@@ -499,7 +500,12 @@ const StatisticCard: React.FC<{
         <QuestionMarkCircleIcon 
           className="h-5 w-5 text-gray-400 hover:text-purple-600 transition-colors cursor-help"
         />
-        <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-popover-foreground bg-popover rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 
+          text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity
+          text-gray-100 dark:text-gray-100
+          bg-gray-800/90 dark:bg-black/70
+          border border-purple-200/20 dark:border-purple-900
+          backdrop-blur-sm">
           {tooltip}
         </div>
       </div>
@@ -662,7 +668,7 @@ const TierMilestoneTracker: React.FC<{
         if (selectedTier) {
           return milestone.currentTier.name === selectedTier.name && isCloseToNextTier;
         } else {
-          return milestone.currentTier.name !== 'Free' && isCloseToNextTier;
+          return milestone.currentTier.name !== 'No Stake' && isCloseToNextTier;
         }
       })
       .sort((a, b) => {
@@ -680,7 +686,7 @@ const TierMilestoneTracker: React.FC<{
       .slice(0, selectedTier ? 999 : 15);
   }, [stakersData, selectedTier]);
 
-  if (milestones.length === 0) return null;
+  if (milestones.length === 0 || selectedTier?.name === 'No Stake') return null;
 
   return (
     <div className="mb-8">
@@ -1125,33 +1131,64 @@ function App() {
     });
   };
 
-  // Update processedData to handle new structure
-  const processedData = useMemo(() => {
+  // First, create a separate function to get all stakers data without tier filtering
+  const getAllStakersData = useMemo(() => {
     if (!response?.data) return [];
 
     return Object.entries(response.data)
-      .filter(([username]) => username.toLowerCase().includes(searchTerm.toLowerCase()))
       .map(([username, amounts]) => ({
         username,
         staked: amounts.staked,
         unstaked: amounts.unstaked,
         total: amounts.staked + amounts.unstaked
-      }))
+      }));
+  }, [response?.data]);
+
+  // Update tierStatistics to use getAllStakersData instead of processedData
+  const tierStatistics = useMemo(() => {
+    if (!getAllStakersData.length) return null;
+
+    const tiers = STAKING_TIERS.map((tier, index) => {
+      const nextTier = STAKING_TIERS[index - 1];
+      return {
+        ...tier,
+        count: getAllStakersData.filter(user => {
+          const amount = user.staked;
+          
+          // Special handling for "No Stake" tier
+          if (tier.name === 'No Stake') {
+            return amount === 0;
+          }
+          
+          // If this is the highest tier, only check minimum
+          if (!nextTier) {
+            return amount >= tier.minimum;
+          }
+          // Otherwise, check if amount is between this tier's minimum and next tier's minimum
+          return amount >= tier.minimum && amount < nextTier.minimum;
+        }).length
+      };
+    });
+
+    return tiers;
+  }, [getAllStakersData]);
+
+  // Update processedData to use getAllStakersData as its base
+  const processedData = useMemo(() => {
+    return getAllStakersData
+      .filter(item => item.username.toLowerCase().includes(searchTerm.toLowerCase()))
       .filter((item) => {
-        // Remove zero balance entries
-        if (item.staked <= 0 && item.unstaked <= 0) return false;
-        
         // If no tier is selected, show all
         if (!selectedTier) return true;
         
+        // Special handling for "No Stake" tier
+        if (selectedTier.name === 'No Stake') {
+          return item.staked === 0;
+        }
+        
         // Find the index of the selected tier
         const tierIndex = STAKING_TIERS.findIndex(t => t.name === selectedTier.name);
-        const nextTierUp = STAKING_TIERS[tierIndex - 1]; // Get next tier up (if any)
-        
-        // For "Free" tier (last tier)
-        if (selectedTier.name === 'Free') {
-          return item.staked >= 0 && item.staked < STAKING_TIERS[STAKING_TIERS.length - 2].minimum;
-        }
+        const nextTierUp = STAKING_TIERS[tierIndex - 1];
         
         // For "Whale" tier (first tier)
         if (selectedTier.name === 'Whale') {
@@ -1159,15 +1196,15 @@ function App() {
         }
         
         // For all other tiers
-        return item.staked >= selectedTier.minimum && item.staked < nextTierUp.minimum;
+        return item.staked >= selectedTier.minimum && 
+               (!nextTierUp || item.staked < nextTierUp.minimum);
       })
       .sort((a, b) => {
         const compareValue = sortOrder === 'desc' ? -1 : 1;
-        // Special case for rewards sorting - use staked amount
         const field = sortField === 'rewards' ? 'staked' : sortField;
         return (a[field] - b[field]) * compareValue;
       });
-  }, [response?.data, sortOrder, searchTerm, selectedTier, sortField]);
+  }, [getAllStakersData, searchTerm, selectedTier, sortOrder, sortField]);
 
   const totalPages = Math.ceil(processedData.length / ITEMS_PER_PAGE);
   const currentData = processedData.slice(
@@ -1232,28 +1269,6 @@ function App() {
       minStake,
       maxStake
     };
-  }, [processedData]);
-
-  const tierStatistics = useMemo(() => {
-    if (!processedData.length) return null;
-
-    const tiers = STAKING_TIERS.map((tier, index) => {
-      const nextTier = STAKING_TIERS[index - 1]; // Get the next higher tier
-      return {
-        ...tier,
-        count: processedData.filter(user => {
-          const amount = user.staked;
-          // If this is the highest tier, only check minimum
-          if (!nextTier) {
-            return amount >= tier.minimum;
-          }
-          // Otherwise, check if amount is between this tier's minimum and next tier's minimum
-          return amount >= tier.minimum && amount < nextTier.minimum;
-        }).length
-      };
-    });
-
-    return tiers;
   }, [processedData]);
 
   // Get STRX price
@@ -1770,10 +1785,10 @@ function App() {
                     setSelectedTier(selectedTier?.name === tier.name ? null : tier);
                     handleEasterEgg(tier);
                   }}
-                  className={`tier-card bg-card bg-white dark:bg-gray-800 p-4 rounded-lg shadow border cursor-pointer transition-colors ${
+                  className={`tier-card p-4 rounded-lg shadow border cursor-pointer ${
                     selectedTier?.name === tier.name 
-                      ? 'border-primary bg-accent' 
-                      : 'hover:bg-accent'
+                      ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400  transition-colors' 
+                      : 'hover:bg-purple-200 dark:hover:bg-purple-900/40'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -1781,10 +1796,10 @@ function App() {
                     <span className="text-sm text-muted-foreground dark:text-gray-300">{tier.name}</span>
                   </div>
                   <div className="text-xl font-semibold text-primary dark:text-purple-400">
-                    {tier.count.toLocaleString()}
+                    {tier.count > 0 ? tier.count.toLocaleString() : 'X'}
                   </div>
                   <div className="text-xs text-muted-foreground dark:text-gray-300">
-                    {tier.minimum.toLocaleString()}+ STRX
+                   {tier.minimum > 0 ? tier.minimum.toLocaleString() + '+ STRX' : 'Nada'} 
                   </div>
                 </div>
               ))}
@@ -1828,350 +1843,265 @@ function App() {
             strxPrice={strxPrice}
           />
 
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-700 border-t-transparent"></div>
-            </div>
-          ) : error ? (
-            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-              <p className="text-red-700">Error loading data. Please try again later.</p>
-            </div>
-          ) : (
-            <>
-              <div className="mb-8">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 15 Holders Distribution</h2>
-                <div className="h-64 w-full">
-                  <ResponsiveContainer>
-                    <BarChart data={topHolders} margin={{ left: 50, right: 20, top: 20, bottom: 20 }}>
-                      <XAxis 
-                        dataKey="username" 
-                        tick={{ fill: 'var(--axis-color)' }}
-                      />
-                      <YAxis 
-                        tickFormatter={formatLargeNumber}
-                        tick={{ fill: 'var(--axis-color)' }}
-                      />
-                      <Tooltip 
-                        formatter={(value: number) => [
-                          value.toLocaleString(undefined, {
-                            minimumFractionDigits: 4,
-                            maximumFractionDigits: 4,
-                            useGrouping: true,
-                          }),
-                          sortField === 'rewards' 
-                            ? "Staked Amount" 
-                            : sortField.charAt(0).toUpperCase() + sortField.slice(1)
-                        ]}
-                      />
-                      <Bar 
-                        dataKey={sortField === 'rewards' ? 'staked' : sortField} 
-                        fill="#7C63CC" 
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+          {selectedTier?.name !== 'No Stake' && (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 15 Holders Distribution</h2>
+              <div className="h-64 w-full">
+                <ResponsiveContainer>
+                  <BarChart data={topHolders} margin={{ left: 50, right: 20, top: 20, bottom: 20 }}>
+                    <XAxis 
+                      dataKey="username" 
+                      tick={{ fill: 'var(--axis-color)' }}
+                    />
+                    <YAxis 
+                      tickFormatter={formatLargeNumber}
+                      tick={{ fill: 'var(--axis-color)' }}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => [
+                        value.toLocaleString(undefined, {
+                          minimumFractionDigits: 4,
+                          maximumFractionDigits: 4,
+                          useGrouping: true,
+                        }),
+                        sortField === 'rewards' 
+                          ? "Staked Amount" 
+                          : sortField.charAt(0).toUpperCase() + sortField.slice(1)
+                      ]}
+                    />
+                    <Bar 
+                      dataKey={sortField === 'rewards' ? 'staked' : sortField} 
+                      fill="#7C63CC" 
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
+            </div>
+          )}
 
-              <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search by username..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
-                             focus:outline-none focus:ring-2 focus:ring-purple-500 
-                             bg-white dark:bg-gray-800 
-                             text-gray-900 dark:text-gray-100 
-                             placeholder-gray-500 dark:placeholder-gray-400"
-                  />
-                  {searchTerm && (
-                    <button
-                      onClick={() => setSearchTerm('')}
-                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
-                  <ColumnSelector 
-                    visibleColumns={visibleColumns} 
-                    setVisibleColumns={setVisibleColumns}
-                    setSortField={setSortField}
-                  />
-                  <div className="hidden md:flex items-center gap-2">
-                    <span className="text-gray-600">Sort by:</span>
-                    <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger asChild>
-                        <button className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300">
-                          Sort by
-                          <ChevronDownIcon className="h-4 w-4" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent 
-                        className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 min-w-[150px] mt-2 z-50 border border-purple-100 dark:border-purple-800"
-                        sideOffset={5}
-                      >
-                        <DropdownMenuItem className="outline-none">
-                          <button 
-                            onClick={() => setSortField('staked')}
-                            className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
-                          >
-                            Staked Amount
-                          </button>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="outline-none">
-                          <button 
-                            onClick={() => setSortField('unstaked')}
-                            className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
-                          >
-                            Unstaked Amount
-                          </button>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="outline-none">
-                          <button 
-                            onClick={() => setSortField('total')}
-                            className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
-                          >
-                            Total Amount
-                          </button>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="outline-none">
-                          <button 
-                            onClick={() => setSortField('rewards')}
-                            className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
-                          >
-                            Estimated Rewards
-                          </button>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-card rounded-lg shadow overflow-hidden">
-                <table className="table-custom">
-                  <thead>
-                    <tr>
+          {selectedTier?.name !== 'No Stake' && (
+            <div className="bg-card rounded-lg shadow overflow-hidden">
+              <table className="table-custom">
+                <thead>
+                  <tr>
+                    {visibleColumns.rank && (
+                      <th className="w-12">Rank</th>
+                    )}
+                    {visibleColumns.username && (
+                      <th className="w-40">Username</th>
+                    )}
+                    {visibleColumns.staked && (
+                      <th>Staked Amount</th>
+                    )}
+                    {visibleColumns.unstaked && (
+                      <th>Unstaked Amount</th>
+                    )}
+                    {visibleColumns.total && (
+                      <th>Total Amount</th>
+                    )}
+                    {visibleColumns.usdValue && (
+                      <th>USD Value</th>
+                    )}
+                    {visibleColumns.rewards && (
+                      <th className="min-w-[200px]">Estimated Rewards</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentData.map((item, index) => (
+                    <tr key={item.username} className="hover:bg-purple-50">
                       {visibleColumns.rank && (
-                        <th className="w-12">Rank</th>
+                        <td className="px-2 py-4 text-sm text-gray-900 w-12">
+                          <div className="flex items-center gap-1">
+                            {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                            {(currentPage === 1 && index < 3) && (
+                              <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
+                                {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                              </span>
+                            )}
+                          </div>
+                        </td>
                       )}
                       {visibleColumns.username && (
-                        <th className="w-40">Username</th>
+                        <td className="px-2 py-4 text-sm text-gray-900 w-40">
+                          <div className="flex items-center gap-1">
+                            <span title={getUserTier(item.staked).name}>
+                              {getUserTier(item.staked).emoji}
+                            </span>
+                            <UsernameLink username={item.username} />
+                            <a 
+                              href={`https://explorer.xprnetwork.org/account/${item.username}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-gray-400 hover:text-purple-600 transition-colors"
+                              title="View on Blockchain Explorer"
+                            >
+                              <CubeTransparentIcon className="h-4 w-4" />
+                            </a>
+                          </div>
+                        </td>
                       )}
                       {visibleColumns.staked && (
-                        <th>Staked Amount</th>
+                        <td 
+                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                          onClick={() => {
+                            toggleAmountDisplay(item.username, 'staked');
+                            handleEasterEgg(null, item.username);
+                          }}
+                        >
+                          <div className="flex flex-col">
+                            {formatAmount(
+                              item.staked, 
+                              amountDisplays[`${item.username}-staked`] || 'strx'
+                            )}
+                            <span className="text-xs text-gray-500 dark:text-gray-300">
+                              ({(item.staked / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                            </span>
+                          </div>
+                        </td>
                       )}
                       {visibleColumns.unstaked && (
-                        <th>Unstaked Amount</th>
+                        <td 
+                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                          onClick={() => {
+                            toggleAmountDisplay(item.username, 'unstaked');
+                            handleEasterEgg(null, item.username);
+                          }}
+                        >
+                          <div className="flex flex-col">
+                            {formatAmount(
+                              item.unstaked, 
+                              amountDisplays[`${item.username}-unstaked`] || 'strx'
+                            )}
+                            <span className="text-xs text-gray-500 dark:text-gray-300">
+                              ({(item.unstaked / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                            </span>
+                          </div>
+                        </td>
                       )}
                       {visibleColumns.total && (
-                        <th>Total Amount</th>
+                        <td 
+                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                          onClick={() => {
+                            toggleAmountDisplay(item.username, 'total');
+                            handleEasterEgg(null, item.username);
+                          }}
+                        >
+                          <div className="flex flex-col">
+                            {formatAmount(
+                              item.total, 
+                              amountDisplays[`${item.username}-total`] || 'strx'
+                            )}
+                            <span className="text-xs text-gray-500 dark:text-gray-300">
+                              ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                            </span>
+                          </div>
+                        </td>
                       )}
                       {visibleColumns.usdValue && (
-                        <th>USD Value</th>
+                        <td 
+                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                          onClick={() => {
+                            toggleAmountDisplay(item.username, 'usdValue');
+                            handleEasterEgg(null, item.username);
+                          }}
+                        >
+                          {formatAmount(
+                            item.total,
+                            amountDisplays[`${item.username}-usdValue`] || 'usd'
+                          )}
+                        </td>
                       )}
                       {visibleColumns.rewards && (
-                        <th className="min-w-[200px]">Estimated Rewards</th>
+                        <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[220px]">
+                          {(() => {
+                            const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
+                              ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                              : 0;
+                            
+                            const rewards = calculateRewards(
+                              item.staked, 
+                              rewardsPerSec, 
+                              strxPrice,
+                              blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
+                            );
+                            const isUsd = amountDisplays[`${item.username}-rewards`] === 'usd';
+
+                            return (
+                              <div className="flex flex-col items-start">
+                                <span>
+                                  Daily: {isUsd 
+                                    ? `$${rewards.dailyUsd.toFixed(2)}` 
+                                    : `${rewards.daily.toFixed(4)}`}
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-300">
+                                  Monthly: {isUsd 
+                                    ? `$${rewards.monthlyUsd.toFixed(2)}` 
+                                    : `${rewards.monthly.toFixed(4)}`}
+                                </span>
+                                <span className="text-xs text-gray-500 dark:text-gray-300">
+                                  Yearly: {isUsd 
+                                    ? `$${rewards.yearlyUsd.toFixed(2)}` 
+                                    : `${rewards.yearly.toFixed(4)}`}
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </td>
                       )}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {currentData.map((item, index) => (
-                      <tr key={item.username} className="hover:bg-purple-50">
-                        {visibleColumns.rank && (
-                          <td className="px-2 py-4 text-sm text-gray-900 w-12">
-                            <div className="flex items-center gap-1">
-                              {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                              {(currentPage === 1 && index < 3) && (
-                                <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                                  {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        )}
-                        {visibleColumns.username && (
-                          <td className="px-2 py-4 text-sm text-gray-900 w-40">
-                            <div className="flex items-center gap-1">
-                              <span title={getUserTier(item.staked).name}>
-                                {getUserTier(item.staked).emoji}
-                              </span>
-                              <UsernameLink username={item.username} />
-                              <a 
-                                href={`https://explorer.xprnetwork.org/account/${item.username}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-gray-400 hover:text-purple-600 transition-colors"
-                                title="View on Blockchain Explorer"
-                              >
-                                <CubeTransparentIcon className="h-4 w-4" />
-                              </a>
-                            </div>
-                          </td>
-                        )}
-                        {visibleColumns.staked && (
-                          <td 
-                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                            onClick={() => {
-                              toggleAmountDisplay(item.username, 'staked');
-                              handleEasterEgg(null, item.username);
-                            }}
-                          >
-                            <div className="flex flex-col">
-                              {formatAmount(
-                                item.staked, 
-                                amountDisplays[`${item.username}-staked`] || 'strx'
-                              )}
-                              <span className="text-xs text-gray-500 dark:text-gray-300">
-                                ({(item.staked / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                              </span>
-                            </div>
-                          </td>
-                        )}
-                        {visibleColumns.unstaked && (
-                          <td 
-                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                            onClick={() => {
-                              toggleAmountDisplay(item.username, 'unstaked');
-                              handleEasterEgg(null, item.username);
-                            }}
-                          >
-                            <div className="flex flex-col">
-                              {formatAmount(
-                                item.unstaked, 
-                                amountDisplays[`${item.username}-unstaked`] || 'strx'
-                              )}
-                              <span className="text-xs text-gray-500 dark:text-gray-300">
-                                ({(item.unstaked / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                              </span>
-                            </div>
-                          </td>
-                        )}
-                        {visibleColumns.total && (
-                          <td 
-                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                            onClick={() => {
-                              toggleAmountDisplay(item.username, 'total');
-                              handleEasterEgg(null, item.username);
-                            }}
-                          >
-                            <div className="flex flex-col">
-                              {formatAmount(
-                                item.total, 
-                                amountDisplays[`${item.username}-total`] || 'strx'
-                              )}
-                              <span className="text-xs text-gray-500 dark:text-gray-300">
-                                ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                              </span>
-                            </div>
-                          </td>
-                        )}
-                        {visibleColumns.usdValue && (
-                          <td 
-                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                            onClick={() => {
-                              toggleAmountDisplay(item.username, 'usdValue');
-                              handleEasterEgg(null, item.username);
-                            }}
-                          >
-                            {formatAmount(
-                              item.total,
-                              amountDisplays[`${item.username}-usdValue`] || 'usd'
-                            )}
-                          </td>
-                        )}
-                        {visibleColumns.rewards && (
-                          <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[220px]">
-                            {(() => {
-                              const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
-                                ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
-                                : 0;
-                              
-                              const rewards = calculateRewards(
-                                item.staked, 
-                                rewardsPerSec, 
-                                strxPrice,
-                                blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
-                              );
-                              const isUsd = amountDisplays[`${item.username}-rewards`] === 'usd';
-
-                              return (
-                                <div className="flex flex-col items-start">
-                                  <span>
-                                    Daily: {isUsd 
-                                      ? `$${rewards.dailyUsd.toFixed(2)}` 
-                                      : `${rewards.daily.toFixed(4)}`}
-                                  </span>
-                                  <span className="text-xs text-gray-500 dark:text-gray-300">
-                                    Monthly: {isUsd 
-                                      ? `$${rewards.monthlyUsd.toFixed(2)}` 
-                                      : `${rewards.monthly.toFixed(4)}`}
-                                  </span>
-                                  <span className="text-xs text-gray-500 dark:text-gray-300">
-                                    Yearly: {isUsd 
-                                      ? `$${rewards.yearlyUsd.toFixed(2)}` 
-                                      : `${rewards.yearly.toFixed(4)}`}
-                                  </span>
-                                </div>
-                              );
-                            })()}
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="text-sm text-gray-600 text-center md:text-left dark:text-gray-300">
-                  Page Total: {currentPageTotal.toLocaleString(undefined, {
-                    minimumFractionDigits: 4,
-                    maximumFractionDigits: 4,
-                    useGrouping: true,
-                  })}
-                </div>
-                <div className="flex items-center gap-2 justify-center md:justify-end">
-                  <button
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                  >
-                    First
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-sm text-gray-600 px-2 dark:text-gray-300">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                  >
-                    Next
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                  >
-                    Last
-                  </button>
-                </div>
-              </div>
-            </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
+
+          {selectedTier?.name !== 'No Stake' && (
+            <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="text-sm text-gray-600 text-center md:text-left dark:text-gray-300">
+                Page Total: {currentPageTotal.toLocaleString(undefined, {
+                  minimumFractionDigits: 4,
+                  maximumFractionDigits: 4,
+                  useGrouping: true,
+                })}
+              </div>
+              <div className="flex items-center gap-2 justify-center md:justify-end">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                >
+                  First
+                </button>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600 px-2 dark:text-gray-300">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                >
+                  Next
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
+                >
+                  Last
+                </button>
+              </div>
+            </div>
+          )}
+
+          
         </div>
       </div>
     </ThemeProvider>
