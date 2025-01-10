@@ -11,6 +11,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/workbox-webpack-plugin": "^6.0.0",
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "lodash": "^4.17.21",
     "react": "^18.2.0",
     "react-app": "^1.0.0",
@@ -28,7 +29,7 @@
     "workbox-strategies": "^6.6.0"
   },
   "scripts": {
-    "build": "GENERATE_SOURCEMAP=false react-app-rewired build",
+    "build": "cross-env GENERATE_SOURCEMAP=false react-app-rewired build",
     "start": "react-app-rewired start"
   },
   "browserslist": {
