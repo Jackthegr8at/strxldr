@@ -6,15 +6,19 @@ module.exports = function override(config, env) {
     plugin => !plugin.constructor.name.includes('Workbox')
   );
 
-  // Add GenerateSW plugin with all our custom caching strategies
+  // Always generate service worker for builds
   config.plugins.push(
     new WorkboxWebpackPlugin.GenerateSW({
+      swDest: 'service-worker.js', // Remove build/ prefix
       clientsClaim: true,
       skipWaiting: true,
       maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       exclude: [/\.map$/, /asset-manifest\.json$/, /LICENSE/],
+      modifyURLPrefix: {
+        // Remove leading slash from assets
+        '/': ''
+      },
       runtimeCaching: [
-        // Navigation routes
         {
           urlPattern: ({ request }) => request.mode === 'navigate',
           handler: 'NetworkFirst',
@@ -25,7 +29,6 @@ module.exports = function override(config, env) {
             }
           }
         },
-        // API routes
         {
           urlPattern: ({ url }) => 
             url.href.includes('api-xprnetwork-main.saltant.io') ||
@@ -38,31 +41,7 @@ module.exports = function override(config, env) {
             cacheName: 'api-cache',
             expiration: {
               maxEntries: 50,
-              maxAgeSeconds: 5 * 60 // 5 minutes
-            }
-          }
-        },
-        // External images
-        {
-          urlPattern: ({ url }) => url.href.includes('raw.githubusercontent.com'),
-          handler: 'StaleWhileRevalidate',
-          options: {
-            cacheName: 'external-images',
-            expiration: {
-              maxEntries: 60,
-              maxAgeSeconds: 24 * 60 * 60 // 24 hours
-            }
-          }
-        },
-        // Static assets
-        {
-          urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
-          handler: 'StaleWhileRevalidate',
-          options: {
-            cacheName: 'images',
-            expiration: {
-              maxEntries: 60,
-              maxAgeSeconds: 24 * 60 * 60 // 24 hours
+              maxAgeSeconds: 5 * 60
             }
           }
         }
@@ -71,4 +50,4 @@ module.exports = function override(config, env) {
   );
 
   return config;
-};
+}
