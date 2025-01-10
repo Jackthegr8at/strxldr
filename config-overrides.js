@@ -17,5 +17,24 @@ module.exports = function override(config, env) {
     })
   );
 
+  // Locate the Babel loader within the Webpack config
+  const oneOfRule = config.module.rules.find(rule => rule.oneOf);
+  if (oneOfRule) {
+    const babelLoader = oneOfRule.oneOf.find(
+      r => r.loader && r.loader.includes('babel-loader')
+    );
+    if (babelLoader) {
+      babelLoader.options.plugins = babelLoader.options.plugins || [];
+
+      // Remove the deprecated plugin if it's present
+      babelLoader.options.plugins = babelLoader.options.plugins.filter(
+        plugin => plugin !== '@babel/plugin-proposal-private-property-in-object'
+      );
+
+      // Add the transform plugin
+      babelLoader.options.plugins.push('@babel/plugin-transform-private-property-in-object');
+    }
+  }
+
   return config;
 };
