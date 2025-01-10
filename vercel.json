@@ -2,6 +2,18 @@
   "version": 2,
   "routes": [
     {
+      "src": "/service-worker.js",
+      "dest": "/service-worker.js"
+    },
+    {
+      "src": "/custom.d.ts",
+      "dest": "/custom.d.ts"
+    },
+    {
+      "src": "/serviceWorkerRegistration.ts",
+      "dest": "/serviceWorkerRegistration.ts"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },

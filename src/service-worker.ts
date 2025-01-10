@@ -9,18 +9,13 @@ import { StaleWhileRevalidate } from 'workbox-strategies';
 
 clientsClaim();
 
-// Add a try-catch block to handle the manifest
-try {
-  const manifest = self.__WB_MANIFEST || [];
-  precacheAndRoute(manifest);
-} catch (error) {
-  console.error('Failed to load manifest:', error);
-  precacheAndRoute([]);
-}
+// Use a fallback for the manifest
+const manifest = self.__WB_MANIFEST || [];
+precacheAndRoute(manifest);
 
 const fileExtensionRegexp = new RegExp('/[^/?]+\\.[^/]+$');
 registerRoute(
-  ({ request, url }: { request: Request; url: URL }) => {
+  ({ request, url }) => {
     if (request.mode !== 'navigate') {
       return false;
     }
