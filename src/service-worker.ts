@@ -9,9 +9,8 @@ import { StaleWhileRevalidate } from 'workbox-strategies';
 
 clientsClaim();
 
-// This will be replaced by the list of files to precache
-const manifest = self.__WB_MANIFEST || [];
-precacheAndRoute(manifest);
+// Remove the manifest declaration and use precacheAndRoute directly
+precacheAndRoute(self.__WB_MANIFEST);
 
 const fileExtensionRegexp = new RegExp('/[^/?]+\\.[^/]+$');
 registerRoute(
