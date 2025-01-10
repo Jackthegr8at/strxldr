@@ -35,6 +35,38 @@ registerRoute(
   })
 );
 
+registerRoute(
+  ({ url }) => 
+    url.href.includes('api-xprnetwork-main.saltant.io') ||
+    url.href.includes('proton.eosusa.io') ||
+    url.href.includes('api-v3.raydium.io') ||
+    url.href.includes('api.bloks.io') ||
+    url.href.includes('api.dexscreener.com'),
+  new StaleWhileRevalidate({
+    cacheName: 'api-cache',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 50,
+        maxAgeSeconds: 5 * 60 // Cache for 5 minutes
+      })
+    ]
+  })
+);
+
+registerRoute(
+  ({ url }) => 
+    url.href.includes('raw.githubusercontent.com'),
+  new StaleWhileRevalidate({
+    cacheName: 'external-images',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 24 * 60 * 60 // Cache for 24 hours
+      })
+    ]
+  })
+);
+
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
