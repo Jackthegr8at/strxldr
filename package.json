@@ -19,6 +19,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/workbox-webpack-plugin": "^6.0.0",
+    "babel-preset-react-app": "^10.0.1",
     "cross-env": "^7.0.3",
     "lodash": "^4.17.21",
     "react": "^18.2.0",
@@ -29,16 +30,14 @@
     "swr": "^2.2.0",
     "typescript": "^4.9.5",
     "web-push": "^3.6.7",
-    "workbox-core": "^6.6.0",
-    "workbox-expiration": "^6.6.0",
-    "workbox-precaching": "^6.6.0",
-    "workbox-routing": "^6.6.0",
-    "workbox-strategies": "^6.6.0",
-    "workbox-webpack-plugin": "^6.6.0",
-    "babel-preset-react-app": "^10.0.1"
+    "workbox-core": "^5.1.4",
+    "workbox-expiration": "^5.1.4",
+    "workbox-precaching": "^5.1.4",
+    "workbox-routing": "^5.1.4",
+    "workbox-strategies": "^5.1.4"
   },
   "scripts": {
-    "build": "cross-env GENERATE_SOURCEMAP=false react-app-rewired build",
+    "build": "cross-env GENERATE_SOURCEMAP=false INLINE_RUNTIME_CHUNK=false react-app-rewired build",
     "start": "react-app-rewired start"
   },
   "browserslist": {
@@ -65,7 +64,8 @@
     "js-cookie": "^3.0.5",
     "postcss": "^8.4.49",
     "react-app-rewired": "^2.2.1",
-    "tailwindcss": "^3.4.16"
+    "tailwindcss": "^3.4.16",
+    "workbox-webpack-plugin": "^5.1.4"
   },
   "homepage": "/"
 }
