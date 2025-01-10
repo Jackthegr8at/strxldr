@@ -2,8 +2,8 @@
   "version": 2,
   "routes": [
     {
-      "src": "/sw.js",
-      "dest": "/sw.js",
+      "src": "/service-worker.js",
+      "dest": "/service-worker.js",
       "headers": {
         "content-type": "application/javascript",
         "cache-control": "public, max-age=0, must-revalidate"
@@ -16,10 +16,6 @@
         "content-type": "application/javascript",
         "cache-control": "public, max-age=31536000, immutable"
       }
-    },
-    {
-      "src": "/serviceWorkerRegistration.ts",
-      "dest": "/serviceWorkerRegistration.ts"
     },
     {
       "src": "/api/(.*)",
