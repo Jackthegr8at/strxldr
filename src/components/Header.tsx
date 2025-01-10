@@ -39,7 +39,7 @@ export function Header() {
             <ThemeToggle />
             <a href="/">
               <img 
-                src="/icon-512x512.png" 
+                src="/icons/icon-512x512.png" 
                 alt="STRX Logo" 
                 className="h-8 w-8 md:hidden rounded-lg"
               />
@@ -97,7 +97,7 @@ export function Header() {
       <div className="hidden md:block fixed bottom-4 left-4 z-50">
         <a href="/">
           <img 
-            src="/icon-512x512.png" 
+            src="/icons/icon-512x512.png" 
             alt="STRX Logo" 
             className="w-24 h-24 rounded-lg shadow-lg hover:scale-110 transition-transform duration-200"
           />
