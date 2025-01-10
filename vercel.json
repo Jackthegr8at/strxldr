@@ -58,7 +58,7 @@
       "dest": "/$1"
     },
     {
-      "src": "/service-worker.js",
+      "src": "^/service-worker\\.js$",
       "dest": "/service-worker.js",
       "headers": {
         "Content-Type": "application/javascript",
@@ -66,8 +66,8 @@
       }
     },
     {
-      "src": "/workbox-sw.js",
-      "dest": "/workbox-sw.js",
+      "src": "^/workbox-[^.]+\\.js$",
+      "dest": "/workbox-$1.js",
       "headers": {
         "Content-Type": "application/javascript"
       }
