@@ -23,7 +23,7 @@
     "workbox-webpack-plugin": "^6.6.0"
   },
   "scripts": {
-    "build": "react-app-rewired build",
+    "build": "GENERATE_SOURCEMAP=false react-app-rewired build",
     "start": "react-app-rewired start"
   },
   "browserslist": {
