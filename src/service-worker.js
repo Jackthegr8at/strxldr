@@ -1,5 +1,4 @@
 /// <reference lib="webworker" />
-declare const self: ServiceWorkerGlobalScope;
 
 import { clientsClaim } from 'workbox-core';
 import { ExpirationPlugin } from 'workbox-expiration';
@@ -9,11 +8,10 @@ import { StaleWhileRevalidate } from 'workbox-strategies';
 
 clientsClaim();
 
-// Use a fallback for the manifest
-const manifest = self.__WB_MANIFEST || [];
-precacheAndRoute(manifest);
+// Use the injected manifest
+precacheAndRoute(self.__WB_MANIFEST || []);
 
-const fileExtensionRegexp = new RegExp('/[^/?]+\\.[^/]+$');
+const fileExtensionRegexp = /[^/?]+\.[^/]+$/;
 registerRoute(
   ({ request, url }) => {
     if (request.mode !== 'navigate') {
@@ -22,7 +20,7 @@ registerRoute(
     if (url.pathname.startsWith('/_')) {
       return false;
     }
-    if (url.pathname.match(fileExtensionRegexp)) {
+    if (fileExtensionRegexp.test(url.pathname)) {
       return false;
     }
     return true;
