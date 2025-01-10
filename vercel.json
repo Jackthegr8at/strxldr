@@ -2,8 +2,8 @@
   "version": 2,
   "routes": [
     {
-      "src": "/service-worker.js",
-      "dest": "/service-worker.js",
+      "src": "/sw.js",
+      "dest": "/sw.js",
       "headers": {
         "content-type": "application/javascript",
         "cache-control": "public, max-age=0, must-revalidate"
