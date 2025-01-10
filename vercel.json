@@ -4,18 +4,18 @@
     {
       "src": "^/service-worker\\.js$",
       "headers": {
-        "content-type": "application/javascript"
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-type": "application/javascript; charset=utf-8"
       },
-      "dest": "/service-worker.js",
-      "continue": true
+      "dest": "/service-worker.js"
     },
     {
-      "src": "^/workbox-[^.]+\\.js$",
+      "src": "^/workbox-[a-f0-9]{8}\\.js$",
       "headers": {
-        "content-type": "application/javascript"
+        "cache-control": "public, max-age=31536000, immutable",
+        "content-type": "application/javascript; charset=utf-8"
       },
-      "dest": "/workbox-$1.js",
-      "continue": true
+      "dest": "/workbox-$1.js"
     },
     {
       "src": "/api/(.*)",
@@ -68,14 +68,6 @@
     {
       "src": "^/(.*)\\.(?:png|jpg|jpeg|gif|ico|svg|webp|json)$",
       "dest": "/$1"
-    },
-    {
-      "src": "^/service-worker\\.js$",
-      "dest": "/service-worker.js"
-    },
-    {
-      "src": "^/workbox-[^.]+\\.js$",
-      "dest": "/workbox-$1.js"
     },
     {
       "src": ".*",
