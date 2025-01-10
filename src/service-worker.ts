@@ -9,8 +9,14 @@ import { StaleWhileRevalidate } from 'workbox-strategies';
 
 clientsClaim();
 
-// Remove the manifest declaration and use precacheAndRoute directly
-precacheAndRoute(self.__WB_MANIFEST);
+// Add a try-catch block to handle the manifest
+try {
+  const manifest = self.__WB_MANIFEST || [];
+  precacheAndRoute(manifest);
+} catch (error) {
+  console.error('Failed to load manifest:', error);
+  precacheAndRoute([]);
+}
 
 const fileExtensionRegexp = new RegExp('/[^/?]+\\.[^/]+$');
 registerRoute(
