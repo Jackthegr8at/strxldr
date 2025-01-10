@@ -1,30 +1,22 @@
 {
   "version": 2,
-  "headers": [
+  "routes": [
     {
-      "source": "/service-worker.js",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        },
-        {
-          "key": "Service-Worker-Allowed",
-          "value": "/"
-        }
-      ]
+      "src": "^/service-worker\\.js$",
+      "headers": {
+        "content-type": "application/javascript"
+      },
+      "dest": "/service-worker.js",
+      "continue": true
     },
     {
-      "source": "/workbox-[^.]+\\.js",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        }
-      ]
-    }
-  ],
-  "routes": [
+      "src": "^/workbox-[^.]+\\.js$",
+      "headers": {
+        "content-type": "application/javascript"
+      },
+      "dest": "/workbox-$1.js",
+      "continue": true
+    },
     {
       "src": "/serviceWorkerRegistration.ts",
       "dest": "/serviceWorkerRegistration.ts"
@@ -80,14 +72,6 @@
     {
       "src": "^/(.*)\\.(?:png|jpg|jpeg|gif|ico|svg|webp|json)$",
       "dest": "/$1"
-    },
-    {
-      "src": "^/service-worker\\.js$",
-      "dest": "/service-worker.js"
-    },
-    {
-      "src": "^/workbox-[^.]+\\.js$",
-      "dest": "/workbox-$1.js"
     },
     {
       "src": ".*",
