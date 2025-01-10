@@ -3,12 +3,7 @@
   "routes": [
     {
       "src": "/service-worker.js",
-      "headers": {
-        "cache-control": "public, max-age=0, must-revalidate",
-        "content-type": "application/javascript; charset=utf-8"
-      },
-      "dest": "/service-worker.js",
-      "continue": true
+      "dest": "/service-worker.js"
     },
     {
       "src": "/custom.d.ts",
