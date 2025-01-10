@@ -972,11 +972,19 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                         })()}
 
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
-                          Monthly rewards contribute{' '}
+                          Monthly rewards of{' '}
                           <span className="font-medium text-purple-700 dark:text-purple-400">
-                            {tierAnalysis.monthlyProgress.toFixed(2)}%
+                            {stakingStats?.rewards?.monthly.toFixed(4)} STRX
                           </span>
-                          {' '}towards your next tier goal
+                          {' '}contribute{' '}
+                          <span className="font-medium text-purple-700 dark:text-purple-400">
+                            {((stakingStats?.rewards?.monthly ?? 0) / (nextTier.minimum - userData.staked) * 100).toFixed(2)}%
+                          </span>
+                          {' '}towards your next tier goal. At this rate, it will take approximately{' '}
+                          <span className="font-medium text-purple-700 dark:text-purple-400">
+                            {Math.ceil((nextTier.minimum - userData.staked) / (stakingStats?.rewards?.monthly ?? 0))}
+                          </span>
+                          {' '}months to reach the next tier.
                         </p>
                       </div>
                     )}
