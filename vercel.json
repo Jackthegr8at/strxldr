@@ -6,6 +6,10 @@
       "dest": "/api/$1"
     },
     {
+      "src": "/service-worker.js",
+      "dest": "/service-worker.js"
+    },
+    {
       "src": "/strx.png",
       "dest": "/strx.png"
     },
@@ -56,6 +60,21 @@
     {
       "src": ".*",
       "dest": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/service-worker.js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     }
   ]
 }
