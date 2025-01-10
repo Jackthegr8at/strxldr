@@ -1,15 +1,39 @@
 {
-  "short_name": "STRX LDRBDS",
   "name": "Storex LeaderBoard",
+  "short_name": "STRX LDRBDS",
+  "description": "Storex LeaderBoard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#9461e0",
+  "theme_color": "#9333ea",
   "icons": [
     {
-      "src": "/favicon.ico",
+      "src": "favicon.ico",
       "sizes": "128x128",
-      "type": "image/ico"
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
-}
+  "screenshots": [
+    {
+      "src": "/screenshots/screenshot-wide.png",
+      "sizes": "1280x685",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshots/screenshot-mobile.png",
+      "sizes": "911x1515",
+      "type": "image/png"
+    }
+  ]
+} 

@@ -30,8 +30,20 @@
       "dest": "/favicon_solscan.png"
     },
     {
-      "src": "^/icon-512x512.png",
-      "dest": "/icon-512x512.png"
+      "src": "^/icons/icon-192x192.png",
+      "dest": "/icons/icon-192x192.png"
+    },
+    {
+      "src": "^/icons/icon-512x512.png",
+      "dest": "/icons/icon-512x512.png"
+    },
+    {
+      "src": "^/screenshots/screenshot-wide.png",
+      "dest": "/screenshots/screenshot-wide.png"
+    },
+    {
+      "src": "^/screenshots/screenshot-mobile.png",
+      "dest": "/screenshots/screenshot-mobile.png"
     },
     {
       "src": "^/favicon-128.webp",

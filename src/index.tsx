@@ -12,6 +12,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuIte
 // Near the top of the file, import BridgePage
 import { BridgePage } from './BridgePage';
 import UserPageNoStake from './UserPageNoStake';
+// Add this near your other imports
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -2129,3 +2131,6 @@ root.render(
 );
 // smapshot version
 // 1.1.0
+
+// Add this after ReactDOM.render()
+serviceWorkerRegistration.register();
