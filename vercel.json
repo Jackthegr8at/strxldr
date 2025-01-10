@@ -2,10 +2,6 @@
   "version": 2,
   "routes": [
     {
-      "src": "/service-worker.js",
-      "dest": "/service-worker.js"
-    },
-    {
       "src": "/serviceWorkerRegistration.ts",
       "dest": "/serviceWorkerRegistration.ts"
     },
@@ -60,6 +56,14 @@
     {
       "src": "^/(.*)\\.(?:png|jpg|jpeg|gif|ico|svg|webp|json)$",
       "dest": "/$1"
+    },
+    {
+      "src": "/workbox-(.+)\\.js",
+      "dest": "/workbox-$1.js"
+    },
+    {
+      "src": "/service-worker\\.js",
+      "dest": "/service-worker.js"
     },
     {
       "src": ".*",
