@@ -9,7 +9,7 @@ module.exports = function override(config, env) {
   if (env === 'production') {
     config.plugins.push(
       new WorkboxWebpackPlugin.GenerateSW({
-        swDest: 'service-worker.js',
+        swDest: 'sw.js',
         clientsClaim: true,
         skipWaiting: true,
         include: [/\.html$/, /\.js$/, /\.css$/, /\.jpg$/, /\.png$/, /\.ico$/],
