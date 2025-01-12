@@ -24,7 +24,9 @@ module.exports = {
         url.href.includes('proton.eosusa.io') ||
         url.href.includes('api-v3.raydium.io') ||
         url.href.includes('api.bloks.io') ||
-        url.href.includes('api.dexscreener.com'),
+        url.href.includes('api.dexscreener.com') ||
+        url.href.includes('nfts.jessytremblay.com') ||
+        url.href.includes('raw.githubusercontent.com/'),
       handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'api-cache',
