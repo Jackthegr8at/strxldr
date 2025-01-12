@@ -189,7 +189,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       
       return fetch(`${baseUrl}?${params}`).then(res => res.json());
     },
-    { refreshInterval: 30000 }
+    { refreshInterval: 60000 }  // 1 minute
   );
 
   // First get priceData
@@ -213,7 +213,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       return res.json();
     }),
     { 
-      refreshInterval: 120000,
+      refreshInterval: 300000,  // 5 minutes
       fallbackData: globalData.priceData
     }
   );
@@ -284,7 +284,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       })
     }).then(res => res.json()),
     { 
-      refreshInterval: 60000,
+      refreshInterval: 300000,  // 5 minutes
       fallbackData: globalData.blockchainData
     }
   );
@@ -568,7 +568,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       setIsLoadingBridge(false);
       return data;
     },
-    { refreshInterval: 30000 }
+    { refreshInterval: 60000 }  // 1 minute
   );
 
   // Effect to accumulate and filter user's bridge actions
@@ -633,7 +633,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     'dexscreener_data',
     () => fetch('https://api.dexscreener.com/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
       .then(res => res.json()),
-    { refreshInterval: 30000 }
+    { refreshInterval: 300000 }  // 5 minutes
   );
 
   const isMobile = window.innerWidth < 768; // Adjust the breakpoint as needed

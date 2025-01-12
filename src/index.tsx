@@ -312,7 +312,7 @@ const RecentActions: React.FC<{
       
       return fetch(`${baseUrl}?${params}`).then(res => res.json());
     },
-    { refreshInterval: 30000 }
+    { refreshInterval: 30000 }  // 30 seconds
   );
 
   // Update the formatTimestamp function
@@ -969,7 +969,7 @@ function App() {
   const { data: response, error, isLoading } = useSWR<FetchResponse>(
     'https://nfts.jessytremblay.com/STRX/stakes.json',
     fetcher,
-    { refreshInterval: 120000 }
+    { refreshInterval: 120000 }  // 2 minutes (correct)
   );
 
   // Function to format the time difference
@@ -999,7 +999,7 @@ function App() {
         limit: 10
       })
     }).then(res => res.json()),
-    { refreshInterval: 60000 } // Refresh every 60 minutes
+    { refreshInterval: 300000 }  // Changed from 360000 to 300000 (5 minutes)
   );
 
   // Add new SWR call for price data with a unique key
@@ -1020,7 +1020,7 @@ function App() {
         show_payer: false
       })
     }).then(res => res.json()),
-    { refreshInterval: 120000 } // Refresh every 2 minutes
+    { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add this with your other SWR fetches
@@ -1035,7 +1035,7 @@ function App() {
         symbol: "STRX"
       })
     }).then(res => res.json()),
-    { refreshInterval: 30000 }
+    { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add this SWR hook near your other data fetches
@@ -1050,7 +1050,7 @@ function App() {
         symbol: "STRX"
       })
     }).then(res => res.json()),
-    { refreshInterval: 30000 }
+    { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add with other SWR hooks
@@ -1058,7 +1058,7 @@ function App() {
     'raydium_pool_v3',
     () => fetch('https://api-v3.raydium.io/pools/info/ids?ids=5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
       .then(res => res.json()),
-    { refreshInterval: 30000 }
+    { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add with other SWR hooks in Leaderboard component
@@ -1066,7 +1066,7 @@ function App() {
     'xsol_price',
     () => fetch('https://www.api.bloks.io/proton/tokens/XSOL-proton-xtokens')
       .then(res => res.json()),
-    { refreshInterval: 30000 }
+    { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add new SWR hook in Leaderboard component
@@ -1074,7 +1074,7 @@ function App() {
     'dexscreener_data',
     () => fetch('https://api.dexscreener.com/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
       .then(res => res.json()),
-    { refreshInterval: 30000 }
+    { refreshInterval: 300000 }  // 5 minutes
   );
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -1342,7 +1342,7 @@ function App() {
   const { data: newStakersData } = useSWR<NewStakersResponse>(
     'https://nfts.jessytremblay.com/STRX/newstakers.json',
     (url) => fetch(url).then((res) => res.json()),
-    { refreshInterval: 120000 }
+    { refreshInterval: 120000 }  // 2 minute
   );
 
   // Move processedNewStakers inside the Leaderboard function

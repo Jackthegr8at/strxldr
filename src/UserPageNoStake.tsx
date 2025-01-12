@@ -63,14 +63,14 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
         limit: 10
       })
     }).then(res => res.json()),
-    { refreshInterval: 60000 }
+    { refreshInterval: 300000 } // 5 minutes
   );
 
   const { data: dexScreenerData } = useSWR<any>(
     'dexscreener_data',
     () => fetch('https://api.dexscreener.com/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
       .then(res => res.json()),
-    { refreshInterval: 30000 }
+    { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add stakingStats here
@@ -114,7 +114,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
       setIsLoadingBridge(false);
       return data;
     },
-    { refreshInterval: 30000 }
+    { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Helper functions
@@ -220,7 +220,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
       
       return fetch(`${baseUrl}?${params}`).then(res => res.json());
     },
-    { refreshInterval: 30000 }
+    { refreshInterval: 300000 } // 5 minutes
   );
 
   // Add this after other states
@@ -270,7 +270,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
         symbol: "STRX"
       })
     }).then(res => res.json()),
-    { refreshInterval: 30000 }
+    { refreshInterval: 300000 } // 5 minutes
   );
 
   return (

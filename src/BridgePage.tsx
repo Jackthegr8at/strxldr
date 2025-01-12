@@ -162,14 +162,14 @@ export function BridgePage() {
     'raydium_pool_v3',
     () => fetch('https://api-v3.raydium.io/pools/info/ids?ids=5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
       .then(res => res.json()),
-    { refreshInterval: 30000 }
+    { refreshInterval: 360000 } // 6 minutes
   );
 
   const { data: dexScreenerData } = useSWR<DexScreenerData>(
     'dexscreener_data',
     () => fetch('https://api.dexscreener.com/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
       .then(res => res.json()),
-    { refreshInterval: 30000 }
+    { refreshInterval: 360000 } // 6 minutes
   );
 
   // Add state for amount displays if needed
@@ -212,7 +212,7 @@ export function BridgePage() {
       setIsLoading(false);
       return data;
     },
-    { refreshInterval: 30000 }
+    { refreshInterval: 240000 } // 4 minutes
   );
 
   // Effect to accumulate actions
