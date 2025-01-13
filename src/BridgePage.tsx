@@ -212,7 +212,7 @@ export function BridgePage() {
       setIsLoading(false);
       return data;
     },
-    { refreshInterval: 240000 } // 4 minutes
+    { refreshInterval: 120000 } // 2 minutes
   );
 
   // Effect to accumulate actions

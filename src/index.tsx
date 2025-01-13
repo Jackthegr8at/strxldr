@@ -211,7 +211,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
             </ul>
 
             <p className="text-sm md:text-base mt-4">
-              The leaderboard updates every 60 minutes to provide the most current staking data. 
+              The leaderboard updates every 30 minutes to provide the most current staking data. 
               USD price is updated every 2 minutes. Users are categorized into tiers (Whale, 
               Shark, Dolphin, etc.) based on their total STRX holdings.
             </p>
@@ -999,7 +999,7 @@ function App() {
         limit: 10
       })
     }).then(res => res.json()),
-    { refreshInterval: 300000 }  // Changed from 360000 to 300000 (5 minutes)
+    { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add new SWR call for price data with a unique key

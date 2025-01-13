@@ -114,7 +114,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
       setIsLoadingBridge(false);
       return data;
     },
-    { refreshInterval: 300000 }  // 5 minutes
+    { refreshInterval: 120000 }  // 2 minutes
   );
 
   // Helper functions
@@ -220,7 +220,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
       
       return fetch(`${baseUrl}?${params}`).then(res => res.json());
     },
-    { refreshInterval: 300000 } // 5 minutes
+    { refreshInterval: 60000 } // 1 minute
   );
 
   // Add this after other states
@@ -270,7 +270,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
         symbol: "STRX"
       })
     }).then(res => res.json()),
-    { refreshInterval: 300000 } // 5 minutes
+    { refreshInterval: 60000 } // 1 minute
   );
 
   return (
