@@ -2,14 +2,14 @@ module.exports = {
   globDirectory: 'build/',
   globPatterns: [
     ...(process.env.NODE_ENV === 'production' ? [
-      '**/*.{html,js,css}', // Core web assets
+      '**/*.{html,js,css}', // Core web assets (production only)
       'static/**/*.{png,jpg,jpeg,gif,webp,svg}', // Static images
       'assets/**/*.{png,jpg,jpeg,gif,webp,svg}', // Asset images
       'icons/*.{png,webp}', // Icons
       'manifest.json',
       'favicon*.{ico,webp,png}' // Favicons
     ] : [
-      // In development, only cache static assets
+      // In development, ONLY cache images and other static assets
       'static/**/*.{png,jpg,jpeg,gif,webp,svg}',
       'assets/**/*.{png,jpg,jpeg,gif,webp,svg}',
       'icons/*.{png,webp}',
@@ -19,10 +19,24 @@ module.exports = {
   ],
   globIgnores: [
     '**/service-worker.js',
+    '**/sw.js',
+    '**/workbox-*.js',
+    '**/index.tsx',
+    '**/index.js',
+    '**/App.tsx',
+    '**/App.js',
     '**/*.map',
     '**/asset-manifest.json',
     'robots.txt',
-    '.DS_Store'
+    '.DS_Store',
+    ...(process.env.NODE_ENV === 'development' ? [
+      '**/*.tsx',
+      '**/*.ts',
+      '**/*.jsx',
+      '**/*.js',
+      '**/*.css',
+      '**/*.html'
+    ] : [])
   ],
   swDest: 'build/sw.js',
   clientsClaim: true,
@@ -37,7 +51,7 @@ module.exports = {
         cacheName: 'pages',
         expiration: {
           maxEntries: 50,
-          maxAgeSeconds: process.env.NODE_ENV === 'production' ? 24 * 60 * 60 : 5 * 60 // 24 hours in prod, 5 minutes in dev
+          maxAgeSeconds: process.env.NODE_ENV === 'production' ? 1 * 60 * 60 : 5 * 60 // 1 hour in prod, 5 minutes in dev
         }
       }
     },
@@ -75,7 +89,7 @@ module.exports = {
         cacheName: 'images',
         expiration: {
           maxEntries: 60,
-          maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+          maxAgeSeconds: 24 * 60 * 60 // 24 hours
         }
       }
     },
@@ -87,7 +101,7 @@ module.exports = {
         cacheName: 'fonts',
         expiration: {
           maxEntries: 20,
-          maxAgeSeconds: 60 * 24 * 60 * 60 // 60 days
+          maxAgeSeconds: 24 * 60 * 60 // 24 hours
         }
       }
     }

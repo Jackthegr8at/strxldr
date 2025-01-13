@@ -776,9 +776,18 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                         />
                         <YAxis 
                           domain={['dataMin', 'dataMax']}
-                          tickFormatter={(value) => (value / 1000).toFixed(0) + 'k'}
+                          tickFormatter={(value) => {
+                            if (value >= 1000000000) {
+                              return (value / 1000000000).toFixed(2) + 'B';
+                            } else if (value >= 1000000) {
+                              return (value / 1000000).toFixed(2) + 'M';
+                            } else if (value >= 1000) {
+                              return (value / 1000).toFixed(1) + 'K';
+                            }
+                            return value.toString();
+                          }}
                           tick={{ fill: 'var(--axis-color)' }}
-                          width={50}
+                          width={60}
                         />
                         <Tooltip 
                           contentStyle={{
@@ -1145,7 +1154,16 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                             />
                             <YAxis 
                               tick={{ fill: 'var(--axis-color)' }}
-                              tickFormatter={(value) => (value / 1000).toFixed(0) + 'k'}
+                              tickFormatter={(value) => {
+                                if (value >= 1000000000) {
+                                  return (value / 1000000000).toFixed(2) + 'B';
+                                } else if (value >= 1000000) {
+                                  return (value / 1000000).toFixed(2) + 'M';
+                                } else if (value >= 1000) {
+                                  return (value / 1000).toFixed(1) + 'K';
+                                }
+                                return value.toString();
+                              }}
                               width={50}
                             />
                             <Tooltip 
