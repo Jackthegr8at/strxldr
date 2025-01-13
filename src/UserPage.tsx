@@ -83,6 +83,7 @@ type UserPageProps = {
   globalData: {
     blockchainData?: BlockchainResponse;
     priceData?: PriceResponse;
+    lastModified: string;
   };
 };
 
@@ -151,9 +152,51 @@ const getTransactionType = (memo: string) => {
   return 'other';
 };
 
+// Add these new types and helpers
+type StakeTransaction = {
+  time: Date;
+  amount: number;
+  type: string;
+};
+
+const getUpdatedStakedAmount = (
+  baseAmount: number,
+  transactions: StakeTransaction[],
+  lastJsonUpdate: Date | string | undefined
+) => {
+  // Validate and create date
+  let lastUpdateUTC: Date;
+  try {
+    if (!lastJsonUpdate) {
+      console.log('No lastModified date provided, using current time');
+      lastUpdateUTC = new Date();
+    } else {
+      lastUpdateUTC = new Date(lastJsonUpdate);
+      if (isNaN(lastUpdateUTC.getTime())) {
+        console.log('Invalid lastModified date, using current time');
+        lastUpdateUTC = new Date();
+      }
+    }
+  } catch (error) {
+    console.error('Error parsing date:', error);
+    lastUpdateUTC = new Date();
+  }
+  
+  console.log('Last JSON Update (UTC):', lastUpdateUTC);
+  
+  return transactions
+    .filter(tx => tx.time > lastUpdateUTC)
+    .reduce((total, tx) => {
+      if (tx.type === 'add stake') return total + tx.amount;
+      if (tx.type === 'withdraw stake') return total - tx.amount;
+      return total;
+    }, baseAmount);
+};
+
 const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
+  const [adjustedStaked, setAdjustedStaked] = useState(userData.staked);
   const [projectionRange, setProjectionRange] = useState<'1y' | '2y' | '5y'>('1y');
-  const [simulatedStaked, setSimulatedStaked] = useState(userData.staked);
+  const [simulatedStaked, setSimulatedStaked] = useState(adjustedStaked);
   const [transactionPage, setTransactionPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 10;
 
@@ -309,22 +352,61 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     };
   };
 
-  // Add total calculation
-  const totalAmount = userData.staked + userData.unstaked;
+  // Calculate the adjusted staked amount whenever transactions or userData changes
+  useEffect(() => {
+    if (!userActions.length || !userData.staked) return;
+
+    console.log('Initial staked amount:', userData.staked);
+    console.log('Global data:', globalData);
+    
+    // Parse the GMT date string properly
+    const lastJsonUpdate = globalData.lastModified 
+      ? new Date(Date.parse(globalData.lastModified))
+      : new Date();
+
+    console.log('Last JSON update time:', lastJsonUpdate);
+
+    const updatedAmount = getUpdatedStakedAmount(
+      userData.staked,
+      userActions.map(tx => ({
+        time: new Date(tx.time), // Transaction times are already in UTC
+        amount: tx.amount,
+        type: tx.type
+      })),
+      lastJsonUpdate
+    );
+
+    console.log('Previous staked amount:', adjustedStaked);
+    console.log('New staked amount:', updatedAmount);
+    
+    if (updatedAmount !== adjustedStaked) {
+      console.log('Updating staked amount...');
+      setAdjustedStaked(updatedAmount);
+    }
+  }, [userActions, userData.staked, globalData.lastModified]);
+
+  // Add this useEffect to verify state updates
+  useEffect(() => {
+    console.log('adjustedStaked changed:', adjustedStaked);
+  }, [adjustedStaked]);
+
+    // Add total calculation
+    const totalAmount = adjustedStaked + userData.unstaked;
 
   const stakingStats = useMemo(() => {
+    console.log('Recalculating stakingStats with adjustedStaked:', adjustedStaked);
     if (!blockchainData?.rows?.[0]) return null;
 
     const totalStaked = parseFloat(blockchainData.rows[0].stakes.split(' ')[0]);
-    const percentageOfPool = (simulatedStaked / totalStaked) * 100;
+    const percentageOfPool = (adjustedStaked / totalStaked) * 100;
     const percentageOfSupply = (totalAmount / TOTAL_SUPPLY) * 100;
 
     return {
       percentageOfPool,
       percentageOfSupply,
-      rewards: calculateRewards(simulatedStaked)
+      rewards: calculateRewards(adjustedStaked)
     };
-  }, [blockchainData, simulatedStaked, totalAmount, strxPrice]);
+  }, [blockchainData, adjustedStaked, totalAmount, strxPrice]);
 
   const activityData = useMemo(() => {
     if (!userActions.length) return [];
@@ -355,11 +437,12 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   }, [userActions, transactionPage]);
 
   const currentTier = useMemo(() => {
+    console.log('Recalculating currentTier with adjustedStaked:', adjustedStaked);
     return STAKING_TIERS.find((tier, index) => {
       const nextTier = STAKING_TIERS[index - 1];
-      return userData.staked >= tier.minimum && (!nextTier || userData.staked < nextTier.minimum);
+      return adjustedStaked >= tier.minimum && (!nextTier || adjustedStaked < nextTier.minimum);
     });
-  }, [userData.staked]);
+  }, [adjustedStaked]);
 
   const nextTier = useMemo(() => {
     const currentTierIndex = STAKING_TIERS.findIndex(t => t.name === currentTier?.name);
@@ -369,15 +452,15 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   const tierProgress = useMemo(() => {
     if (!currentTier || !nextTier) return null;
     
-    const remaining = nextTier.minimum - userData.staked;
-    const percentageComplete = ((userData.staked - currentTier.minimum) / 
+    const remaining = nextTier.minimum - adjustedStaked;
+    const percentageComplete = ((adjustedStaked - currentTier.minimum) / 
       (nextTier.minimum - currentTier.minimum)) * 100;
 
     return {
       remaining,
       percentageComplete
     };
-  }, [currentTier, nextTier, userData.staked]);
+  }, [currentTier, nextTier, adjustedStaked]);
 
   // Add this debounced function
   const debouncedSetSimulated = useCallback(
@@ -638,6 +721,14 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
 
   const isMobile = window.innerWidth < 768; // Adjust the breakpoint as needed
 
+  // Update simulatedStaked when adjustedStaked changes
+  useEffect(() => {
+    setSimulatedStaked(adjustedStaked);
+  }, [adjustedStaked]);
+
+  // Add a check for whether we're showing simulation or recent changes
+  const isShowingRecentChanges = adjustedStaked !== userData.staked;
+
   if (!userData) {
     return (
       <div className="min-h-screen bg-background p-4 md:p-8">
@@ -700,7 +791,9 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
               <div className="mb-8">
                 <div className="flex flex-col gap-4 mb-4">
                   <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Rewards Projection</h2>
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                    Rewards Projection
+                  </h2>
                     <div className="flex gap-2">
                       {(['1y', '2y', '5y'] as const).map((range) => (
                         <button
@@ -726,7 +819,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                                  focus:outline-none focus:ring-2 focus:ring-purple-500 
                                  bg-white dark:bg-gray-800 
                                  text-gray-900 dark:text-gray-100"
-                        defaultValue={userData.staked}
+                        value={simulatedStaked}
                         onChange={(e) => {
                           const value = parseFloat(e.target.value) || 0;
                           debouncedSetSimulated(value);
@@ -825,7 +918,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 {tierAnalysis?.comparison && simulatedStaked !== userData.staked && (
                   <div className="mt-4 p-4 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
                     <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
-                      Simulation Analysis
+                      {isShowingRecentChanges ? 'Recent Changes Impact Analysis' : 'Simulation Analysis'}
                     </h4>
                     <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
                       <p>
@@ -926,7 +1019,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                     {tierAnalysis && (
                       <div className="mt-4 p-3 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
                         <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
-                          Time to Next Tier Analysis
+                          {isShowingRecentChanges ? 'Recent Changes Impact Analysis' : 'Time to Next Tier Analysis'}
                         </h4>
                         
                         {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (() => {
@@ -1017,10 +1110,10 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 <div className="bg-card rounded-lg shadow p-4">
                   <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Staked</div>
                   <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-                    {userData.staked.toLocaleString()} STRX
+                    {adjustedStaked.toLocaleString()} STRX
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    ${(userData.staked * strxPrice).toLocaleString(undefined, {
+                    ${(adjustedStaked * strxPrice).toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2
                     })}

@@ -1486,7 +1486,8 @@ function App() {
         userData={userData}
         globalData={{
           blockchainData,
-          priceData
+          priceData,
+          lastModified: response.lastModified  // Add this line
         }}
       />
     );
