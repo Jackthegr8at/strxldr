@@ -1,12 +1,21 @@
 module.exports = {
   globDirectory: 'build/',
   globPatterns: [
-    '**/*.{html,js,css}', // Core web assets
-    'static/**/*.{png,jpg,jpeg,gif,webp,svg}', // Static images
-    'assets/**/*.{png,jpg,jpeg,gif,webp,svg}', // Asset images
-    'icons/*.{png,webp}', // Icons
-    'manifest.json',
-    'favicon*.{ico,webp,png}' // Favicons
+    ...(process.env.NODE_ENV === 'production' ? [
+      '**/*.{html,js,css}', // Core web assets
+      'static/**/*.{png,jpg,jpeg,gif,webp,svg}', // Static images
+      'assets/**/*.{png,jpg,jpeg,gif,webp,svg}', // Asset images
+      'icons/*.{png,webp}', // Icons
+      'manifest.json',
+      'favicon*.{ico,webp,png}' // Favicons
+    ] : [
+      // In development, only cache static assets
+      'static/**/*.{png,jpg,jpeg,gif,webp,svg}',
+      'assets/**/*.{png,jpg,jpeg,gif,webp,svg}',
+      'icons/*.{png,webp}',
+      'manifest.json',
+      'favicon*.{ico,webp,png}'
+    ]),
   ],
   globIgnores: [
     '**/service-worker.js',
@@ -20,19 +29,19 @@ module.exports = {
   skipWaiting: true,
   inlineWorkboxRuntime: true,
   runtimeCaching: [
-    // Navigation routes
+    // Navigation routes with different strategies for dev/prod
     {
       urlPattern: ({ request }) => request.mode === 'navigate',
-      handler: 'NetworkFirst',
+      handler: process.env.NODE_ENV === 'production' ? 'NetworkFirst' : 'NetworkOnly',
       options: {
         cacheName: 'pages',
         expiration: {
           maxEntries: 50,
-          maxAgeSeconds: 24 * 60 * 60 // 24 hours
+          maxAgeSeconds: process.env.NODE_ENV === 'production' ? 24 * 60 * 60 : 5 * 60 // 24 hours in prod, 5 minutes in dev
         }
       }
     },
-    // API endpoints
+    // API endpoints with shorter cache times in dev
     {
       urlPattern: ({ url }) => {
         const apiEndpoints = [
@@ -51,16 +60,10 @@ module.exports = {
         cacheName: 'api-cache',
         expiration: {
           maxEntries: 100,
-          maxAgeSeconds: 5 * 60 // 5 minutes
+          maxAgeSeconds: process.env.NODE_ENV === 'production' ? 5 * 60 : 60 // 5 minutes in prod, 1 minute in dev
         },
         cacheableResponse: {
           statuses: [0, 200]
-        },
-        backgroundSync: {
-          name: 'apiQueue',
-          options: {
-            maxRetentionTime: 24 * 60 // 24 hours
-          }
         }
       }
     },

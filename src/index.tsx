@@ -1881,6 +1881,89 @@ function App() {
             </div>
           )}
 
+          {/* Add the stakers list section */}
+          <div className="mt-8">
+            <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search by username..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+                           focus:outline-none focus:ring-2 focus:ring-purple-500 
+                           bg-white dark:bg-gray-800 
+                           text-gray-900 dark:text-gray-100 
+                           placeholder-gray-500 dark:placeholder-gray-400"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
+                <ColumnSelector 
+                  visibleColumns={visibleColumns} 
+                  setVisibleColumns={setVisibleColumns}
+                  setSortField={setSortField}
+                />
+                <div className="hidden md:flex items-center gap-2">
+                  <span className="text-gray-600">Sort by:</span>
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300">
+                        Sort by
+                        <ChevronDownIcon className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent 
+                      className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 min-w-[150px] mt-2 z-50 border border-purple-100 dark:border-purple-800"
+                      sideOffset={5}
+                    >
+                      <DropdownMenuItem className="outline-none">
+                        <button 
+                          onClick={() => setSortField('staked')}
+                          className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
+                        >
+                          Staked Amount
+                        </button>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="outline-none">
+                        <button 
+                          onClick={() => setSortField('unstaked')}
+                          className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
+                        >
+                          Unstaked Amount
+                        </button>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="outline-none">
+                        <button 
+                          onClick={() => setSortField('total')}
+                          className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
+                        >
+                          Total Amount
+                        </button>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="outline-none">
+                        <button 
+                          onClick={() => setSortField('rewards')}
+                          className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
+                        >
+                          Estimated Rewards
+                        </button>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </div>
+
           {selectedTier?.name !== 'No Stake' && (
             <div className="bg-card rounded-lg shadow overflow-hidden">
               <table className="table-custom">
@@ -2058,7 +2141,9 @@ function App() {
             </div>
           )}
 
-          {selectedTier?.name !== 'No Stake' && (
+          
+
+            {/* Add pagination controls */}
             <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="text-sm text-gray-600 text-center md:text-left dark:text-gray-300">
                 Page Total: {currentPageTotal.toLocaleString(undefined, {
@@ -2101,9 +2186,7 @@ function App() {
                 </button>
               </div>
             </div>
-          )}
-
-          
+          </div>
         </div>
       </div>
     </ThemeProvider>
@@ -2130,7 +2213,7 @@ root.render(
   </React.StrictMode>
 );
 // smapshot version
-// 1.1.0
+// 1.2.0
 
 // Add this after ReactDOM.render()
 serviceWorkerRegistration.register();

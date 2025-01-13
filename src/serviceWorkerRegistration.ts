@@ -42,4 +42,34 @@ export function unregister() {
       });
   }
 }
+
+// Add this function to help clear cache during development
+export async function clearCache() {
+  if ('caches' in window) {
+    const cacheNames = await caches.keys();
+    await Promise.all(
+      cacheNames.map(cacheName => caches.delete(cacheName))
+    );
+    console.log('All caches cleared');
+    
+    // Also unregister the service worker
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(
+        registrations.map(registration => registration.unregister())
+      );
+      console.log('Service workers unregistered');
+    }
+    
+    // Reload the page to ensure fresh content
+    window.location.reload();
+  }
+}
+
+// Add a development helper to clear cache when needed
+if (process.env.NODE_ENV === 'development') {
+  // @ts-ignore
+  window.clearCache = clearCache;
+  console.log('Development helper: Call window.clearCache() to clear all caches');
+}
  
