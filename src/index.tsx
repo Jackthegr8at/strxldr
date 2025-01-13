@@ -6,13 +6,11 @@ import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import UserPage from './UserPage';
-import { ThemeProvider } from './components/ThemeProvider';
+import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import { Header } from './components/Header';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
-// Near the top of the file, import BridgePage
 import { BridgePage } from './BridgePage';
 import UserPageNoStake from './UserPageNoStake';
-// Add this near your other imports
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -953,6 +951,31 @@ type DexScreenerData = {
   };
 };
 
+const ThemedTooltip = ({ active, payload, label }: any) => {
+  const { theme } = useTheme();
+  
+  if (!active || !payload) return null;
+  
+  return (
+    <div
+      style={{
+        backgroundColor: theme === 'dark' ? 'black' : 'white',
+        border: '1px solid #6B21A8',
+        borderRadius: '8px',
+        color: theme === 'dark' ? 'white' : 'black',
+        padding: '8px'
+      }}
+    >
+      <p className="font-medium">{label}</p>
+      <p>Staked : {payload[0]?.value.toLocaleString(undefined, {
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 4,
+        useGrouping: true,
+      })}</p>
+    </div>
+  );
+};
+
 function App() {
   // Update the SWR fetcher to include last-modified time
   const fetcher = async (url: string): Promise<FetchResponse> => {
@@ -1492,6 +1515,26 @@ function App() {
       />
     );
   }
+  const { theme } = useTheme();
+
+  // Add theme as a dependency to the chart's useMemo
+  const chart = useMemo(() => (
+    <BarChart data={topHolders} margin={{ left: 50, right: 20, top: 20, bottom: 20 }}>
+      <XAxis 
+        dataKey="username" 
+        tick={{ fill: 'var(--axis-color)' }}
+      />
+      <YAxis 
+        tickFormatter={formatLargeNumber}
+        tick={{ fill: 'var(--axis-color)' }}
+      />
+      <Tooltip content={<ThemedTooltip />} />
+      <Bar 
+        dataKey={sortField === 'rewards' ? 'staked' : sortField} 
+        fill="#7C63CC" 
+      />
+    </BarChart>
+  ), [topHolders, theme, sortField]); // Add theme to dependencies
 
   return (
     <ThemeProvider>
@@ -1851,32 +1894,7 @@ function App() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 15 Holders Distribution</h2>
               <div className="h-64 w-full">
                 <ResponsiveContainer>
-                  <BarChart data={topHolders} margin={{ left: 50, right: 20, top: 20, bottom: 20 }}>
-                    <XAxis 
-                      dataKey="username" 
-                      tick={{ fill: 'var(--axis-color)' }}
-                    />
-                    <YAxis 
-                      tickFormatter={formatLargeNumber}
-                      tick={{ fill: 'var(--axis-color)' }}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => [
-                        value.toLocaleString(undefined, {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4,
-                          useGrouping: true,
-                        }),
-                        sortField === 'rewards' 
-                          ? "Staked Amount" 
-                          : sortField.charAt(0).toUpperCase() + sortField.slice(1)
-                      ]}
-                    />
-                    <Bar 
-                      dataKey={sortField === 'rewards' ? 'staked' : sortField} 
-                      fill="#7C63CC" 
-                    />
-                  </BarChart>
+                  {chart}
                 </ResponsiveContainer>
               </div>
             </div>
