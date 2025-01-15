@@ -69,7 +69,23 @@ export function Header() {
                     href="https://mint.strxldr.app/"
                     className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
                   >
-                    STRX LEADERS MINT
+                    NFT Minting System
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="outline-none">
+                  <a 
+                    href="https://mint.strxldr.app/escrow"
+                    className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
+                  >
+                    NFT Escrow System
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="outline-none">
+                  <a 
+                    href="https://storex.io"
+                    className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
+                  >
+                    STRX Website
                   </a>
                 </DropdownMenuItem>
               </DropdownMenuContent>
