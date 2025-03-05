@@ -291,11 +291,16 @@ export function BridgePage() {
     }));
   };
 
-  // Ensure priceChange.h24 exists before using it
+  // Ensure priceChange24h is defined before using toFixed
   const priceChange24h = dexScreenerData?.pair?.priceChange?.h24;
-
   const priceChangeDisplay = priceChange24h !== undefined
     ? `${priceChange24h.toFixed(2)}%`
+    : 'N/A'; // or any default value you prefer
+
+  // Ensure priceUsd is defined before using toFixed
+  const priceUsd = dexScreenerData?.pair?.priceUsd;
+  const priceUsdDisplay = priceUsd !== undefined
+    ? `$${parseFloat(priceUsd).toFixed(6)}`
     : 'N/A'; // or any default value you prefer
 
   return (
@@ -384,7 +389,7 @@ export function BridgePage() {
                 dexScreenerData ? (
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                      <span>${parseFloat(dexScreenerData.pair.priceUsd).toFixed(6)}</span>
+                      <span>{priceUsdDisplay}</span>
                       <span className={`text-sm ${
                         priceChange24h !== undefined && priceChange24h >= 0 
                           ? 'text-green-500' 
