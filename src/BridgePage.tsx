@@ -291,6 +291,13 @@ export function BridgePage() {
     }));
   };
 
+  // Ensure priceChange.h24 exists before using it
+  const priceChange24h = dexScreenerData?.pair?.priceChange?.h24;
+
+  const priceChangeDisplay = priceChange24h !== undefined
+    ? `${priceChange24h.toFixed(2)}%`
+    : 'N/A'; // or any default value you prefer
+
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-background text-foreground">
@@ -379,12 +386,11 @@ export function BridgePage() {
                     <div className="flex items-center gap-2">
                       <span>${parseFloat(dexScreenerData.pair.priceUsd).toFixed(6)}</span>
                       <span className={`text-sm ${
-                        dexScreenerData.pair.priceChange.h24 >= 0 
+                        priceChange24h !== undefined && priceChange24h >= 0 
                           ? 'text-green-500' 
                           : 'text-red-500'
                       }`}>
-                        {dexScreenerData.pair.priceChange.h24 > 0 ? '+' : ''}
-                        {dexScreenerData.pair.priceChange.h24.toFixed(2)}%
+                        {priceChangeDisplay}
                       </span>
                     </div>
                     <span className="text-xs text-gray-500 dark:text-gray-300">
