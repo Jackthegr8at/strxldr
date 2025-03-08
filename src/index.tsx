@@ -885,6 +885,8 @@ export const calculateDaysUntilEmpty = (rewardsPool: number, totalStaked: number
 
 // Add near other type definitions
 type RaydiumPoolData = {
+  id: string;
+  success: boolean;
   data: [{
     price: number;
     mintAmountA: number;
@@ -900,10 +902,18 @@ type RaydiumPoolData = {
     };
     week: {
       volume: number;
+      apr: number;
+      feeApr: number;
+      priceMin: number;
+      priceMax: number;
       rewardApr: number[];
     };
     month: {
       volume: number;
+      apr: number;
+      feeApr: number;
+      priceMin: number;
+      priceMax: number;
       rewardApr: number[];
     };
   }];
@@ -1548,6 +1558,27 @@ function App() {
     ? `${priceChange24h > 0 ? '+' : ''}${priceChange24h.toFixed(2)}%`
     : 'N/A'; // or any default value you prefer
 
+  // Get price from the Raydium pool data
+  const raydiumPrice = raydiumPoolData?.data?.[0]?.price;
+  const raydiumPriceDisplay = raydiumPrice !== undefined
+    ? `$${raydiumPrice.toFixed(6)}`
+    : 'N/A';
+
+  // For price changes, use week data instead of day data since day data has -1 values
+  const weekPriceMin = raydiumPoolData?.data?.[0]?.week?.priceMin;
+  const weekPriceMax = raydiumPoolData?.data?.[0]?.week?.priceMax;
+  let raydiumPriceChangePercent: number | undefined;
+
+  if (raydiumPrice !== undefined && weekPriceMin !== undefined && weekPriceMin > 0 && weekPriceMax !== undefined && weekPriceMax > 0) {
+    // Calculate a rough change percentage based on week range
+    const priceMid = (weekPriceMin + weekPriceMax) / 2;
+    raydiumPriceChangePercent = ((raydiumPrice - priceMid) / priceMid) * 100;
+  }
+
+  const raydiumPriceChangeDisplay = raydiumPriceChangePercent !== undefined
+    ? `${raydiumPriceChangePercent > 0 ? '+' : ''}${raydiumPriceChangePercent.toFixed(2)}%`
+    : 'N/A';
+
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-background text-foreground">
@@ -1708,11 +1739,11 @@ function App() {
             <StatisticCard
               title="Bridge Balance"
               value={
-                bridgeData?.[0] && dexScreenerData?.pair.priceUsd ? (
+                bridgeData?.[0] && raydiumPrice ? (
                   <div className="flex flex-col">
                     <span>{parseFloat(bridgeData[0]).toLocaleString()} STRX</span>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      ≈ ${(parseFloat(bridgeData[0]) * parseFloat(dexScreenerData.pair.priceUsd)).toLocaleString(undefined, {
+                      ≈ ${(parseFloat(bridgeData[0]) * raydiumPrice).toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                       })}
@@ -1744,7 +1775,7 @@ function App() {
             <StatisticCard
               title="STRX/SOL Pool"
               value={
-                dexScreenerData && raydiumPoolData && xsolPriceData ? (
+                raydiumPoolData?.success && raydiumPoolData?.data && raydiumPoolData.data.length > 0 ? (
                   <div className="flex flex-col">
                     <span>{raydiumPoolData.data[0].price.toFixed(8)} SOL</span>
                     <span className="text-xs text-gray-500 dark:text-gray-300">
@@ -1761,15 +1792,15 @@ function App() {
                           alt="STRX" 
                           className="w-4 h-4"
                         />
-                        {dexScreenerData.pair.liquidity.base.toLocaleString()} {dexScreenerData.pair.baseToken.symbol}
+                        {raydiumPoolData.data[0].mintAmountA.toLocaleString()} STRX
                       </div>
                       <div className="flex items-center gap-1 ml-2">
                         <img 
                           src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" 
                           alt="SOL" 
-                          className="w-4 h-4 rounded-full" // Add rounded-full class for a circular shape
+                          className="w-4 h-4 rounded-full"
                         />
-                        {dexScreenerData.pair.liquidity.quote.toLocaleString()} {dexScreenerData.pair.quoteToken.symbol}
+                        {raydiumPoolData.data[0].mintAmountB.toLocaleString()} SOL
                       </div>
                     </div>
                   </div>
@@ -1803,31 +1834,35 @@ function App() {
             <StatisticCard
               title="Market Stats"
               value={
-                dexScreenerData ? (
+                raydiumPoolData?.success && raydiumPoolData?.data && raydiumPoolData.data.length > 0 ? (
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                      <span>{priceUsdDisplay}</span>
+                      <span>{raydiumPriceDisplay}</span>
                       <span className={`text-sm ${
-                        priceChange24h !== undefined && priceChange24h >= 0 
+                        raydiumPriceChangePercent !== undefined && raydiumPriceChangePercent >= 0 
                           ? 'text-green-500' 
                           : 'text-red-500'
                       }`}>
-                        {priceChangeDisplay}
+                        {raydiumPriceChangeDisplay}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-300">
-                      MCap: ${(dexScreenerData.pair.marketCap / 1000000).toFixed(2)}M
-                    </span>
-                    <div className="text-xs text-gray-500 dark:text-gray-300">
-                      24h Trades: {dexScreenerData.pair.txns.h24.buys + dexScreenerData.pair.txns.h24.sells}
-                      <span className="ml-2">
-                        ({dexScreenerData.pair.txns.h24.buys} 📈 / {dexScreenerData.pair.txns.h24.sells} 📉)
+                    {raydiumPoolData.data[0].tvl !== undefined && (
+                      <span className="text-xs text-gray-500 dark:text-gray-300">
+                        TVL: ${raydiumPoolData.data[0].tvl.toLocaleString()}
                       </span>
-                    </div>
+                    )}
+                    {raydiumPoolData.data[0].day?.apr !== undefined && (
+                      <div className="text-xs text-gray-500 dark:text-gray-300">
+                        APR: {raydiumPoolData.data[0].day.apr.toFixed(2)}%
+                        <span className="ml-2">
+                          (Fee: {raydiumPoolData.data[0].day.feeApr.toFixed(2)}%)
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ) : 'Loading...'
               }
-              tooltip="Market statistics from DexScreener"
+              tooltip="Market statistics from Raydium"
             />
           </div>
 

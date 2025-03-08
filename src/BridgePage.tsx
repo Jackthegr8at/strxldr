@@ -6,6 +6,8 @@ import { ThemeProvider } from './components/ThemeProvider';
 
 // Import types from index.tsx or create new ones as needed
 type RaydiumPoolData = {
+  id: string;
+  success: boolean;
   data: [{
     price: number;
     mintAmountA: number;
@@ -21,42 +23,21 @@ type RaydiumPoolData = {
     };
     week: {
       volume: number;
+      apr: number;
+      feeApr: number;
+      priceMin: number;
+      priceMax: number;
       rewardApr: number[];
     };
     month: {
       volume: number;
+      apr: number;
+      feeApr: number;
+      priceMin: number;
+      priceMax: number;
       rewardApr: number[];
     };
   }];
-};
-
-type DexScreenerData = {
-  pair: {
-    baseToken: {
-      symbol: string;
-      name: string;
-    };
-    quoteToken: {
-      symbol: string;
-      name: string;
-    };
-    priceUsd: string;
-    priceChange: {
-      h24: number;
-    };
-    txns: {
-      h24: {
-        buys: number;
-        sells: number;
-      };
-    };
-    liquidity: {
-      usd: number;
-      base: number;
-      quote: number;
-    };
-    marketCap: number;
-  };
 };
 
 // Add this type for bridge transactions
@@ -143,7 +124,10 @@ const getTransactionType = (memo: string) => {
   return 'other';
 };
 
+
+
 export function BridgePage() {
+  
   // SWR hooks for data fetching
   const { data: bridgeData } = useSWR<any>(
     'bridge_balance',
@@ -165,12 +149,26 @@ export function BridgePage() {
     { refreshInterval: 360000 } // 6 minutes
   );
 
-  const { data: dexScreenerData } = useSWR<DexScreenerData>(
-    'dexscreener_data',
-    () => fetch('https://api.dexscreener.com/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
-      .then(res => res.json()),
-    { refreshInterval: 360000 } // 6 minutes
-  );
+  // Get price from the pool data
+  const price = raydiumPoolData?.data?.[0]?.price;
+  const priceDisplay = price !== undefined
+    ? `$${price.toFixed(6)}`
+    : 'N/A';
+
+  // For price changes, use week data instead of day data since day data has -1 values
+  const weekPriceMin = raydiumPoolData?.data?.[0]?.week?.priceMin;
+  const weekPriceMax = raydiumPoolData?.data?.[0]?.week?.priceMax;
+  let priceChangePercent: number | undefined;
+
+  if (price !== undefined && weekPriceMin !== undefined && weekPriceMin > 0 && weekPriceMax !== undefined && weekPriceMax > 0) {
+    // Calculate a rough change percentage based on week range
+    const priceMid = (weekPriceMin + weekPriceMax) / 2;
+    priceChangePercent = ((price - priceMid) / priceMid) * 100;
+  }
+
+  const priceChangeDisplay = priceChangePercent !== undefined
+    ? `${priceChangePercent > 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%`
+    : 'N/A';
 
   // Add state for amount displays if needed
   const [amountDisplays, setAmountDisplays] = useState<{ [key: string]: 'strx' | 'usd' }>({});
@@ -291,18 +289,6 @@ export function BridgePage() {
     }));
   };
 
-  // Ensure priceChange24h is defined before using toFixed
-  const priceChange24h = dexScreenerData?.pair?.priceChange?.h24;
-  const priceChangeDisplay = priceChange24h !== undefined
-    ? `${priceChange24h.toFixed(2)}%`
-    : 'N/A'; // or any default value you prefer
-
-  // Ensure priceUsd is defined before using toFixed
-  const priceUsd = dexScreenerData?.pair?.priceUsd;
-  const priceUsdDisplay = priceUsd !== undefined
-    ? `$${parseFloat(priceUsd).toFixed(6)}`
-    : 'N/A'; // or any default value you prefer
-
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-background text-foreground">
@@ -328,14 +314,11 @@ export function BridgePage() {
             <StatisticCard
               title="Bridge Balance"
               value={
-                bridgeData?.[0] && dexScreenerData?.pair.priceUsd ? (
+                bridgeData?.[0] && price ? (
                   <div className="flex flex-col">
                     <span>{parseFloat(bridgeData[0]).toLocaleString()} STRX</span>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      ≈ ${(parseFloat(bridgeData[0]) * parseFloat(dexScreenerData.pair.priceUsd)).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                      })}
+                      ≈ {priceDisplay}
                     </span>
                   </div>
                 ) : '...'
@@ -346,7 +329,7 @@ export function BridgePage() {
             <StatisticCard
               title="STRX/SOL Pool"
               value={
-                dexScreenerData && raydiumPoolData ? (
+                raydiumPoolData && raydiumPoolData.data.length > 0 ? (
                   <div className="flex flex-col">
                     <span>{raydiumPoolData.data[0].price.toFixed(8)} SOL</span>
                     <span className="text-xs text-gray-500 dark:text-gray-300">
@@ -383,35 +366,39 @@ export function BridgePage() {
               tooltip="Trading volume and APR stats from Raydium"
             />
 
-            <StatisticCard
-              title="Market Stats"
-              value={
-                dexScreenerData ? (
+            {raydiumPoolData?.success && raydiumPoolData?.data && raydiumPoolData.data.length > 0 ? (
+              <StatisticCard
+                title="Market Stats"
+                value={
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                      <span>{priceUsdDisplay}</span>
+                      <span>{priceDisplay}</span>
                       <span className={`text-sm ${
-                        priceChange24h !== undefined && priceChange24h >= 0 
+                        priceChangePercent !== undefined && priceChangePercent >= 0 
                           ? 'text-green-500' 
                           : 'text-red-500'
                       }`}>
                         {priceChangeDisplay}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-300">
-                      MCap: ${(dexScreenerData.pair.marketCap / 1000000).toFixed(2)}M
-                    </span>
-                    <div className="text-xs text-gray-500 dark:text-gray-300">
-                      24h Trades: {dexScreenerData.pair.txns.h24.buys + dexScreenerData.pair.txns.h24.sells}
-                      <span className="ml-2">
-                        ({dexScreenerData.pair.txns.h24.buys} 📈 / {dexScreenerData.pair.txns.h24.sells} 📉)
+                    {raydiumPoolData.data[0].tvl !== undefined && (
+                      <span className="text-xs text-gray-500 dark:text-gray-300">
+                        TVL: ${raydiumPoolData.data[0].tvl.toLocaleString()}
                       </span>
-                    </div>
+                    )}
+                    {raydiumPoolData.data[0].day?.apr !== undefined && (
+                      <div className="text-xs text-gray-500 dark:text-gray-300">
+                        APR: {raydiumPoolData.data[0].day.apr.toFixed(2)}%
+                        <span className="ml-2">
+                          (Fee: {raydiumPoolData.data[0].day.feeApr.toFixed(2)}%)
+                        </span>
+                      </div>
+                    )}
                   </div>
-                ) : 'Loading...'
-              }
-              tooltip="Market statistics from DexScreener"
-            />
+                }
+                tooltip="Market statistics from Raydium"
+              />
+            ) : null}
           </div>
 
           {/* Bridge Activity Table */}
@@ -556,7 +543,7 @@ export function BridgePage() {
                           <div className="flex flex-col">
                             <span>
                               {(showAllUsd || showUsd[action.trxId])
-                                ? `$${(action.amount * (dexScreenerData?.pair.priceUsd ? parseFloat(dexScreenerData.pair.priceUsd) : 0)).toLocaleString(undefined, {
+                                ? `$${(action.amount * (price ? price : 0)).toLocaleString(undefined, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2
                                   })}`
