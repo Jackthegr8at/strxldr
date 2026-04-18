@@ -1,17 +1,27 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useDeferredValue, useRef, Suspense, lazy } from 'react';
 import useSWR from 'swr';
 import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon, CubeTransparentIcon, ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import * as React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import UserPage from './UserPage';
 import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import { Header } from './components/Header';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
-import { BridgePage } from './BridgePage';
-import UserPageNoStake from './UserPageNoStake';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+
+// Lazy-load pages that aren't needed on first paint
+const UserPage = lazy(() => import('./UserPage'));
+const UserPageNoStake = lazy(() => import('./UserPageNoStake'));
+const BridgePage = lazy(() => import('./BridgePage').then(m => ({ default: m.BridgePage })));
+
+const PageFallback = () => (
+  <div className="min-h-screen bg-white dark:bg-gray-900 p-4 md:p-8">
+    <div className="max-w-4xl mx-auto flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-700 border-t-transparent"></div>
+    </div>
+  </div>
+);
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -167,24 +177,54 @@ type InfoModalProps = {
 
 // Add this component
 const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  // Esc to close, prevent body scroll, and focus the close button when opened
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+    // Defer focus so the button exists in DOM
+    window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="info-modal-title"
+      onClick={(e) => {
+        // Close when clicking backdrop (but not the modal body)
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="bg-card rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
         {/* Close button */}
         <button
+          ref={closeButtonRef}
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 z-10"
+          aria-label="Close dialog"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 z-10 p-1 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
         >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
         {/* Content container with padding */}
         <div className="p-4 md:p-6">
-          <h2 className="text-xl md:text-2xl font-bold text-purple-700 dark:text-purple-400 mb-4">
+          <h2 id="info-modal-title" className="text-xl md:text-2xl font-bold text-purple-700 dark:text-purple-400 mb-4">
             About STRX Staking Leaderboard
           </h2>
           
@@ -484,38 +524,62 @@ const StatisticCard: React.FC<{
   tooltip: string;
   onClick?: () => void;
   children?: React.ReactNode;
-}> = ({ title, value, tooltip, onClick, children }) => (
-  <div 
-    className={`bg-card p-4 rounded-lg shadow border relative ${
-      onClick ? 'cursor-pointer' : ''
-    }`}
-    onClick={onClick}
-  >
-    <div className="flex justify-between items-start mb-1">
-      <div className="text-sm text-muted-foreground dark:text-gray-300">{title}</div>
-      <div 
-        className="group relative"
-        title={tooltip}
-      >
-        <QuestionMarkCircleIcon 
-          className="h-5 w-5 text-gray-400 hover:text-purple-600 transition-colors cursor-help"
-        />
-        <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 
-          text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity
-          text-gray-100 dark:text-gray-100
-          bg-gray-800/90 dark:bg-black/70
-          border border-purple-200/20 dark:border-purple-900
-          backdrop-blur-sm">
-          {tooltip}
-        </div>
+}> = ({ title, value, tooltip, onClick, children }) => {
+  const handleKeyDown = onClick
+    ? (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }
+    : undefined;
+
+  return (
+    <div
+      className={`bg-card p-4 rounded-lg shadow border relative ${
+        onClick ? 'cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors' : ''
+      }`}
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
+      <div className="flex justify-between items-start mb-1">
+        <div className="text-sm text-muted-foreground dark:text-gray-300">{title}</div>
+        <button
+          type="button"
+          aria-label={tooltip}
+          className="tooltip-trigger relative inline-flex focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 rounded-full"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <QuestionMarkCircleIcon
+            className="h-5 w-5 text-gray-400 hover:text-purple-600 transition-colors cursor-help"
+            aria-hidden="true"
+          />
+          <span
+            role="tooltip"
+            className="tooltip-content invisible absolute right-0 z-10 w-64 p-2 mt-2
+              text-sm rounded-lg opacity-0 transition-opacity
+              text-gray-100 dark:text-gray-100
+              bg-gray-800/90 dark:bg-black/70
+              border border-purple-200/20 dark:border-purple-900
+              backdrop-blur-sm top-full text-left font-normal"
+          >
+            {tooltip}
+          </span>
+        </button>
       </div>
+      <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
+        {value === undefined || value === null || value === '' ? (
+          <div className="skeleton h-6 w-24" aria-label="Loading" />
+        ) : (
+          value
+        )}
+      </div>
+      {children}
     </div>
-    <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-      {value}
-    </div>
-    {children}
-  </div>
-);
+  );
+};
 
 // Add this type for new stakers
 type NewStaker = {
@@ -1110,20 +1174,51 @@ function App() {
     { refreshInterval: 300000 }  // 5 minutes
   );
 
+  const appRootRef = useRef<HTMLDivElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTier, setSelectedTier] = useState<StakingTier | null>(null);
-  const [pageTitle, setPageTitle] = useState("");
+  // Initial values read from the URL so links are shareable
+  const [searchTerm, setSearchTerm] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return new URLSearchParams(window.location.search).get('q') || '';
+  });
+  // Defer the filter term so the input stays responsive while typing on large lists
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const [selectedTier, setSelectedTier] = useState<StakingTier | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const v = new URLSearchParams(window.location.search).get('tier');
+    return v ? STAKING_TIERS.find(t => t.name === v) ?? null : null;
+  });
+  const [pageTitle, setPageTitle] = useState("STRX Staking Leaderboard");
   const [isEasterEggActive, setIsEasterEggActive] = useState(false);
 
-  // Reset page when search term changes
+  // Reset page when the (deferred) search term changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [deferredSearchTerm]);
 
   // Add sort type
-  const [sortField, setSortField] = useState<SortField>('staked');
+  const [sortField, setSortField] = useState<SortField>(() => {
+    if (typeof window === 'undefined') return 'staked';
+    const v = new URLSearchParams(window.location.search).get('sort');
+    const allowed: SortField[] = ['staked', 'unstaked', 'total', 'rewards'];
+    return (allowed as string[]).includes(v ?? '') ? (v as SortField) : 'staked';
+  });
+
+  // Mirror filter state to the URL (so it's shareable) without adding history entries
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    // Preserve the user param (handled by its own flow)
+    if (deferredSearchTerm) params.set('q', deferredSearchTerm); else params.delete('q');
+    if (selectedTier) params.set('tier', selectedTier.name); else params.delete('tier');
+    if (sortField !== 'staked') params.set('sort', sortField); else params.delete('sort');
+    const query = params.toString();
+    const newUrl = `${window.location.pathname}${query ? `?${query}` : ''}`;
+    if (newUrl !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState(window.history.state, '', newUrl);
+    }
+  }, [deferredSearchTerm, selectedTier, sortField]);
 
   // Update the initial visibleColumns state
   const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>({
@@ -1210,8 +1305,9 @@ function App() {
 
   // Update processedData to use getAllStakersData as its base
   const processedData = useMemo(() => {
+    const needle = deferredSearchTerm.toLowerCase();
     return getAllStakersData
-      .filter(item => item.username.toLowerCase().includes(searchTerm.toLowerCase()))
+      .filter(item => needle === '' || item.username.toLowerCase().includes(needle))
       .filter((item) => {
         // If no tier is selected, show all
         if (!selectedTier) return true;
@@ -1239,7 +1335,7 @@ function App() {
         const field = sortField === 'rewards' ? 'staked' : sortField;
         return (a[field] - b[field]) * compareValue;
       });
-  }, [getAllStakersData, searchTerm, selectedTier, sortOrder, sortField]);
+  }, [getAllStakersData, deferredSearchTerm, selectedTier, sortOrder, sortField]);
 
   const totalPages = Math.ceil(processedData.length / ITEMS_PER_PAGE);
   const currentData = processedData.slice(
@@ -1314,39 +1410,44 @@ function App() {
   }, [priceData]);
 
   const handleEasterEgg = (tier: StakingTier | null, username?: string) => {
-    // Remove any existing animations
-    document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
-    
+    // Animate a scoped container, not the <body>, so the page doesn't jump
+    const target = appRootRef.current;
+    const clearAnims = () => {
+      target?.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
+    };
+    clearAnims();
+
     // Simplified check for testing
     if (username === 'jordanhinks' || username === 'jackthegreat') {
       setPageTitle("Future Billionaires List 🚀");
-      document.body.classList.add('bounce-animation');
+      target?.classList.add('bounce-animation');
+      window.setTimeout(clearAnims, 1000);
       return;
     }
-    
-    // If no match, continue with tier checks
+
+    // If toggling the same tier off, reset to the default title
     if (selectedTier?.name === tier?.name) {
       setIsEasterEggActive(false);
-      setPageTitle("");
+      setPageTitle("STRX Staking Leaderboard");
       return;
     }
-    
+
     setIsEasterEggActive(true);
-    
+
     if (tier?.name === 'Free') {
       setPageTitle("NGMI Leaderboard 😢");
-      document.body.classList.add('shake-animation');
+      target?.classList.add('shake-animation');
     } else if (tier?.name === 'Whale') {
       setPageTitle("🐋 Whale Alert! 🚨");
-      document.body.classList.add('splash-animation');
+      target?.classList.add('splash-animation');
     } else if (tier?.name === 'Shrimp') {
       setPageTitle("Shrimps Together Strong 🦐");
-      document.body.classList.add('bounce-animation');
+      target?.classList.add('bounce-animation');
+    } else {
+      setPageTitle("STRX Staking Leaderboard");
     }
-    
-    setTimeout(() => {
-      document.body.classList.remove('shake-animation', 'splash-animation', 'bounce-animation');
-    }, 1000);
+
+    window.setTimeout(clearAnims, 1000);
   };
 
   // Update visibleColumns state based on screen size
@@ -1476,53 +1577,53 @@ function App() {
   
   // If we're on bridge page, render BridgePage
   if (isBridgePage) {
-    return <BridgePage />;
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <BridgePage />
+      </Suspense>
+    );
   }
 
   // Then the existing user page check
   if (selectedUser) {
     if (isLoading || !response) {
-      return (
-        <div className="min-h-screen bg-white p-4 md:p-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-700 border-t-transparent"></div>
-            </div>
-          </div>
-        </div>
-      );
+      return <PageFallback />;
     }
 
     const userData = response?.data?.[selectedUser];
-    
+
     // If no staking data, show the no-stake version
     if (!userData) {
       return (
-        <UserPageNoStake 
-          username={selectedUser}
-          onBack={() => {
-            setSelectedUser(null);
-            window.history.pushState({}, '', window.location.pathname);
-          }}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <UserPageNoStake
+            username={selectedUser}
+            onBack={() => {
+              setSelectedUser(null);
+              window.history.pushState({}, '', window.location.pathname);
+            }}
+          />
+        </Suspense>
       );
     }
 
     // Otherwise show the regular user page
     return (
-      <UserPage 
-        username={selectedUser} 
-        onBack={() => {
-          setSelectedUser(null);
-          window.history.pushState({}, '', window.location.pathname);
-        }}
-        userData={userData}
-        globalData={{
-          blockchainData,
-          priceData,
-          lastModified: response.lastModified  // Add this line
-        }}
-      />
+      <Suspense fallback={<PageFallback />}>
+        <UserPage
+          username={selectedUser}
+          onBack={() => {
+            setSelectedUser(null);
+            window.history.pushState({}, '', window.location.pathname);
+          }}
+          userData={userData}
+          globalData={{
+            blockchainData,
+            priceData,
+            lastModified: response.lastModified
+          }}
+        />
+      </Suspense>
     );
   }
   const { theme } = useTheme();
@@ -1580,19 +1681,18 @@ function App() {
     : 'N/A';
 
   return (
-    <ThemeProvider>
-      <div className="min-h-screen bg-background text-foreground">
+    <UserSelectContext.Provider value={handleUserSelect}>
+      <div ref={appRootRef} id="app-root" className="min-h-screen bg-background text-foreground">
         <Header />
         <div className="container mx-auto px-4 md:px-20 md:py-12 py-8">
           <div className="flex justify-between items-center mb-6">
-            {/* Title with dropdown on the left */}
+            {/* Title on the left */}
             <div className="relative group">
-              <button 
-                className="flex items-center gap-2 text-3xl font-bold text-purple-700 hover:text-purple-800"
+              <h1
+                className="flex items-center gap-2 text-2xl md:text-3xl font-bold text-purple-700 dark:text-purple-400"
               >
                 {pageTitle}
-              </button>
-              
+              </h1>
             </div>
             
             {/* Stake button on the right */}
@@ -1614,8 +1714,8 @@ function App() {
               </span>
               <button
                 onClick={() => setIsInfoModalOpen(true)}
-                className="p-2 text-purple-600 hover:text-purpleinline-flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors-800 transition-colors"
-                aria-label="Information"
+                className="p-2 inline-flex items-center gap-2 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
+                aria-label="About STRX Staking Leaderboard"
               >
                 <QuestionMarkCircleIcon className="h-6 w-6" />
               </button>
@@ -1950,23 +2050,35 @@ function App() {
           <div className="mt-8">
             <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="relative">
+                <MagnifyingGlassIcon
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                />
+                <label htmlFor="staker-search" className="sr-only">
+                  Search by username
+                </label>
                 <input
-                  type="text"
+                  id="staker-search"
+                  type="search"
                   placeholder="Search by username..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
-                           focus:outline-none focus:ring-2 focus:ring-purple-500 
-                           bg-white dark:bg-gray-800 
-                           text-gray-900 dark:text-gray-100 
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="w-full md:w-72 pl-9 pr-9 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                           focus:outline-none focus:ring-2 focus:ring-purple-500
+                           bg-white dark:bg-gray-800
+                           text-gray-900 dark:text-gray-100
                            placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 {searchTerm && (
                   <button
+                    type="button"
+                    aria-label="Clear search"
                     onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
                   </button>
@@ -2058,6 +2170,27 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
+                  {currentData.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={Object.values(visibleColumns).filter(Boolean).length || 1}
+                        className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="animate-spin h-5 w-5 border-2 border-purple-600 border-t-transparent rounded-full" />
+                            Loading stakers…
+                          </div>
+                        ) : deferredSearchTerm ? (
+                          <>No stakers match <span className="font-semibold">"{deferredSearchTerm}"</span>.</>
+                        ) : selectedTier ? (
+                          <>No stakers in the <span className="font-semibold">{selectedTier.name}</span> tier yet.</>
+                        ) : (
+                          <>No staker data available.</>
+                        )}
+                      </td>
+                    </tr>
+                  )}
                   {currentData.map((item, index) => (
                     <tr key={item.username} className="hover:bg-purple-50">
                       {visibleColumns.rank && (
@@ -2254,7 +2387,7 @@ function App() {
           </div>
         </div>
       </div>
-    </ThemeProvider>
+    </UserSelectContext.Provider>
   );
 }
 
@@ -2262,18 +2395,10 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
-const handleUserSelect = (username: string) => {
-  // Update URL with selected user
-  const newUrl = `${window.location.pathname}?user=${username}`;
-  window.location.href = newUrl;  // This will trigger a page reload with the new URL
-};
-
 root.render(
   <React.StrictMode>
     <ThemeProvider>
-      <UserSelectContext.Provider value={handleUserSelect}>
-        <App />
-      </UserSelectContext.Provider>
+      <App />
     </ThemeProvider>
   </React.StrictMode>
 );

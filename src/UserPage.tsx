@@ -168,21 +168,16 @@ const getUpdatedStakedAmount = (
   let lastUpdateUTC: Date;
   try {
     if (!lastJsonUpdate) {
-      console.log('No lastModified date provided, using current time');
       lastUpdateUTC = new Date();
     } else {
       lastUpdateUTC = new Date(lastJsonUpdate);
       if (isNaN(lastUpdateUTC.getTime())) {
-        console.log('Invalid lastModified date, using current time');
         lastUpdateUTC = new Date();
       }
     }
   } catch (error) {
-    console.error('Error parsing date:', error);
     lastUpdateUTC = new Date();
   }
-  
-  console.log('Last JSON Update (UTC):', lastUpdateUTC);
   
   return transactions
     .filter(tx => tx.time > lastUpdateUTC)
@@ -356,15 +351,10 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   useEffect(() => {
     if (!userActions.length || !userData.staked) return;
 
-    console.log('Initial staked amount:', userData.staked);
-    console.log('Global data:', globalData);
-    
     // Parse the GMT date string properly
     const lastJsonUpdate = globalData.lastModified 
       ? new Date(Date.parse(globalData.lastModified))
       : new Date();
-
-    console.log('Last JSON update time:', lastJsonUpdate);
 
     const updatedAmount = getUpdatedStakedAmount(
       userData.staked,
@@ -376,25 +366,15 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       lastJsonUpdate
     );
 
-    console.log('Previous staked amount:', adjustedStaked);
-    console.log('New staked amount:', updatedAmount);
-    
     if (updatedAmount !== adjustedStaked) {
-      console.log('Updating staked amount...');
       setAdjustedStaked(updatedAmount);
     }
   }, [userActions, userData.staked, globalData.lastModified]);
 
-  // Add this useEffect to verify state updates
-  useEffect(() => {
-    console.log('adjustedStaked changed:', adjustedStaked);
-  }, [adjustedStaked]);
-
-    // Add total calculation
-    const totalAmount = adjustedStaked + userData.unstaked;
+  // Add total calculation
+  const totalAmount = adjustedStaked + userData.unstaked;
 
   const stakingStats = useMemo(() => {
-    console.log('Recalculating stakingStats with adjustedStaked:', adjustedStaked);
     if (!blockchainData?.rows?.[0]) return null;
 
     const totalStaked = parseFloat(blockchainData.rows[0].stakes.split(' ')[0]);
@@ -437,7 +417,6 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   }, [userActions, transactionPage]);
 
   const currentTier = useMemo(() => {
-    console.log('Recalculating currentTier with adjustedStaked:', adjustedStaked);
     return STAKING_TIERS.find((tier, index) => {
       const nextTier = STAKING_TIERS[index - 1];
       return adjustedStaked >= tier.minimum && (!nextTier || adjustedStaked < nextTier.minimum);
@@ -719,7 +698,15 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     { refreshInterval: 300000 }  // 5 minutes
   );
 
-  const isMobile = window.innerWidth < 768; // Adjust the breakpoint as needed
+  // Reactive isMobile that updates on resize / rotate
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // Update simulatedStaked when adjustedStaked changes
   useEffect(() => {

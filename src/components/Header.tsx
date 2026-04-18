@@ -16,8 +16,8 @@ export function Header() {
           title: 'STRX Leaderboard',
           url: currentUrl
         });
-      } catch (err) {
-        console.log('Share cancelled');
+      } catch {
+        /* user cancelled share */
       }
     } else {
       // Fallback to clipboard copy on desktop

@@ -8,8 +8,7 @@ export function register() {
         
         // Use package.json version instead of Date.now()
         const swUrlWithVersion = `${swUrl}?v=${APP_VERSION}`;
-        console.log('Attempting to register service worker from:', swUrlWithVersion);
-        
+
         // Check if we need to clear old service worker
         if ('serviceWorker' in navigator) {
           // Get the currently active service worker
@@ -17,9 +16,8 @@ export function register() {
             if (registration) {
               // Extract version from the existing service worker URL
               const currentVersion = new URL(registration.scope).searchParams.get('v');
-              
+
               if (currentVersion && currentVersion !== APP_VERSION) {
-                console.log('New version detected. Clearing cache and updating service worker...');
                 // Clear caches
                 caches.keys().then(cacheNames => {
                   return Promise.all(
@@ -35,16 +33,14 @@ export function register() {
             }
           });
         }
-        
+
         navigator.serviceWorker.register(swUrlWithVersion)
           .then(registration => {
-            console.log('Service Worker registered successfully:', registration);
-            
-            // Check for updates every minute
+            // Check for updates every 30 minutes (was 1 minute; too aggressive)
             setInterval(() => {
               registration.update();
-            }, 60 * 1000);
-            
+            }, 30 * 60 * 1000);
+
             registration.addEventListener('updatefound', () => {
               const installingWorker = registration.installing;
               if (installingWorker) {
@@ -53,8 +49,6 @@ export function register() {
                     if (navigator.serviceWorker.controller) {
                       // New content is available - force reload
                       window.location.reload();
-                    } else {
-                      console.log('Content is cached for offline use.');
                     }
                   }
                 });
@@ -87,15 +81,13 @@ export async function clearCache() {
     await Promise.all(
       cacheNames.map(cacheName => caches.delete(cacheName))
     );
-    console.log('All caches cleared');
-    
+
     // Also unregister the service worker
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.all(
         registrations.map(registration => registration.unregister())
       );
-      console.log('Service workers unregistered');
     }
     
     // Reload the page to ensure fresh content
@@ -107,6 +99,5 @@ export async function clearCache() {
 if (process.env.NODE_ENV === 'development') {
   // @ts-ignore
   window.clearCache = clearCache;
-  console.log('Development helper: Call window.clearCache() to clear all caches');
 }
  

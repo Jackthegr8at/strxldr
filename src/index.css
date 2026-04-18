@@ -171,7 +171,7 @@ body {
   }
 
   .table-custom thead {
-    @apply bg-purple-50 dark:bg-purple-900/20;
+    @apply bg-purple-50 dark:bg-purple-900/20 sticky top-0 z-10;
   }
 
   .table-custom th {
@@ -188,5 +188,47 @@ body {
 
   .table-custom tr {
     @apply hover:bg-purple-50 dark:hover:bg-gray-700/50;
+  }
+
+  /* Touch-friendly tooltip: open on hover OR keyboard focus OR focus-within
+     (tapping a button toggles focus on touch devices). */
+  .tooltip-trigger:hover .tooltip-content,
+  .tooltip-trigger:focus-visible .tooltip-content,
+  .tooltip-trigger:focus-within .tooltip-content {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  /* Loading skeleton helper */
+  .skeleton {
+    @apply relative overflow-hidden bg-gray-200 dark:bg-gray-700 rounded;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+    animation: skeleton-shimmer 1.4s infinite;
+  }
+  .dark .skeleton::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* Respect reduced-motion preference for our animations */
+@media (prefers-reduced-motion: reduce) {
+  .rainbow-text,
+  .animate-fadeIn,
+  .skeleton::after,
+  .shake-animation,
+  .splash-animation,
+  .bounce-animation {
+    animation: none !important;
+    transition: none !important;
   }
 }
