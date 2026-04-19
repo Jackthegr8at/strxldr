@@ -1,78 +1,16 @@
+import * as React from 'react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import useSWR from 'swr';
-import { ArrowLeftIcon, InformationCircleIcon, MagnifyingGlassIcon, CubeTransparentIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, InformationCircleIcon, MagnifyingGlassIcon, CubeTransparentIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid } from 'recharts';
-import * as React from 'react';
-import { STAKING_TIERS, type StakingTier, calculateDaysUntilEmpty } from './index';
 import debounce from 'lodash/debounce';
 import { ThemeToggle } from './components/ThemeToggle';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
-import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { Header } from './components/Header';
+import { fetchBlockchainConfig, fetchDexScreenerPairs, fetchHistoryActions, fetchPriceRows, fetchRewardsPool } from './lib/api';
+import { calculateDaysUntilEmpty, cleanMemo, formatTimestamp, getTransactionType, getUserTier, STAKING_TIERS, TOTAL_SUPPLY } from './lib/leaderboard';
+import type { ActionResponse, BlockchainResponse, BridgeAction, DailyDataPoint, DexScreenerPairsData, PriceResponse, StakingTier } from './lib/types';
 
-// Reuse types from index.tsx
-type StakeData = {
-  [key: string]: {
-    staked: number;
-    unstaked: number;
-  };
-};
-
-type BlockchainResponse = {
-  rows: [{
-    stakes: string;
-    rewards: string;
-    rewards_sec: string;
-    pool_duration_months: number;
-    unstake_period_secs: number;
-    stake_plans: any[];
-    spare1: number;
-    spare2: number;
-    spare3: number;
-    suspended: number;
-  }];
-};
-
-type ActionResponse = {
-  actions: Array<{
-    "@timestamp": string;
-    timestamp: string;
-    act: {
-      name: string;
-      data: {
-        from: string;
-        to: string;
-        amount: number;
-        symbol: string;
-        memo: string;
-        quantity: string;
-      };
-    };
-    trx_id: string;
-  }>;
-};
-
-type PriceResponse = {
-  rows: [{
-    sym: string;
-    quantity: string;
-  }];
-};
-
-type DexScreenerData = {
-  pairs: Array<{
-    priceUsd: string;
-    volume24h: number;
-    txns24h: {
-      buys: number;
-      sells: number;
-    };
-  }>;
-};
-
-const TOTAL_SUPPLY = 2000000000;
-
-// Update the component props to include initial data
 type UserPageProps = {
   username: string;
   onBack: () => void;
@@ -87,76 +25,12 @@ type UserPageProps = {
   };
 };
 
-// Add this before the tierAnalysis useMemo
-interface DailyDataPoint {
-  day: number;
-  date: Date;
-  noCompound: number;
-  dailyCompound: number;
-  monthlyCompound: number;
-  annualCompound: number;
-}
-
-// Update the formatTimestamp function
-const formatTimestamp = (timestamp: Date | string) => {
-  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
-  return date.toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: false
-  });
-};
-
-// Add BridgeAction type
-type BridgeAction = {
-  "@timestamp": string;
-  timestamp: string;
-  act: {
-    name: string;
-    data: {
-      from: string;
-      to: string;
-      amount: number;
-      symbol: string;
-      memo: string;
-      quantity: string;
-    };
-  };
-  trx_id: string;
-};
-
-// Add helper functions
-const cleanMemo = (memo: string) => {
-  if (memo.startsWith('STRX-SPL@')) {
-    return memo.replace('STRX-SPL@', '');
-  }
-  
-  const solanaMatch = memo.match(/Cross-chain wrap from Solana \((.*?)\)/);
-  if (solanaMatch) {
-    return solanaMatch[1];
-  }
-  
-  return memo;
-};
-
-const getTransactionType = (memo: string) => {
-  if (memo.startsWith('STRX-SPL@')) {
-    return 'outbound';
-  }
-  if (memo.includes('Cross-chain wrap from Solana')) {
-    return 'inbound';
-  }
-  return 'other';
-};
-
 // Add these new types and helpers
 type StakeTransaction = {
   time: Date;
   amount: number;
   type: string;
+  trxId?: string;
 };
 
 const getUpdatedStakedAmount = (
@@ -216,43 +90,21 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   // First, get the actions data
   const { data: actionsData } = useSWR<ActionResponse>(
     ['user_actions', username],
-    () => {
-      const baseUrl = 'https://proton.eosusa.io/v2/history/get_actions';
-      const params = new URLSearchParams({
-        limit: '50',
-        account: username,
-        'act.account': 'storex',
-        'act.name': 'transfer'
-      });
-      
-      return fetch(`${baseUrl}?${params}`).then(res => res.json());
-    },
-    { refreshInterval: 60000 }  // 1 minute
+    () => fetchHistoryActions<ActionResponse>({
+      limit: 50,
+      'act.account': 'storex',
+      'act.name': 'transfer',
+    }, username),
+    { refreshInterval: 60000 }
   );
 
   // First get priceData
   const { data: priceData } = useSWR<PriceResponse>(
     'strx_price',
-    () => fetch('https://proton.eosusa.io/v1/chain/get_table_rows', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify({
-        json: true,
-        code: "strxoracle",
-        scope: "strxoracle",
-        table: "prices",
-        limit: 100
-      })
-    })
-    .then(res => {
-      if (!res.ok) {
-        throw new Error('Network response was not ok');
-      }
-      return res.json();
-    }),
-    { 
-      refreshInterval: 300000,  // 5 minutes
-      fallbackData: globalData.priceData
+    fetchPriceRows,
+    {
+      refreshInterval: 300000,
+      fallbackData: globalData.priceData,
     }
   );
 
@@ -310,20 +162,10 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   // We don't need to fetch the full staking data since we have the user's data
   const { data: blockchainData } = useSWR<BlockchainResponse>(
     'blockchain_data',
-    () => fetch('https://proton.eosusa.io/v1/chain/get_table_rows', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify({
-        json: true,
-        code: "storexstake",
-        scope: "storexstake",
-        table: "config",
-        limit: 10
-      })
-    }).then(res => res.json()),
-    { 
-      refreshInterval: 300000,  // 5 minutes
-      fallbackData: globalData.blockchainData
+    fetchBlockchainConfig,
+    {
+      refreshInterval: 300000,
+      fallbackData: globalData.blockchainData,
     }
   );
 
@@ -509,17 +351,9 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   }, [stakingStats, simulatedStaked, projectionRange, userData.staked]);
 
   // Add this with your other SWR fetches
-  const { data: rewardsPoolData } = useSWR<any>(
+  const { data: rewardsPoolData } = useSWR<string[]>(
     'rewards_pool',
-    () => fetch('https://proton.eosusa.io/v1/chain/get_currency_balance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code: "storex",
-        account: "rewards.strx",
-        symbol: "STRX"
-      })
-    }).then(res => res.json())
+    fetchRewardsPool
   );
 
   // Then update the analysis section
@@ -617,20 +451,15 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     ['bridge_actions', skipBridge, username],
     async () => {
       setIsLoadingBridge(true);
-      const baseUrl = `${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v2/history/get_actions`;
-      const params = new URLSearchParams({
-        limit: FETCH_LIMIT.toString(),
-        account: 'bridge.strx',
+      const data = await fetchHistoryActions<ActionResponse>({
+        limit: FETCH_LIMIT,
         'act.name': 'transfer',
-        skip: skipBridge.toString()
-      });
-      
-      const response = await fetch(`${baseUrl}?${params}`);
-      const data = await response.json();
+        skip: skipBridge,
+      }, 'bridge.strx');
       setIsLoadingBridge(false);
       return data;
     },
-    { refreshInterval: 60000 }  // 1 minute
+    { refreshInterval: 60000 }
   );
 
   // Effect to accumulate and filter user's bridge actions
@@ -691,10 +520,9 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   };
 
   // Add near other SWR hooks
-  const { data: dexScreenerData } = useSWR<DexScreenerData>(
+  const { data: dexScreenerData } = useSWR<DexScreenerPairsData>(
     'dexscreener_data',
-    () => fetch('https://api.dexscreener.com/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
-      .then(res => res.json()),
+    fetchDexScreenerPairs,
     { refreshInterval: 300000 }  // 5 minutes
   );
 

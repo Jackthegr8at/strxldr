@@ -1,152 +1,27 @@
 import { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
-import { QuestionMarkCircleIcon, ArrowLeftIcon, CubeTransparentIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, CubeTransparentIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Header } from './components/Header';
 import { ThemeProvider } from './components/ThemeProvider';
-
-// Import types from index.tsx or create new ones as needed
-type RaydiumPoolData = {
-  id: string;
-  success: boolean;
-  data: [{
-    price: number;
-    mintAmountA: number;
-    mintAmountB: number;
-    tvl: number;
-    day: {
-      volume: number;
-      apr: number;
-      feeApr: number;
-      rewardApr: number[];
-      priceMin: number;
-      priceMax: number;
-    };
-    week: {
-      volume: number;
-      apr: number;
-      feeApr: number;
-      priceMin: number;
-      priceMax: number;
-      rewardApr: number[];
-    };
-    month: {
-      volume: number;
-      apr: number;
-      feeApr: number;
-      priceMin: number;
-      priceMax: number;
-      rewardApr: number[];
-    };
-  }];
-};
-
-// Add this type for bridge transactions
-type BridgeAction = {
-  "@timestamp": string;
-  timestamp: string;
-  act: {
-    name: string;
-    data: {
-      from: string;
-      to: string;
-      amount: number;
-      symbol: string;
-      memo: string;
-      quantity: string;
-    };
-  };
-  trx_id: string;
-};
-
-type ActionResponse = {
-  actions: BridgeAction[];
-};
-
-// Reuse the StatisticCard component
-const StatisticCard: React.FC<{
-  title: string;
-  value: React.ReactNode;
-  tooltip: string;
-  onClick?: () => void;
-  children?: React.ReactNode;
-}> = ({ title, value, tooltip, onClick, children }) => (
-  <div 
-    className={`bg-card p-4 rounded-lg shadow border relative ${
-      onClick ? 'cursor-pointer' : ''
-    }`}
-    onClick={onClick}
-  >
-    <div className="flex justify-between items-start mb-1">
-      <div className="text-sm text-muted-foreground dark:text-gray-300">{title}</div>
-      <div 
-        className="group relative"
-        title={tooltip}
-      >
-        <QuestionMarkCircleIcon 
-          className="h-5 w-5 text-gray-400 hover:text-purple-600 transition-colors cursor-help"
-        />
-        <div className="invisible group-hover:visible absolute right-0 z-10 w-64 p-2 mt-2 text-sm text-popover-foreground bg-popover rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-          {tooltip}
-        </div>
-      </div>
-    </div>
-    <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-      {value}
-    </div>
-    {children}
-  </div>
-);
-
-// Add helper function to clean memo text
-const cleanMemo = (memo: string) => {
-  // Remove "STRX-SPL@" prefix
-  if (memo.startsWith('STRX-SPL@')) {
-    return memo.replace('STRX-SPL@', '');
-  }
-  
-  // Extract address from "Cross-chain wrap from Solana" text
-  const solanaMatch = memo.match(/Cross-chain wrap from Solana \((.*?)\)/);
-  if (solanaMatch) {
-    return solanaMatch[1];
-  }
-  
-  return memo;
-};
-
-// Add helper to determine if it's an inbound or outbound transaction
-const getTransactionType = (memo: string) => {
-  if (memo.startsWith('STRX-SPL@')) {
-    return 'outbound';
-  }
-  if (memo.includes('Cross-chain wrap from Solana')) {
-    return 'inbound';
-  }
-  return 'other';
-};
+import { StatisticCard } from './components/StatisticCard';
+import { fetchBridgeBalance, fetchDexScreenerPairs, fetchHistoryActions, fetchRaydiumPool } from './lib/api';
+import { cleanMemo, formatTimestamp, getTransactionType } from './lib/leaderboard';
+import type { ActionResponse, BridgeAction, RaydiumPoolData } from './lib/types';
 
 
 
 export function BridgePage() {
   
   // SWR hooks for data fetching
-  const { data: bridgeData } = useSWR<any>(
+  const { data: bridgeData } = useSWR<string[]>(
     'bridge_balance',
-    () => fetch(`${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v1/chain/get_currency_balance`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code: "storex",
-        account: "bridge.strx",
-        symbol: "STRX"
-      })
-    }).then(res => res.json())
+    fetchBridgeBalance
   );
 
   const { data: raydiumPoolData } = useSWR<RaydiumPoolData>(
     'raydium_pool_v3',
-    () => fetch('https://api-v3.raydium.io/pools/info/ids?ids=5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
-      .then(res => res.json()),
-    { refreshInterval: 360000 } // 6 minutes
+    fetchRaydiumPool,
+    { refreshInterval: 360000 }
   );
 
   // Get price from the pool data
@@ -197,20 +72,15 @@ export function BridgePage() {
     ['bridge_actions', skip],
     async () => {
       setIsLoading(true);
-      const baseUrl = `${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v2/history/get_actions`;
-      const params = new URLSearchParams({
-        limit: FETCH_LIMIT.toString(),
-        account: 'bridge.strx',
+      const data = await fetchHistoryActions<ActionResponse>({
+        limit: FETCH_LIMIT,
         'act.name': 'transfer',
-        skip: skip.toString()
-      });
-      
-      const response = await fetch(`${baseUrl}?${params}`);
-      const data = await response.json();
+        skip,
+      }, 'bridge.strx');
       setIsLoading(false);
       return data;
     },
-    { refreshInterval: 120000 } // 2 minutes
+    { refreshInterval: 120000 }
   );
 
   // Effect to accumulate actions
@@ -237,18 +107,6 @@ export function BridgePage() {
   }, [bridgeActions]);
 
   // Format timestamp function
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp + 'Z'); // Add Z to ensure UTC parsing
-    return date.toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: false
-    });
-  };
-
   // Update the processedActions to remove the sort since it's already sorted
   const processedActions = useMemo(() => {
     const filtered = allActions

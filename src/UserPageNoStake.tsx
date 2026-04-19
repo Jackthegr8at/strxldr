@@ -3,39 +3,13 @@ import useSWR from 'swr';
 import { ArrowLeftIcon, MagnifyingGlassIcon, CubeTransparentIcon } from '@heroicons/react/24/outline';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Header } from './components/Header';
+import { fetchBlockchainConfig, fetchDexScreenerPairs, fetchHistoryActions } from './lib/api';
+import { cleanMemo, formatTimestamp, getTransactionType } from './lib/leaderboard';
+import type { ActionResponse, BlockchainResponse, BridgeAction, DexScreenerPairsData } from './lib/types';
 
 type UserPageNoStakeProps = {
   username: string;
   onBack: () => void;
-};
-
-// Types can stay outside
-type BridgeAction = {
-  "@timestamp": string;
-  timestamp: string;
-  act: {
-    name: string;
-    data: {
-      from: string;
-      to: string;
-      amount: number;
-      symbol: string;
-      memo: string;
-      quantity: string;
-    };
-  };
-  trx_id: string;
-};
-
-type ActionResponse = {
-  actions: BridgeAction[];
-};
-
-type BlockchainResponse = {
-  rows: Array<{
-    stakes: string;
-    rewards_sec: string;
-  }>;
 };
 
 export default function UserPageNoStake({ username, onBack }: UserPageNoStakeProps) {
@@ -52,26 +26,20 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
   // Move all SWR hooks inside
   const { data: blockchainData } = useSWR<BlockchainResponse>(
     'blockchain_data',
-    () => fetch(`${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v1/chain/get_table_rows`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        json: true,
-        code: "storexstake",
-        scope: "storexstake",
-        table: "config",
-        limit: 10
-      })
-    }).then(res => res.json()),
-    { refreshInterval: 300000 } // 5 minutes
+    fetchBlockchainConfig,
+    { refreshInterval: 300000 }
   );
 
-  const { data: dexScreenerData } = useSWR<any>(
+  const { data: dexScreenerData } = useSWR<DexScreenerPairsData>(
     'dexscreener_data',
-    () => fetch('https://api.dexscreener.com/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
-      .then(res => res.json()),
-    { refreshInterval: 300000 }  // 5 minutes
+    fetchDexScreenerPairs,
+    { refreshInterval: 300000 }
   );
+
+  const dexPriceUsd = useMemo(() => {
+    const priceUsd = dexScreenerData?.pairs?.[0]?.priceUsd;
+    return priceUsd ? parseFloat(priceUsd) : 0;
+  }, [dexScreenerData]);
 
   // Add stakingStats here
   const stakingStats = useMemo(() => {
@@ -89,69 +57,28 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
         daily: dailyReward,
         monthly: monthlyReward,
         yearly: yearlyReward,
-        dailyUsd: dailyReward * (dexScreenerData?.pair?.priceUsd ? parseFloat(dexScreenerData.pair.priceUsd) : 0),
-        monthlyUsd: monthlyReward * (dexScreenerData?.pair?.priceUsd ? parseFloat(dexScreenerData.pair.priceUsd) : 0),
-        yearlyUsd: yearlyReward * (dexScreenerData?.pair?.priceUsd ? parseFloat(dexScreenerData.pair.priceUsd) : 0),
+        dailyUsd: dailyReward * dexPriceUsd,
+        monthlyUsd: monthlyReward * dexPriceUsd,
+        yearlyUsd: yearlyReward * dexPriceUsd,
       }
     };
-  }, [blockchainData, dexScreenerData]);
+  }, [blockchainData, dexPriceUsd]);
 
   // Fetch bridge actions
   const { data: bridgeActions, mutate: refetchBridgeActions } = useSWR<ActionResponse>(
     ['bridge_actions', skipBridge],
     async () => {
       setIsLoadingBridge(true);
-      const baseUrl = `${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v2/history/get_actions`;
-      const params = new URLSearchParams({
-        limit: FETCH_LIMIT.toString(),
-        account: 'bridge.strx',
+      const data = await fetchHistoryActions<ActionResponse>({
+        limit: FETCH_LIMIT,
         'act.name': 'transfer',
-        skip: skipBridge.toString()
-      });
-      
-      const response = await fetch(`${baseUrl}?${params}`);
-      const data = await response.json();
+        skip: skipBridge,
+      }, 'bridge.strx');
       setIsLoadingBridge(false);
       return data;
     },
-    { refreshInterval: 120000 }  // 2 minutes
+    { refreshInterval: 120000 }
   );
-
-  // Helper functions
-  const cleanMemo = (memo: string) => {
-    if (memo.startsWith('STRX-SPL@')) {
-      return memo.replace('STRX-SPL@', '');
-    }
-    const solanaMatch = memo.match(/Cross-chain wrap from Solana \((.*?)\)/);
-    if (solanaMatch) {
-      return solanaMatch[1];
-    }
-    return memo;
-  };
-
-  const getTransactionType = (memo: string) => {
-    if (memo.startsWith('STRX-SPL@')) {
-      return 'outbound';
-    }
-    if (memo.includes('Cross-chain wrap from Solana')) {
-      return 'inbound';
-    }
-    return 'other';
-  };
-
-
-  // Update the formatTimestamp function
-  const formatTimestamp = (timestamp: Date | string) => {
-    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
-    return date.toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: false
-    });
-  };
 
   // Effect to accumulate and filter user's bridge actions
   useEffect(() => {
@@ -241,15 +168,15 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
         // Properly handle UTC timestamp
         const time = new Date(action.timestamp + 'Z'); // Add Z to ensure UTC parsing
         return {
-          time: time,
+          time,
           amount,
-          usdValue: amount * (dexScreenerData?.pairs[0]?.priceUsd ? parseFloat(dexScreenerData.pairs[0].priceUsd) : 0),
+          usdValue: amount * dexPriceUsd,
           type: action.act.data.memo,
           trxId: action.trx_id
         };
       })
       .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-  }, [actionsData, dexScreenerData]);
+  }, [actionsData, dexPriceUsd]);
 
   // Add this with other useMemo hooks
   const paginatedTransactions = useMemo(() => {
@@ -327,7 +254,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
                 {userBalance?.[0] ? parseFloat(userBalance[0]).toFixed(4) : '0'} STRX
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                ${userBalance?.[0] ? (parseFloat(userBalance[0]) * (dexScreenerData?.pair?.priceUsd ? parseFloat(dexScreenerData.pair.priceUsd) : 0)).toFixed(2) : '0.00'}
+                ${userBalance?.[0] ? (parseFloat(userBalance[0]) * dexPriceUsd).toFixed(2) : '0.00'}
               </div>
             </div>
           </div>
@@ -342,7 +269,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
                     {userBalance?.[0] ? parseFloat(userBalance[0]).toFixed(4) : '0'} STRX
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    ≈ ${userBalance?.[0] ? (parseFloat(userBalance[0]) * (dexScreenerData?.pair?.priceUsd ? parseFloat(dexScreenerData.pair.priceUsd) : 0)).toFixed(2) : '0.00'}
+                    ≈ ${userBalance?.[0] ? (parseFloat(userBalance[0]) * dexPriceUsd).toFixed(2) : '0.00'}
                   </div>
                 </div>
                 <div>
@@ -538,7 +465,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
                           <div className="flex flex-col">
                             <span>
                               {(showAllUsd || showUsd[action.trxId])
-                                ? `$${(action.amount * (dexScreenerData?.pair?.priceUsd ? parseFloat(dexScreenerData.pair.priceUsd) : 0)).toLocaleString(undefined, {
+                                ? `$${(action.amount * dexPriceUsd).toLocaleString(undefined, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2
                                   })}`

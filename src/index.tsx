@@ -7,21 +7,16 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import { Header } from './components/Header';
+import { PageFallback } from './components/PageFallback';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
+import { calculateDaysUntilEmpty, getUserTier, STAKING_TIERS, TOTAL_SUPPLY } from './lib/leaderboard';
+import type { BlockchainResponse, PriceResponse, StakingTier } from './lib/types';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 // Lazy-load pages that aren't needed on first paint
 const UserPage = lazy(() => import('./UserPage'));
 const UserPageNoStake = lazy(() => import('./UserPageNoStake'));
 const BridgePage = lazy(() => import('./BridgePage').then(m => ({ default: m.BridgePage })));
-
-const PageFallback = () => (
-  <div className="min-h-screen bg-white dark:bg-gray-900 p-4 md:p-8">
-    <div className="max-w-4xl mx-auto flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-700 border-t-transparent"></div>
-    </div>
-  </div>
-);
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -32,51 +27,10 @@ type StakeData = {
   };
 };
 
-type BlockchainResponse = {
-  rows: [{
-    stakes: string;
-    rewards: string;
-    rewards_sec: string;
-    pool_duration_months: number;
-    unstake_period_secs: number;
-    stake_plans: any[];
-    spare1: number;
-    spare2: number;
-    spare3: number;
-    suspended: number;
-  }];
-};
-
 const ITEMS_PER_PAGE = 10;
 
-export type StakingTier = {
-  name: string;
-  minimum: number;
-  emoji: string;
-};
-
-export const STAKING_TIERS: StakingTier[] = [
-  { name: 'Whale', minimum: 20000000, emoji: '🐋' },
-  { name: 'Shark', minimum: 10000000, emoji: '🦈' },
-  { name: 'Dolphin', minimum: 5000000, emoji: '🐬' },
-  { name: 'Fish', minimum: 1000000, emoji: '🐟' },
-  { name: 'Shrimp', minimum: 500000, emoji: '🦐' },
-  { name: 'Free', minimum: 0.000001, emoji: '🆓' },
-  { name: 'No Stake', minimum: 0, emoji: '🤷' },
-];
-
-// Add this type for the price response
-type PriceResponse = {
-  rows: [{
-    sym: string;
-    quantity: string;
-  }];
-};
-
-// Add this type definition
 type SortField = 'staked' | 'unstaked' | 'total' | 'rewards';
 
-// Add these types at the top of your file
 type VisibleColumns = {
   rank: boolean;
   username: boolean;
@@ -274,9 +228,6 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
 
 // Add this type for the display mode
 type AmountDisplay = 'strx' | 'usd';
-
-// Add this constant at the top of your file
-const TOTAL_SUPPLY = 2000000000; // 2 billion STRX
 
 // Update the ActionResponse type to match v2 API
 type ActionResponse = {
@@ -923,30 +874,6 @@ const UsernameLink: React.FC<{ username: string }> = ({ username }) => (
   </UserSelectContext.Consumer>
 );
 
-// Add this before the Leaderboard function
-const getUserTier = (stakedAmount: number): StakingTier => {
-  return STAKING_TIERS.find((tier, index) => {
-    const nextTier = STAKING_TIERS[index - 1];
-    return stakedAmount >= tier.minimum && (!nextTier || stakedAmount < nextTier.minimum);
-  }) || STAKING_TIERS[STAKING_TIERS.length - 1]; // Default to lowest tier
-};
-
-// Add this helper function
-export const calculateDaysUntilEmpty = (rewardsPool: number, totalStaked: number, rewardsPerSec: number) => {
-  let remainingRewards = rewardsPool;
-  let currentStaked = totalStaked;
-  let days = 0;
-  
-  while (remainingRewards > 0 && days < 3650) { // Cap at 10 years
-    const dailyRewards = rewardsPerSec * 86400 * (currentStaked / totalStaked);
-    remainingRewards -= dailyRewards;
-    currentStaked += dailyRewards; // Compound effect
-    days++;
-  }
-  
-  return days;
-};
-
 // Add near other type definitions
 type RaydiumPoolData = {
   id: string;
@@ -1572,60 +1499,6 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Check if we're on the bridge page
-  const isBridgePage = window.location.pathname === '/bridge';
-  
-  // If we're on bridge page, render BridgePage
-  if (isBridgePage) {
-    return (
-      <Suspense fallback={<PageFallback />}>
-        <BridgePage />
-      </Suspense>
-    );
-  }
-
-  // Then the existing user page check
-  if (selectedUser) {
-    if (isLoading || !response) {
-      return <PageFallback />;
-    }
-
-    const userData = response?.data?.[selectedUser];
-
-    // If no staking data, show the no-stake version
-    if (!userData) {
-      return (
-        <Suspense fallback={<PageFallback />}>
-          <UserPageNoStake
-            username={selectedUser}
-            onBack={() => {
-              setSelectedUser(null);
-              window.history.pushState({}, '', window.location.pathname);
-            }}
-          />
-        </Suspense>
-      );
-    }
-
-    // Otherwise show the regular user page
-    return (
-      <Suspense fallback={<PageFallback />}>
-        <UserPage
-          username={selectedUser}
-          onBack={() => {
-            setSelectedUser(null);
-            window.history.pushState({}, '', window.location.pathname);
-          }}
-          userData={userData}
-          globalData={{
-            blockchainData,
-            priceData,
-            lastModified: response.lastModified
-          }}
-        />
-      </Suspense>
-    );
-  }
   const { theme } = useTheme();
 
   // Add theme as a dependency to the chart's useMemo
@@ -1679,6 +1552,57 @@ function App() {
   const raydiumPriceChangeDisplay = raydiumPriceChangePercent !== undefined
     ? `${raydiumPriceChangePercent > 0 ? '+' : ''}${raydiumPriceChangePercent.toFixed(2)}%`
     : 'N/A';
+
+  // Check route-specific content only after every hook above has been called.
+  const isBridgePage = window.location.pathname === '/bridge';
+
+  if (isBridgePage) {
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <BridgePage />
+      </Suspense>
+    );
+  }
+
+  if (selectedUser) {
+    if (isLoading || !response) {
+      return <PageFallback />;
+    }
+
+    const userData = response?.data?.[selectedUser];
+
+    if (!userData) {
+      return (
+        <Suspense fallback={<PageFallback />}>
+          <UserPageNoStake
+            username={selectedUser}
+            onBack={() => {
+              setSelectedUser(null);
+              window.history.pushState({}, '', window.location.pathname);
+            }}
+          />
+        </Suspense>
+      );
+    }
+
+    return (
+      <Suspense fallback={<PageFallback />}>
+        <UserPage
+          username={selectedUser}
+          onBack={() => {
+            setSelectedUser(null);
+            window.history.pushState({}, '', window.location.pathname);
+          }}
+          userData={userData}
+          globalData={{
+            blockchainData,
+            priceData,
+            lastModified: response.lastModified
+          }}
+        />
+      </Suspense>
+    );
+  }
 
   return (
     <UserSelectContext.Provider value={handleUserSelect}>
