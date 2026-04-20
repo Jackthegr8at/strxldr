@@ -103,3 +103,15 @@ export const fetchDexScreenerPairs = () => fetchJson<DexScreenerPairsData>('http
 export const fetchDexScreenerMarket = () => fetchJson<DexScreenerMarketData>('https://api.dexscreener.com/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf');
 
 export const fetchNewStakers = () => fetchJson<NewStakersResponse>('https://nfts.jessytremblay.com/STRX/newstakers.json');
+
+export const fetchXsolPrice = () => fetchJson<any>('https://www.api.bloks.io/proton/tokens/XSOL-proton-xtokens');
+
+export const fetchUserBalance = (account: string) => fetchJson<string[]>(`${getXprEndpoint()}/v1/chain/get_currency_balance`, {
+  method: 'POST',
+  headers: jsonHeaders,
+  body: JSON.stringify({
+    code: 'storex',
+    account,
+    symbol: 'STRX',
+  }),
+});

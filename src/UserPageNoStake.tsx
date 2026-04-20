@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { ArrowLeftIcon, MagnifyingGlassIcon, CubeTransparentIcon } from '@heroicons/react/24/outline';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Header } from './components/Header';
-import { fetchBlockchainConfig, fetchDexScreenerPairs, fetchHistoryActions } from './lib/api';
+import { fetchBlockchainConfig, fetchDexScreenerPairs, fetchHistoryActions, fetchUserBalance } from './lib/api';
 import { cleanMemo, formatTimestamp, getTransactionType } from './lib/leaderboard';
 import type { ActionResponse, BlockchainResponse, BridgeAction, DexScreenerPairsData } from './lib/types';
 
@@ -188,16 +188,8 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
   // Add this SWR fetch near other data fetches
   const { data: userBalance } = useSWR<any>(
     ['user_balance', username],
-    () => fetch(`${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v1/chain/get_currency_balance`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code: "storex",
-        account: username,
-        symbol: "STRX"
-      })
-    }).then(res => res.json()),
-    { refreshInterval: 60000 } // 1 minute
+    () => fetchUserBalance(username),
+    { refreshInterval: 60000 }
   );
 
   return (

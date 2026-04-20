@@ -8,9 +8,13 @@ import './index.css';
 import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import { Header } from './components/Header';
 import { PageFallback } from './components/PageFallback';
+import { StatisticCard } from './components/StatisticCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
 import { calculateDaysUntilEmpty, getUserTier, STAKING_TIERS, TOTAL_SUPPLY } from './lib/leaderboard';
-import type { BlockchainResponse, PriceResponse, StakingTier } from './lib/types';
+import { fetchBlockchainConfig, fetchBridgeBalance, fetchDexScreenerPairs, fetchNewStakers, fetchPriceRows, fetchRaydiumPool, fetchRewardsPool, fetchXsolPrice } from './lib/api';
+import type { ActionResponse, BlockchainResponse, DexScreenerData, FetchResponse, NewStaker, NewStakersResponse, PriceResponse, RaydiumPoolData, StakingTier, XSolPriceData } from './lib/types';
+import { useLeaderboardState } from './hooks/useLeaderboardState';
+import { useRouteSelection } from './hooks/useRouteSelection';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 // Lazy-load pages that aren't needed on first paint
@@ -229,58 +233,6 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
 // Add this type for the display mode
 type AmountDisplay = 'strx' | 'usd';
 
-// Update the ActionResponse type to match v2 API
-type ActionResponse = {
-  query_time_ms: number;
-  cached: boolean;
-  lib: number;
-  last_indexed_block: number;
-  last_indexed_block_time: string;
-  total: {
-    value: number;
-    relation: string;
-  };
-  actions: Array<{
-    "@timestamp": string;
-    timestamp: string;
-    block_num: number;
-    block_id: string;
-    trx_id: string;
-    act: {
-      account: string;
-      name: string;
-      authorization: Array<{
-        actor: string;
-        permission: string;
-      }>;
-      data: {
-        from: string;
-        to: string;
-        amount: number;
-        symbol: string;
-        memo: string;
-        quantity: string;
-      };
-    };
-    receipts: Array<{
-      receiver: string;
-      global_sequence: number;
-      recv_sequence: number;
-      auth_sequence: Array<{
-        account: string;
-        sequence: number;
-      }>;
-    }>;
-    cpu_usage_us: number;
-    net_usage_words: number;
-    global_sequence: number;
-    producer: string;
-    action_ordinal: number;
-    creator_action_ordinal: number;
-    signatures: Array<string>;
-  }>;
-};
-
 // Add this component for the recent actions dashboard
 const RecentActions: React.FC<{
   strxPrice: number;
@@ -461,86 +413,6 @@ const RecentActions: React.FC<{
     </div>
   );
 };
-
-// Add this type for the fetch response
-type FetchResponse = {
-  data: StakeData;
-  lastModified: string;
-};
-
-// Add this component for the tooltip
-const StatisticCard: React.FC<{
-  title: string;
-  value: React.ReactNode;
-  tooltip: string;
-  onClick?: () => void;
-  children?: React.ReactNode;
-}> = ({ title, value, tooltip, onClick, children }) => {
-  const handleKeyDown = onClick
-    ? (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick();
-        }
-      }
-    : undefined;
-
-  return (
-    <div
-      className={`bg-card p-4 rounded-lg shadow border relative ${
-        onClick ? 'cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors' : ''
-      }`}
-      onClick={onClick}
-      onKeyDown={handleKeyDown}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-    >
-      <div className="flex justify-between items-start mb-1">
-        <div className="text-sm text-muted-foreground dark:text-gray-300">{title}</div>
-        <button
-          type="button"
-          aria-label={tooltip}
-          className="tooltip-trigger relative inline-flex focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 rounded-full"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <QuestionMarkCircleIcon
-            className="h-5 w-5 text-gray-400 hover:text-purple-600 transition-colors cursor-help"
-            aria-hidden="true"
-          />
-          <span
-            role="tooltip"
-            className="tooltip-content invisible absolute right-0 z-10 w-64 p-2 mt-2
-              text-sm rounded-lg opacity-0 transition-opacity
-              text-gray-100 dark:text-gray-100
-              bg-gray-800/90 dark:bg-black/70
-              border border-purple-200/20 dark:border-purple-900
-              backdrop-blur-sm top-full text-left font-normal"
-          >
-            {tooltip}
-          </span>
-        </button>
-      </div>
-      <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-        {value === undefined || value === null || value === '' ? (
-          <div className="skeleton h-6 w-24" aria-label="Loading" />
-        ) : (
-          value
-        )}
-      </div>
-      {children}
-    </div>
-  );
-};
-
-// Add this type for new stakers
-type NewStaker = {
-  username: string;
-  total_staked: number;
-  date: string;
-};
-
-// Add this type for the new stakers response
-type NewStakersResponse = NewStaker[];
 
 // Add this component for displaying new stakers
 const NewStakersPanel: React.FC<{ 
@@ -874,84 +746,6 @@ const UsernameLink: React.FC<{ username: string }> = ({ username }) => (
   </UserSelectContext.Consumer>
 );
 
-// Add near other type definitions
-type RaydiumPoolData = {
-  id: string;
-  success: boolean;
-  data: [{
-    price: number;
-    mintAmountA: number;
-    mintAmountB: number;
-    tvl: number;
-    day: {
-      volume: number;
-      apr: number;
-      feeApr: number;
-      rewardApr: number[];
-      priceMin: number;
-      priceMax: number;
-    };
-    week: {
-      volume: number;
-      apr: number;
-      feeApr: number;
-      priceMin: number;
-      priceMax: number;
-      rewardApr: number[];
-    };
-    month: {
-      volume: number;
-      apr: number;
-      feeApr: number;
-      priceMin: number;
-      priceMax: number;
-      rewardApr: number[];
-    };
-  }];
-};
-
-// Add near other type definitions
-type XSolPriceData = {
-  0: {
-    price: {
-      quotes: {
-        USD: number;
-      };
-      usd: number;
-    };
-  };
-};
-
-// Add new type definition
-type DexScreenerData = {
-  pair: {
-    baseToken: {
-      symbol: string;
-      name: string;
-    };
-    quoteToken: {
-      symbol: string;
-      name: string;
-    };
-    priceUsd: string;
-    priceChange: {
-      h24: number;
-    };
-    txns: {
-      h24: {
-        buys: number;
-        sells: number;
-      };
-    };
-    liquidity: {
-      usd: number;
-      base: number;
-      quote: number;
-    };
-    marketCap: number;
-  };
-};
-
 const ThemedTooltip = ({ active, payload, label }: any) => {
   const { theme } = useTheme();
   
@@ -1012,151 +806,79 @@ function App() {
 
   const { data: blockchainData } = useSWR<BlockchainResponse>(
     'blockchain_data',
-    () => fetch(`${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v1/chain/get_table_rows`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        json: true,
-        code: "storexstake",
-        scope: "storexstake",
-        table: "config",
-        limit: 10
-      })
-    }).then(res => res.json()),
+    fetchBlockchainConfig,
     { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add new SWR call for price data with a unique key
   const { data: priceData } = useSWR<PriceResponse>(
     'strx_price_data', // Unique key
-    () => fetch('https://proton.eosusa.io/v1/chain/get_table_rows', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=UTF-8',
-      },
-      body: JSON.stringify({
-        json: true,
-        code: "strxoracle",
-        scope: "strxoracle",
-        table: "prices",
-        limit: 9999,
-        reverse: false,
-        show_payer: false
-      })
-    }).then(res => res.json()),
+    fetchPriceRows,
     { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add this with your other SWR fetches
   const { data: rewardsPoolData } = useSWR<any>(
     'rewards_pool',
-    () => fetch(`${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v1/chain/get_currency_balance`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code: "storex",
-        account: "rewards.strx",
-        symbol: "STRX"
-      })
-    }).then(res => res.json()),
+    fetchRewardsPool,
     { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add this SWR hook near your other data fetches
   const { data: bridgeData } = useSWR<any>(
     'bridge_balance',
-    () => fetch(`${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v1/chain/get_currency_balance`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code: "storex",
-        account: "bridge.strx",
-        symbol: "STRX"
-      })
-    }).then(res => res.json()),
+    fetchBridgeBalance,
     { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add with other SWR hooks
   const { data: raydiumPoolData } = useSWR<RaydiumPoolData>(
     'raydium_pool_v3',
-    () => fetch('https://api-v3.raydium.io/pools/info/ids?ids=5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
-      .then(res => res.json()),
+    fetchRaydiumPool,
     { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add with other SWR hooks in Leaderboard component
   const { data: xsolPriceData } = useSWR<XSolPriceData>(
     'xsol_price',
-    () => fetch('https://www.api.bloks.io/proton/tokens/XSOL-proton-xtokens')
-      .then(res => res.json()),
+    fetchXsolPrice,
     { refreshInterval: 300000 }  // 5 minutes
   );
 
   // Add new SWR hook in Leaderboard component
   const { data: dexScreenerData } = useSWR<DexScreenerData>(
     'dexscreener_data',
-    () => fetch('https://api.dexscreener.com/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf')
-      .then(res => res.json()),
+    fetchDexScreenerPairs,
     { refreshInterval: 300000 }  // 5 minutes
   );
 
   const appRootRef = useRef<HTMLDivElement | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  // Initial values read from the URL so links are shareable
-  const [searchTerm, setSearchTerm] = useState(() => {
-    if (typeof window === 'undefined') return '';
-    return new URLSearchParams(window.location.search).get('q') || '';
-  });
-  // Defer the filter term so the input stays responsive while typing on large lists
-  const deferredSearchTerm = useDeferredValue(searchTerm);
-  const [selectedTier, setSelectedTier] = useState<StakingTier | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const v = new URLSearchParams(window.location.search).get('tier');
-    return v ? STAKING_TIERS.find(t => t.name === v) ?? null : null;
-  });
   const [pageTitle, setPageTitle] = useState("STRX Staking Leaderboard");
   const [isEasterEggActive, setIsEasterEggActive] = useState(false);
 
-  // Reset page when the (deferred) search term changes
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [deferredSearchTerm]);
+  // Use shared hooks for state management
+  const {
+    searchTerm,
+    setSearchTerm,
+    deferredSearchTerm,
+    selectedTier,
+    setSelectedTier,
+    sortField,
+    setSortField,
+    visibleColumns,
+    setVisibleColumns,
+    currentPage,
+    setCurrentPage,
+  } = useLeaderboardState();
 
-  // Add sort type
-  const [sortField, setSortField] = useState<SortField>(() => {
-    if (typeof window === 'undefined') return 'staked';
-    const v = new URLSearchParams(window.location.search).get('sort');
-    const allowed: SortField[] = ['staked', 'unstaked', 'total', 'rewards'];
-    return (allowed as string[]).includes(v ?? '') ? (v as SortField) : 'staked';
-  });
-
-  // Mirror filter state to the URL (so it's shareable) without adding history entries
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    // Preserve the user param (handled by its own flow)
-    if (deferredSearchTerm) params.set('q', deferredSearchTerm); else params.delete('q');
-    if (selectedTier) params.set('tier', selectedTier.name); else params.delete('tier');
-    if (sortField !== 'staked') params.set('sort', sortField); else params.delete('sort');
-    const query = params.toString();
-    const newUrl = `${window.location.pathname}${query ? `?${query}` : ''}`;
-    if (newUrl !== `${window.location.pathname}${window.location.search}`) {
-      window.history.replaceState(window.history.state, '', newUrl);
-    }
-  }, [deferredSearchTerm, selectedTier, sortField]);
-
-  // Update the initial visibleColumns state
-  const [visibleColumns, setVisibleColumns] = useState<VisibleColumns>({
-    rank: true,
-    username: true,
-    staked: true, // Set this to true by default
-    unstaked: false,
-    total: false,
-    usdValue: false,
-    rewards: false, // Set this to false by default
-  });
+  const {
+    selectedUser,
+    handleUserSelect,
+    handleBackToLeaderboard,
+    isBridgePage,
+  } = useRouteSelection();
 
   // Add this state
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
@@ -1401,8 +1123,8 @@ function App() {
 
   // Add new SWR fetch for new stakers inside the Leaderboard function
   const { data: newStakersData } = useSWR<NewStakersResponse>(
-    'https://nfts.jessytremblay.com/STRX/newstakers.json',
-    (url) => fetch(url).then((res) => res.json()),
+    'new_stakers',
+    fetchNewStakers,
     { refreshInterval: 120000 }  // 2 minute
   );
 
@@ -1474,31 +1196,6 @@ function App() {
     </div>
   );
 
-  // Add this near the start of the Leaderboard component
-  const [selectedUser, setSelectedUser] = useState<string | null>(() => {
-    // Check URL parameters on component mount
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('user');
-  });
-
-  // Update the selectedUser handler
-  const handleUserSelect = (username: string) => {
-    setSelectedUser(username);
-    const newUrl = `${window.location.pathname}?user=${username}`;
-    window.history.pushState({ username }, '', newUrl);
-  };
-
-  // Add effect to handle browser back/forward
-  useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
-      const urlParams = new URLSearchParams(window.location.search);
-      setSelectedUser(urlParams.get('user'));
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
   const { theme } = useTheme();
 
   // Add theme as a dependency to the chart's useMemo
@@ -1521,15 +1218,9 @@ function App() {
   ), [topHolders, theme, sortField]); // Add theme to dependencies
 
   // Ensure priceUsd is defined before using toFixed
-  const priceUsd = dexScreenerData?.pair?.priceUsd;
+  const priceUsd = dexScreenerData?.pairs?.[0]?.priceUsd;
   const priceUsdDisplay = priceUsd !== undefined
     ? `$${parseFloat(priceUsd).toFixed(6)}`
-    : 'N/A'; // or any default value you prefer
-
-  // Ensure priceChange.h24 is defined before using toFixed
-  const priceChange24h = dexScreenerData?.pair?.priceChange?.h24;
-  const priceChangeDisplay = priceChange24h !== undefined
-    ? `${priceChange24h > 0 ? '+' : ''}${priceChange24h.toFixed(2)}%`
     : 'N/A'; // or any default value you prefer
 
   // Get price from the Raydium pool data
@@ -1554,8 +1245,6 @@ function App() {
     : 'N/A';
 
   // Check route-specific content only after every hook above has been called.
-  const isBridgePage = window.location.pathname === '/bridge';
-
   if (isBridgePage) {
     return (
       <Suspense fallback={<PageFallback />}>
@@ -1576,10 +1265,7 @@ function App() {
         <Suspense fallback={<PageFallback />}>
           <UserPageNoStake
             username={selectedUser}
-            onBack={() => {
-              setSelectedUser(null);
-              window.history.pushState({}, '', window.location.pathname);
-            }}
+            onBack={handleBackToLeaderboard}
           />
         </Suspense>
       );
@@ -1589,10 +1275,7 @@ function App() {
       <Suspense fallback={<PageFallback />}>
         <UserPage
           username={selectedUser}
-          onBack={() => {
-            setSelectedUser(null);
-            window.history.pushState({}, '', window.location.pathname);
-          }}
+          onBack={handleBackToLeaderboard}
           userData={userData}
           globalData={{
             blockchainData,
