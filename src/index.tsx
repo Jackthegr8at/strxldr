@@ -14,6 +14,7 @@ import { fetchBlockchainConfig, fetchBridgeBalance, fetchDexScreenerPairs, fetch
 import type { ActionResponse, BlockchainResponse, DexScreenerData, FetchResponse, NewStaker, NewStakersResponse, PriceResponse, RaydiumPoolData, StakingTier, XSolPriceData } from './lib/types';
 import { useLeaderboardState } from './hooks/useLeaderboardState';
 import { useRouteSelection } from './hooks/useRouteSelection';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Lazy-load pages that aren't needed on first paint
 const UserPage = lazy(() => import('./UserPage'));
@@ -1200,9 +1201,11 @@ export function App() {
   // Check route-specific content only after every hook above has been called.
   if (isBridgePage) {
     return (
-      <Suspense fallback={<PageFallback />}>
-        <BridgePage />
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={<PageFallback />}>
+          <BridgePage />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 
@@ -1215,28 +1218,32 @@ export function App() {
 
     if (!userData) {
       return (
-        <Suspense fallback={<PageFallback />}>
-          <UserPageNoStake
-            username={selectedUser}
-            onBack={handleBackToLeaderboard}
-          />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<PageFallback />}>
+            <UserPageNoStake
+              username={selectedUser}
+              onBack={handleBackToLeaderboard}
+            />
+          </Suspense>
+        </ErrorBoundary>
       );
     }
 
     return (
-      <Suspense fallback={<PageFallback />}>
-        <UserPage
-          username={selectedUser}
-          onBack={handleBackToLeaderboard}
-          userData={userData}
-          globalData={{
-            blockchainData,
-            priceData,
-            lastModified: response.lastModified
-          }}
-        />
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={<PageFallback />}>
+          <UserPage
+            username={selectedUser}
+            onBack={handleBackToLeaderboard}
+            userData={userData}
+            globalData={{
+              blockchainData,
+              priceData,
+              lastModified: response.lastModified
+            }}
+          />
+        </Suspense>
+      </ErrorBoundary>
     );
   }
 

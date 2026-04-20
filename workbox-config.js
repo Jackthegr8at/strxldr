@@ -3,14 +3,12 @@ module.exports = {
   globPatterns: [
     ...(process.env.NODE_ENV === 'production' ? [
       '**/*.{html,js,css}', // Core web assets (production only)
-      'static/**/*.{png,jpg,jpeg,gif,webp,svg}', // Static images
       'assets/**/*.{png,jpg,jpeg,gif,webp,svg}', // Asset images
       'icons/*.{png,webp}', // Icons
       'manifest.json',
       'favicon*.{ico,webp,png}' // Favicons
     ] : [
       // In development, ONLY cache images and other static assets
-      'static/**/*.{png,jpg,jpeg,gif,webp,svg}',
       'assets/**/*.{png,jpg,jpeg,gif,webp,svg}',
       'icons/*.{png,webp}',
       'manifest.json',

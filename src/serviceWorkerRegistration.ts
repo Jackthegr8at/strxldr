@@ -36,23 +36,32 @@ export function register() {
 
         navigator.serviceWorker.register(swUrlWithVersion)
           .then(registration => {
-            // Check for updates every 30 minutes (was 1 minute; too aggressive)
+            // Check for updates every 30 minutes (conservative cadence)
             setInterval(() => {
               registration.update();
             }, 30 * 60 * 1000);
 
+            // When a new SW finishes installing, it enters the "waiting" state.
+            // Only activate it on the next navigation (controllerchange) rather
+            // than forcing an immediate reload that can flash a blank screen.
             registration.addEventListener('updatefound', () => {
               const installingWorker = registration.installing;
               if (installingWorker) {
                 installingWorker.addEventListener('statechange', () => {
                   if (installingWorker.state === 'installed') {
                     if (navigator.serviceWorker.controller) {
-                      // New content is available - force reload
-                      window.location.reload();
+                      // New content is available and will activate on next navigation.
+                      console.log('[SW] New version available; will activate on next page load.');
                     }
                   }
                 });
               }
+            });
+
+            // When the controlling SW changes (e.g. after user navigates),
+            // reload once to pick up the new precache manifest.
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              window.location.reload();
             });
           })
           .catch(error => {
