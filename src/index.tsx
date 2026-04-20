@@ -11,7 +11,7 @@ import { PageFallback } from './components/PageFallback';
 import { StatisticCard } from './components/StatisticCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
 import { calculateDaysUntilEmpty, getUserTier, STAKING_TIERS, TOTAL_SUPPLY } from './lib/leaderboard';
-import { fetchBlockchainConfig, fetchBridgeBalance, fetchDexScreenerPairs, fetchNewStakers, fetchPriceRows, fetchRaydiumPool, fetchRewardsPool, fetchXsolPrice } from './lib/api';
+import { fetchBlockchainConfig, fetchBridgeBalance, fetchDexScreenerPairs, fetchHistoryActions, fetchNewStakers, fetchPriceRows, fetchRaydiumPool, fetchRewardsPool, fetchStakeSnapshot, fetchXsolPrice } from './lib/api';
 import type { ActionResponse, BlockchainResponse, DexScreenerData, FetchResponse, NewStaker, NewStakersResponse, PriceResponse, RaydiumPoolData, StakingTier, XSolPriceData } from './lib/types';
 import { useLeaderboardState } from './hooks/useLeaderboardState';
 import { useRouteSelection } from './hooks/useRouteSelection';
@@ -21,8 +21,6 @@ import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 const UserPage = lazy(() => import('./UserPage'));
 const UserPageNoStake = lazy(() => import('./UserPageNoStake'));
 const BridgePage = lazy(() => import('./BridgePage').then(m => ({ default: m.BridgePage })));
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type StakeData = {
   [key: string]: {
@@ -234,7 +232,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
 type AmountDisplay = 'strx' | 'usd';
 
 // Add this component for the recent actions dashboard
-const RecentActions: React.FC<{
+const RecentActionsDashboard: React.FC<{
   strxPrice: number;
   stakersData?: StakeData;
   setSearchTerm: (term: string) => void;
@@ -242,17 +240,12 @@ const RecentActions: React.FC<{
 }> = ({ strxPrice, stakersData, setSearchTerm, selectedTier }) => {
   const { data: actionsData } = useSWR<ActionResponse>(
     ['recent_actions', selectedTier?.name],
-    () => {
-      const baseUrl = 'https://proton.eosusa.io/v2/history/get_actions';
-      const params = new URLSearchParams({
-        limit: selectedTier ? '100' : '30',
-        account: 'storexstake',
-        sort: 'desc',
-        'act.name': 'transfer'
-      });
-      
-      return fetch(`${baseUrl}?${params}`).then(res => res.json());
-    },
+    () => fetchHistoryActions<ActionResponse>({
+      limit: selectedTier ? '100' : '30',
+      account: 'storexstake',
+      sort: 'desc',
+      'act.name': 'transfer'
+    }, 'storexstake'),
     { refreshInterval: 30000 }  // 30 seconds
   );
 
@@ -772,21 +765,10 @@ const ThemedTooltip = ({ active, payload, label }: any) => {
 };
 
 function App() {
-  // Update the SWR fetcher to include last-modified time
-  const fetcher = async (url: string): Promise<FetchResponse> => {
-    const response = await fetch(url);
-    const lastModified = response.headers.get('last-modified');
-    const data = await response.json();
-    return {
-      data,
-      lastModified: lastModified || new Date().toUTCString()
-    };
-  };
-
-  // Update the SWR hook to use the new response type
+  // Update the SWR hook to use the shared fetchStakeSnapshot function
   const { data: response, error, isLoading } = useSWR<FetchResponse>(
-    'https://nfts.jessytremblay.com/STRX/stakes.json',
-    fetcher,
+    'stakes_snapshot',
+    fetchStakeSnapshot,
     { refreshInterval: 120000 }  // 2 minutes (correct)
   );
 
@@ -1627,7 +1609,7 @@ function App() {
             />
             
             {sectionVisibility.recentActivity && (
-              <RecentActions 
+              <RecentActionsDashboard 
                 strxPrice={strxPrice}
                 stakersData={response?.data}
                 setSearchTerm={setSearchTerm}
