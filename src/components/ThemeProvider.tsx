@@ -37,9 +37,9 @@ export function ThemeProvider({
     // Set cookie options based on environment
     const cookieOptions = {
       expires: 365,
-      secure: process.env.NODE_ENV === 'production',
+      secure: import.meta.env.PROD,
       sameSite: 'lax' as 'lax' | 'strict' | 'none',
-      ...(process.env.NODE_ENV === 'production' && {
+      ...(import.meta.env.PROD && {
         domain: 'strxldr.app'
       })
     }

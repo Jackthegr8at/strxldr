@@ -137,7 +137,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
   const { data: actionsData } = useSWR<ActionResponse>(
     ['user_actions', username],
     () => {
-      const baseUrl = `${process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v2/history/get_actions`;
+      const baseUrl = `${import.meta.env.VITE_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v2/history/get_actions`;
       const params = new URLSearchParams({
         limit: '50',
         account: username,

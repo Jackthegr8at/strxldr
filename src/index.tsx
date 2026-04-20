@@ -3,11 +3,10 @@ import useSWR from 'swr';
 import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon, CubeTransparentIcon, ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import * as React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
 import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import { Header } from './components/Header';
 import { PageFallback } from './components/PageFallback';
+import { SectionHeader } from './components/SectionHeader';
 import { StatisticCard } from './components/StatisticCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
 import { calculateDaysUntilEmpty, getUserTier, STAKING_TIERS, TOTAL_SUPPLY } from './lib/leaderboard';
@@ -15,7 +14,6 @@ import { fetchBlockchainConfig, fetchBridgeBalance, fetchDexScreenerPairs, fetch
 import type { ActionResponse, BlockchainResponse, DexScreenerData, FetchResponse, NewStaker, NewStakersResponse, PriceResponse, RaydiumPoolData, StakingTier, XSolPriceData } from './lib/types';
 import { useLeaderboardState } from './hooks/useLeaderboardState';
 import { useRouteSelection } from './hooks/useRouteSelection';
-import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 // Lazy-load pages that aren't needed on first paint
 const UserPage = lazy(() => import('./UserPage'));
@@ -495,7 +493,7 @@ const TierMilestoneTracker: React.FC<{
   setSectionVisibility: React.Dispatch<React.SetStateAction<SectionVisibility>>;
   SectionHeader: React.FC<{
     title: string;
-    sectionKey: keyof SectionVisibility;
+    sectionKey: string;
     isVisible: boolean;
     onToggle: () => void;
   }>;
@@ -696,9 +694,7 @@ const TierMilestoneTracker: React.FC<{
 
 // Add these types at the top with your other types
 type SectionVisibility = {
-  recentActivity: boolean;
-  newStakers: boolean;
-  tierMilestones: boolean;
+  [key: string]: boolean;
 };
 
 // Add this helper function near your other utility functions
@@ -764,7 +760,9 @@ const ThemedTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-function App() {
+export function App() {
+  const { theme } = useTheme();
+
   // Update the SWR hook to use the shared fetchStakeSnapshot function
   const { data: response, error, isLoading } = useSWR<FetchResponse>(
     'stakes_snapshot',
@@ -1150,37 +1148,10 @@ function App() {
     };
   });
 
-  // Add this effect to save visibility state
   useEffect(() => {
     localStorage.setItem('sectionVisibility', JSON.stringify(sectionVisibility));
   }, [sectionVisibility]);
 
-  // Add this component definition
-  const SectionHeader: React.FC<{
-    title: string;
-    sectionKey: keyof SectionVisibility;
-    isVisible: boolean;
-    onToggle: () => void;
-  }> = ({ title, isVisible, onToggle }) => (
-    <div className="flex justify-between items-center mb-4">
-      <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
-      <button
-        onClick={onToggle}
-        className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
-        aria-label={isVisible ? "Hide section" : "Show section"}
-      >
-        {isVisible ? (
-          <ChevronUpIcon className="h-5 w-5" />
-        ) : (
-          <ChevronDownIcon className="h-5 w-5" />
-        )}
-      </button>
-    </div>
-  );
-
-  const { theme } = useTheme();
-
-  // Add theme as a dependency to the chart's useMemo
   const chart = useMemo(() => (
     <BarChart data={topHolders} margin={{ left: 50, right: 20, top: 20, bottom: 20 }}>
       <XAxis 
@@ -1197,7 +1168,7 @@ function App() {
         fill="#7C63CC" 
       />
     </BarChart>
-  ), [topHolders, theme, sortField]); // Add theme to dependencies
+  ), [topHolders, theme, sortField]);
 
   // Ensure priceUsd is defined before using toFixed
   const priceUsd = dexScreenerData?.pairs?.[0]?.priceUsd;
@@ -1980,19 +1951,6 @@ function App() {
   );
 }
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
-
-root.render(
-  <React.StrictMode>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
-  </React.StrictMode>
-);
+export default App;
 // smapshot version
 // 1.2.0
-
-// Add this after ReactDOM.render()
-serviceWorkerRegistration.register();

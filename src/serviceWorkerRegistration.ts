@@ -1,10 +1,10 @@
 // Import the version from package.json
-const APP_VERSION = require('../package.json').version;
+import { version as APP_VERSION } from '../package.json';
 
 export function register() {
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+    if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        const swUrl = `${process.env.PUBLIC_URL || ''}/sw.js`;
+        const swUrl = `${import.meta.env.BASE_URL || ''}sw.js`;
         
         // Use package.json version instead of Date.now()
         const swUrlWithVersion = `${swUrl}?v=${APP_VERSION}`;
@@ -96,7 +96,7 @@ export async function clearCache() {
 }
 
 // Add a development helper to clear cache when needed
-if (process.env.NODE_ENV === 'development') {
+if (import.meta.env.DEV) {
   // @ts-ignore
   window.clearCache = clearCache;
 }

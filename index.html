@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#9333ea" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1b1f23" media="(prefers-color-scheme: dark)" />
+
+  <title>STRX Staking Leaderboard</title>
+  <meta name="description" content="Real-time STRX staking leaderboard: track top holders, tier distribution, recent stakes, rewards projections, and the STRX/SOL bridge." />
+
+  <!-- Open Graph / Twitter -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="STRX Staking Leaderboard" />
+  <meta property="og:title" content="STRX Staking Leaderboard" />
+  <meta property="og:description" content="Real-time STRX staking leaderboard: top holders, tier distribution, rewards projections and bridge activity." />
+  <meta property="og:image" content="/icons/icon-512x512.png" />
+  <meta property="og:url" content="https://strxldr.app/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="STRX Staking Leaderboard" />
+  <meta name="twitter:description" content="Real-time STRX staking leaderboard: top holders, tier distribution, rewards projections and bridge activity." />
+  <meta name="twitter:image" content="/icons/icon-512x512.png" />
+
+  <!-- Icons / Manifest -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="icon" type="image/webp" sizes="128x128" href="/favicon-128.webp" />
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Hint the browser to warm up connections to the APIs we hit on first paint -->
+  <link rel="preconnect" href="https://proton.eosusa.io" crossorigin />
+  <link rel="preconnect" href="https://nfts.jessytremblay.com" crossorigin />
+  <link rel="preconnect" href="https://api.dexscreener.com" crossorigin />
+  <link rel="preconnect" href="https://api-v3.raydium.io" crossorigin />
+  <link rel="dns-prefetch" href="https://www.api.bloks.io" />
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

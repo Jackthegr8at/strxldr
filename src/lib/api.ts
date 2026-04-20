@@ -9,7 +9,7 @@ import type {
   RaydiumPoolData,
 } from './types';
 
-export const getXprEndpoint = () => process.env.REACT_APP_XPR_ENDPOINT || 'https://proton.eosusa.io';
+export const getXprEndpoint = () => import.meta.env.VITE_XPR_ENDPOINT || 'https://proton.eosusa.io';
 
 const jsonHeaders = {
   'Content-Type': 'application/json',

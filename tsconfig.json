@@ -9,11 +9,11 @@
     "jsx": "react-jsx",
     "outDir": "./dist",
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "strict": true
   },
-  "include": ["src"]
+  "include": ["src", "src/vite-env.d.ts"]
 }
