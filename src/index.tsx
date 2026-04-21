@@ -8,6 +8,7 @@ import { Header } from './components/Header';
 import { PageFallback } from './components/PageFallback';
 import { SectionHeader } from './components/SectionHeader';
 import { StatisticCard } from './components/StatisticCard';
+import { Skeleton } from './components/Skeleton';
 import { ColumnSelector } from './components/ColumnSelector';
 import { NewStakersPanel } from './components/NewStakersPanel';
 import { TierMilestoneTracker } from './components/TierMilestoneTracker';
@@ -601,7 +602,21 @@ export function App() {
             />
           </Suspense>
 
-          {/* Statistics Dashboard */}
+        {/* Statistics Dashboard */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="bg-card p-4 rounded-lg shadow border">
+                <div className="flex justify-between items-start mb-1">
+                  <Skeleton variant="text" className="h-4 w-24" />
+                  <Skeleton variant="circle" className="h-5 w-5" />
+                </div>
+                <Skeleton variant="text" className="h-6 w-32 mt-2" />
+                <Skeleton variant="text" className="h-3 w-20 mt-1" />
+              </div>
+            ))}
+          </div>
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <StatisticCard
               title="Total Stakers"
@@ -838,6 +853,7 @@ export function App() {
               tooltip="Market statistics from Raydium"
             />
           </div>
+          )}
 
           {/* Staking Tiers Dashboard */}
           <div className="mb-8">
