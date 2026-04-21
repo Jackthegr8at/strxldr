@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { Component } from 'react';
+import { useToast } from './Toast';
 
 type ErrorBoundaryProps = {
   children: React.ReactNode;
@@ -10,7 +11,7 @@ type ErrorBoundaryState = {
   error: Error | null;
 };
 
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundaryInner extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -22,6 +23,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('ErrorBoundary caught:', error, info);
+    // Emit toast via global error handler if available
+    if ((window as any).__emitErrorToast) {
+      (window as any).__emitErrorToast(error.message);
+    }
   }
 
   render() {
@@ -47,3 +52,16 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     return this.props.children;
   }
 }
+
+export const ErrorBoundary: React.FC<ErrorBoundaryProps> = (props) => {
+  const { addToast } = useToast();
+
+  // Set up global error handler for ErrorBoundary
+  React.useEffect(() => {
+    (window as any).__emitErrorToast = (message: string) => {
+      addToast(message, 'error');
+    };
+  }, [addToast]);
+
+  return <ErrorBoundaryInner {...props} />;
+};

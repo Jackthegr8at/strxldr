@@ -136,17 +136,11 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
   // Add this after other states
   const { data: actionsData } = useSWR<ActionResponse>(
     ['user_actions', username],
-    () => {
-      const baseUrl = `${import.meta.env.VITE_XPR_ENDPOINT || 'https://proton.eosusa.io'}/v2/history/get_actions`;
-      const params = new URLSearchParams({
-        limit: '50',
-        account: username,
-        'act.account': 'storex',
-        'act.name': 'transfer'
-      });
-      
-      return fetch(`${baseUrl}?${params}`).then(res => res.json());
-    },
+    () => fetchHistoryActions<ActionResponse>({
+      limit: '50',
+      'act.account': 'storex',
+      'act.name': 'transfer',
+    }, username),
     { refreshInterval: 60000 } // 1 minute
   );
 

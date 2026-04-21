@@ -49,7 +49,7 @@ export const StatisticCard = ({ title, value, tooltip, onClick, children }: Stat
           </span>
         </button>
       </div>
-      <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
+      <div className="text-xl font-semibold text-purple-700 dark:text-purple-300">
         {value === undefined || value === null || value === '' ? (
           <div className="skeleton h-6 w-24" aria-label="Loading" />
         ) : (

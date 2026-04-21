@@ -1,704 +1,37 @@
 import { useState, useMemo, useEffect, useDeferredValue, useRef, Suspense, lazy } from 'react';
 import useSWR from 'swr';
 import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon, CubeTransparentIcon, ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import * as React from 'react';
 import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import { Header } from './components/Header';
 import { PageFallback } from './components/PageFallback';
 import { SectionHeader } from './components/SectionHeader';
 import { StatisticCard } from './components/StatisticCard';
+import { ColumnSelector } from './components/ColumnSelector';
+import { NewStakersPanel } from './components/NewStakersPanel';
+import { TierMilestoneTracker } from './components/TierMilestoneTracker';
+import { RecentActionsDashboard } from './components/RecentActionsDashboard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
 import { calculateDaysUntilEmpty, getUserTier, STAKING_TIERS, TOTAL_SUPPLY } from './lib/leaderboard';
 import { fetchBlockchainConfig, fetchBridgeBalance, fetchDexScreenerPairs, fetchHistoryActions, fetchNewStakers, fetchPriceRows, fetchRaydiumPool, fetchRewardsPool, fetchStakeSnapshot, fetchXsolPrice } from './lib/api';
-import type { ActionResponse, BlockchainResponse, DexScreenerData, FetchResponse, NewStaker, NewStakersResponse, PriceResponse, RaydiumPoolData, StakingTier, XSolPriceData } from './lib/types';
+import type { ActionResponse, BlockchainResponse, DexScreenerData, FetchResponse, NewStaker, NewStakersResponse, PriceResponse, RaydiumPoolData, SectionVisibility, SortField, StakingTier, VisibleColumns, XSolPriceData } from './lib/types';
 import { useLeaderboardState } from './hooks/useLeaderboardState';
 import { useRouteSelection } from './hooks/useRouteSelection';
+import { useRouteMeta } from './hooks/useRouteMeta';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Lazy-load pages that aren't needed on first paint
 const UserPage = lazy(() => import('./UserPage'));
 const UserPageNoStake = lazy(() => import('./UserPageNoStake'));
 const BridgePage = lazy(() => import('./BridgePage').then(m => ({ default: m.BridgePage })));
-
-type StakeData = {
-  [key: string]: {
-    staked: number;
-    unstaked: number;
-  };
-};
+const InfoModal = lazy(() => import('./components/InfoModal').then(m => ({ default: m.InfoModal })));
+const StakersChart = lazy(() => import('./components/StakersChart').then(m => ({ default: m.StakersChart })));
 
 const ITEMS_PER_PAGE = 10;
-
-type SortField = 'staked' | 'unstaked' | 'total' | 'rewards';
-
-type VisibleColumns = {
-  rank: boolean;
-  username: boolean;
-  staked: boolean;
-  unstaked: boolean;
-  total: boolean;
-  usdValue: boolean;
-  rewards: boolean;
-};
-
-type ColumnSelectorProps = {
-  visibleColumns: VisibleColumns;
-  setVisibleColumns: React.Dispatch<React.SetStateAction<VisibleColumns>>;
-  setSortField: React.Dispatch<React.SetStateAction<SortField>>;
-};
-
-// Add this component
-const ColumnSelector: React.FC<ColumnSelectorProps> = ({ 
-  visibleColumns, 
-  setVisibleColumns,
-  setSortField
-}) => {
-  // Check if we're on mobile
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  // Add resize listener
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Only render on mobile
-  if (!isMobile) {
-    return null;
-  }
-
-  return (
-    <div className="mb-4">
-      <label className="block text-sm text-gray-600 mb-1 dark:text-gray-300">
-        Select additional column:
-      </label>
-      <select
-        className="w-full px-3 py-2 
-                   border border-gray-300 dark:border-gray-600 rounded-lg 
-                   focus:outline-none focus:ring-2 focus:ring-purple-500 
-                   bg-white dark:bg-gray-800 
-                   text-gray-900 dark:text-gray-100"
-        value={Object.entries(visibleColumns)
-          .filter(([key]) => !['rank', 'username'].includes(key))
-          .filter(([_, value]) => value)
-          .map(([key]) => key)[0]}
-        onChange={(e) => {
-          const selected = e.target.value;
-
-          // Update visible columns
-          const newVisibleColumns = {
-            rank: true,
-            username: true,
-            staked: selected === 'staked',
-            unstaked: selected === 'unstaked',
-            total: selected === 'total',
-            usdValue: selected === 'usdValue',
-            rewards: selected === 'rewards',
-          };
-          
-          setVisibleColumns(newVisibleColumns);
-
-          // Update sort field based on selection
-          if (selected === 'usdValue') {
-            setSortField('total'); // Sort by total amount when USD is selected
-          } else {
-            setSortField(selected as SortField); // Sort by the selected column
-          }
-        }}
-      >
-        <option value="staked">Staked Amount</option>
-        <option value="unstaked">Unstaked Amount</option>
-        <option value="total">Total Amount</option>
-        <option value="usdValue">USD Value</option>
-        <option value="rewards">Estimated Rewards</option>
-      </select>
-      <p className="text-xs text-gray-500 mt-1">
-        Rank and Username are always visible
-      </p>
-    </div>
-  );
-};
-
-// Add this type
-type InfoModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
-};
-
-// Add this component
-const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
-  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  // Esc to close, prevent body scroll, and focus the close button when opened
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKeyDown);
-    // Defer focus so the button exists in DOM
-    window.setTimeout(() => closeButtonRef.current?.focus(), 0);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="info-modal-title"
-      onClick={(e) => {
-        // Close when clicking backdrop (but not the modal body)
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="bg-card rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
-        {/* Close button */}
-        <button
-          ref={closeButtonRef}
-          onClick={onClose}
-          aria-label="Close dialog"
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 z-10 p-1 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-        >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        {/* Content container with padding */}
-        <div className="p-4 md:p-6">
-          <h2 id="info-modal-title" className="text-xl md:text-2xl font-bold text-purple-700 dark:text-purple-400 mb-4">
-            About STRX Staking Leaderboard
-          </h2>
-          
-          <div className="prose prose-sm md:prose max-w-none space-y-4">
-            <p>
-              Welcome to the STRX Staking Leaderboard! This platform provides real-time tracking 
-              of STOREX token staking positions across the community.
-            </p>
-            
-            <h3 className="text-lg font-semibold text-purple-700 dark:text-purple-400">Features:</h3>
-            
-            <ul className="list-disc pl-5 space-y-2">
-              <li className="text-sm md:text-base">View detailed staking statistics and distribution</li>
-              <li className="text-sm md:text-base">Track top holders and their staking positions</li>
-              <li className="text-sm md:text-base">Real-time statistics with automatic 2-minute updates</li>
-              <li className="text-sm md:text-base">Toggle between STRX and USD values by clicking on amounts</li>
-              <li className="text-sm md:text-base">Live staking activity dashboard showing recent stakes and withdrawals</li>
-              <li className="text-sm md:text-base">New staker detection and highlighting</li>
-              <li className="text-sm md:text-base">Percentage of total supply for staked amounts</li>
-              <li className="text-sm md:text-base">Sortable leaderboard with search functionality</li>
-              <li className="text-sm md:text-base">Find some easter eggs</li>
-            </ul>
-
-            <p className="text-sm md:text-base mt-4">
-              The leaderboard updates every 30 minutes to provide the most current staking data. 
-              USD price is updated every 2 minutes. Users are categorized into tiers (Whale, 
-              Shark, Dolphin, etc.) based on their total STRX holdings.
-            </p>
-          </div>
-        </div>
-
-        {/* Footer with close button */}
-        <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-purple-600 dark:bg-purple-700 text-white rounded-lg 
-                     hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors 
-                     text-sm md:text-base"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Add this type for the display mode
 type AmountDisplay = 'strx' | 'usd';
 
-// Add this component for the recent actions dashboard
-const RecentActionsDashboard: React.FC<{
-  strxPrice: number;
-  stakersData?: StakeData;
-  setSearchTerm: (term: string) => void;
-  selectedTier: StakingTier | null;
-}> = ({ strxPrice, stakersData, setSearchTerm, selectedTier }) => {
-  const { data: actionsData } = useSWR<ActionResponse>(
-    ['recent_actions', selectedTier?.name],
-    () => fetchHistoryActions<ActionResponse>({
-      limit: selectedTier ? '100' : '30',
-      account: 'storexstake',
-      sort: 'desc',
-      'act.name': 'transfer'
-    }, 'storexstake'),
-    { refreshInterval: 30000 }  // 30 seconds
-  );
-
-  // Update the formatTimestamp function
-  const formatTimestamp = (timestamp: string) => {
-    try {
-      // Remove milliseconds if present and ensure proper UTC format
-      const cleanTimestamp = timestamp
-        .replace('.000', '')  // Remove milliseconds
-        .replace(/Z$/, '')    // Remove Z if present
-        + 'Z';               // Add Z back to ensure UTC
-
-      const date = new Date(cleanTimestamp);
-      
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
-        console.warn('Invalid date:', timestamp);
-        return 'Invalid date';
-      }
-
-      return date.toLocaleString(undefined, {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: false
-      });
-    } catch (error) {
-      console.warn('Error formatting timestamp:', timestamp, error);
-      return 'Invalid date';
-    }
-  };
-
-  const recentActions = useMemo(() => {
-    if (!actionsData?.actions) return [];
-    
-    return actionsData.actions
-      .filter(action => {
-        if (!selectedTier || !stakersData) return true;
-
-        const username = action.act.data.memo === "withdraw stake" 
-          ? action.act.data.to 
-          : action.act.data.from;
-
-        const userStaked = stakersData[username]?.staked || 0;
-
-        // Get tier boundaries
-        const tierIndex = STAKING_TIERS.findIndex(t => t.name === selectedTier.name);
-        const nextTierUp = STAKING_TIERS[tierIndex - 1];
-
-        // Check if user is within the selected tier's range
-        return userStaked >= selectedTier.minimum && 
-               (!nextTierUp || userStaked < nextTierUp.minimum);
-      })
-      .slice(0, 15)
-      .map(action => ({
-        time: formatTimestamp(action.timestamp),
-        username: action.act.data.memo === "withdraw stake" 
-          ? action.act.data.to 
-          : action.act.data.from,
-        amount: parseFloat(action.act.data.quantity.split(' ')[0]),
-        type: action.act.data.memo,
-        trxId: action.trx_id,
-        isNewStaker: stakersData && 
-                    action.act.data.memo === "add stake" && 
-                    !stakersData[action.act.data.from]
-      }));
-  }, [actionsData, stakersData, selectedTier]);
-
-  return (
-    <div className="bg-card rounded-lg shadow overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="table-custom">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Username</th>
-              <th>Amount</th>
-              <th>USD Value</th>
-              <th>Action</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentActions.map((action, index) => (
-              <tr key={index} className={action.isNewStaker ? 'bg-green-50 dark:bg-green-900/20' : ''}>
-                <td>{action.time}</td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    {stakersData && (
-                      <span title={getUserTier(stakersData[action.username]?.staked || 0).name}>
-                        {getUserTier(stakersData[action.username]?.staked || 0).emoji}
-                      </span>
-                    )}
-                    <UsernameLink username={action.username} />
-                    {action.isNewStaker && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
-                        New Staker! 🎉
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td>
-                  {action.amount.toLocaleString(undefined, {
-                    minimumFractionDigits: 4,
-                    maximumFractionDigits: 4
-                  })} STRX
-                </td>
-                <td>
-                  ${(action.amount * strxPrice).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}
-                </td>
-                <td>
-                  <a 
-                    href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-1 hover:underline ${
-                      action.type === 'add stake' 
-                        ? 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300' 
-                        : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300'
-                    }`}
-                  >
-                    {action.type === 'add stake' ? (
-                      <>
-                        <span>👍</span> Add Stake
-                      </>
-                    ) : (
-                      <>
-                        <span>👎</span> Withdraw
-                      </>
-                    )}
-                  </a>
-                </td>
-                <td>
-                  <button
-                    onClick={() => {
-                      setSearchTerm(action.username);
-                      const searchInput = document.querySelector('input[type="text"]');
-                      if (searchInput) {
-                        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }
-                    }}
-                    className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
-                    title="Search this user"
-                  >
-                    <MagnifyingGlassIcon className="h-5 w-5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-// Add this component for displaying new stakers
-const NewStakersPanel: React.FC<{ 
-  newStakers: NewStaker[];
-  strxPrice: number;
-}> = ({ newStakers, strxPrice }) => {
-  if (!newStakers.length) return null;
-
-  return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">
-        New Stakers 🎉
-      </h2>
-      <div className="bg-card rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="table-custom">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Username</th>
-                <th>Initial Stake</th>
-                <th>USD Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {newStakers.map((staker, index) => {
-                const stakerDate = new Date(staker.date);
-                const isLast24Hours = (new Date().getTime() - stakerDate.getTime()) < 24 * 60 * 60 * 1000;
-
-                // Format the date with leading zeros for hours and minutes
-                const formattedDate = `${stakerDate.getFullYear()}-${String(stakerDate.getMonth() + 1).padStart(2, '0')}-${String(stakerDate.getDate()).padStart(2, '0')} ${String(stakerDate.getHours()).padStart(2, '0')} h ${String(stakerDate.getMinutes()).padStart(2, '0')}`;
-
-                return (
-                  <tr 
-                    key={staker.username} 
-                    className={`${
-                      isLast24Hours 
-                        ? 'bg-green-50/50 dark:bg-green-800/20' 
-                        : ''
-                    }`}
-                  >
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {formattedDate} {/* Use the formatted date */}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      <UsernameLink username={staker.username} />
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {staker.total_staked.toLocaleString(undefined, {
-                        minimumFractionDigits: 4,
-                        maximumFractionDigits: 4
-                      })} STRX
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      ${(staker.total_staked * strxPrice).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                      })}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Add this new type near your other type definitions
-type MilestoneUser = {
-  username: string;
-  currentTier: StakingTier;
-  nextTier: StakingTier;
-  staked: number;
-  remaining: number;
-  percentageComplete: number;
-};
-
-// Add this new component
-const TierMilestoneTracker: React.FC<{
-  stakersData: Array<{ username: string; total: number; staked: number }>;
-  setSearchTerm: (term: string) => void;
-  selectedTier: StakingTier | null;
-  sectionVisibility: SectionVisibility;
-  setSectionVisibility: React.Dispatch<React.SetStateAction<SectionVisibility>>;
-  SectionHeader: React.FC<{
-    title: string;
-    sectionKey: string;
-    isVisible: boolean;
-    onToggle: () => void;
-  }>;
-}> = ({ 
-  stakersData, 
-  setSearchTerm, 
-  selectedTier, 
-  sectionVisibility, 
-  setSectionVisibility,
-  SectionHeader 
-}) => {
-  const milestones = useMemo(() => {
-    return stakersData
-      .map(staker => {
-        let currentTier = STAKING_TIERS[0];
-        for (let i = 0; i < STAKING_TIERS.length; i++) {
-          if (staker.staked >= STAKING_TIERS[i].minimum) {
-            currentTier = STAKING_TIERS[i];
-            break;
-          }
-        }
-        
-        const tierIndex = STAKING_TIERS.findIndex(t => t.name === currentTier.name);
-        const nextTier = STAKING_TIERS[tierIndex - 1];
-        
-        if (!nextTier) {
-          return null;
-        }
-        
-        const remaining = nextTier.minimum - staker.staked;
-        const percentageComplete = ((staker.staked - currentTier.minimum) / 
-          (nextTier.minimum - currentTier.minimum)) * 100;
-
-        return {
-          username: staker.username,
-          currentTier,
-          nextTier,
-          staked: staker.staked,
-          remaining,
-          percentageComplete
-        };
-      })
-      .filter((milestone): milestone is MilestoneUser => {
-        if (!milestone) return false;
-        
-        const isCloseToNextTier = 
-          milestone.remaining > 0 && 
-          milestone.remaining < milestone.nextTier.minimum * 0.15;
-        
-        if (selectedTier) {
-          return milestone.currentTier.name === selectedTier.name && isCloseToNextTier;
-        } else {
-          return milestone.currentTier.name !== 'No Stake' && isCloseToNextTier;
-        }
-      })
-      .sort((a, b) => {
-        // First sort by tier level (higher tiers first)
-        const aTierIndex = STAKING_TIERS.findIndex(t => t.name === a.currentTier.name);
-        const bTierIndex = STAKING_TIERS.findIndex(t => t.name === b.currentTier.name);
-        
-        if (aTierIndex !== bTierIndex) {
-          return aTierIndex - bTierIndex; // Lower index (higher tier) comes first
-        }
-        
-        // If same tier, sort by how close they are to next tier (percentage)
-        return b.percentageComplete - a.percentageComplete;
-      })
-      .slice(0, selectedTier ? 999 : 15);
-  }, [stakersData, selectedTier]);
-
-  if (milestones.length === 0 || selectedTier?.name === 'No Stake') return null;
-
-  return (
-    <div className="mb-8">
-      <SectionHeader
-        title="Tier Milestone Tracker 🎯"
-        sectionKey="tierMilestones"
-        isVisible={sectionVisibility.tierMilestones}
-        onToggle={() => setSectionVisibility(prev => ({
-          ...prev,
-          tierMilestones: !prev.tierMilestones
-        }))}
-      />
-
-      {sectionVisibility.tierMilestones && (
-        <div className="rounded-lg border-t shadow dark:shadow-purple-500 overflow-hidden">
-          {/* Mobile view */}
-          <div className="md:hidden">
-            <div className="grid grid-cols-1 gap-4 p-4">
-              {milestones.slice(0, 3).map((milestone, index) => (
-                <div key={index} className="bg-card p-4 rounded-lg border">
-                  <div className="flex justify-between items-start mb-2">
-                    <UsernameLink username={milestone.username} />
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl">{milestone.currentTier.emoji}</span>
-                    <span className="text-gray-400">➜</span>
-                    <span className="text-2xl">{milestone.nextTier.emoji}</span>
-                  </div>
-
-                  <div className="mb-2">
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
-                      <span>Progress to {milestone.nextTier.name}</span>
-                      <span>{milestone.percentageComplete.toFixed(1)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
-                        className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
-                        style={{ width: `${milestone.percentageComplete}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <div className="text-sm text-gray-600 dark:text-gray-200">
-                    <span className="font-medium text-purple-600 dark:text-purple-400">
-                      {milestone.remaining.toLocaleString()} STRX
-                    </span>
-                    {' '}remaining
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Compact table for remaining items */}
-            {milestones.length > 3 && (
-              <div className="border-t border-gray-200 dark:border-purple-500">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full">
-                    <tbody className="divide-y divide-gray-200 dark:divide-purple-500">
-                      {milestones.slice(3).map((milestone, index) => (
-                        <tr key={index} className="hover:bg-purple-50 dark:hover:bg-purple-900">
-                          <td className="px-4 py-2 text-sm">
-                            <UsernameLink username={milestone.username} />
-                          </td>
-                          <td className="px-4 py-2 text-sm text-center">
-                            <span className="text-lg">
-                              {milestone.currentTier.emoji} ➜ {milestone.nextTier.emoji}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2 text-sm text-right">
-                            <span className="text-gray-600 dark:text-gray-200">
-                              {milestone.remaining.toLocaleString()}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Desktop view - original grid layout */}
-          <div className="hidden md:block p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {milestones.map((milestone, index) => (
-                <div key={index} className="bg-card p-4 rounded-lg border">
-                  <div className="flex justify-between items-start mb-2">
-                    <UsernameLink username={milestone.username} />
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl">{milestone.currentTier.emoji}</span>
-                    <span className="text-gray-400">➜</span>
-                    <span className="text-2xl">{milestone.nextTier.emoji}</span>
-                  </div>
-
-                  <div className="mb-2">
-                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-200 mb-1">
-                      <span>Progress to {milestone.nextTier.name}</span>
-                      <span>{milestone.percentageComplete.toFixed(1)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
-                        className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
-                        style={{ width: `${milestone.percentageComplete}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <div className="text-sm text-gray-600 dark:text-gray-200">
-                    <span className="font-medium text-purple-600 dark:text-purple-400">
-                      {milestone.remaining.toLocaleString()} STRX
-                    </span>
-                    {' '}remaining
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Add these types at the top with your other types
-type SectionVisibility = {
-  [key: string]: boolean;
-};
-
-// Add this helper function near your other utility functions
 const calculateRewards = (
   stakedAmount: number,
   rewardsPerSec: number,
@@ -720,7 +53,7 @@ const calculateRewards = (
 };
 
 // Add this near the top of the file, after imports
-const UserSelectContext = React.createContext<(username: string) => void>(() => {});
+export const UserSelectContext = React.createContext<(username: string) => void>(() => {});
 
 // Update UsernameLink to use context
 const UsernameLink: React.FC<{ username: string }> = ({ username }) => (
@@ -735,31 +68,6 @@ const UsernameLink: React.FC<{ username: string }> = ({ username }) => (
     )}
   </UserSelectContext.Consumer>
 );
-
-const ThemedTooltip = ({ active, payload, label }: any) => {
-  const { theme } = useTheme();
-  
-  if (!active || !payload) return null;
-  
-  return (
-    <div
-      style={{
-        backgroundColor: theme === 'dark' ? 'black' : 'white',
-        border: '1px solid #6B21A8',
-        borderRadius: '8px',
-        color: theme === 'dark' ? 'white' : 'black',
-        padding: '8px'
-      }}
-    >
-      <p className="font-medium">{label}</p>
-      <p>Staked : {payload[0]?.value.toLocaleString(undefined, {
-        minimumFractionDigits: 4,
-        maximumFractionDigits: 4,
-        useGrouping: true,
-      })}</p>
-    </div>
-  );
-};
 
 export function App() {
   const { theme } = useTheme();
@@ -860,6 +168,9 @@ export function App() {
     handleBackToLeaderboard,
     isBridgePage,
   } = useRouteSelection();
+
+  // Update page title and meta description based on route
+  useRouteMeta(isBridgePage, selectedUser);
 
   // Add this state
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
@@ -1153,24 +464,6 @@ export function App() {
     localStorage.setItem('sectionVisibility', JSON.stringify(sectionVisibility));
   }, [sectionVisibility]);
 
-  const chart = useMemo(() => (
-    <BarChart data={topHolders} margin={{ left: 50, right: 20, top: 20, bottom: 20 }}>
-      <XAxis 
-        dataKey="username" 
-        tick={{ fill: 'var(--axis-color)' }}
-      />
-      <YAxis 
-        tickFormatter={formatLargeNumber}
-        tick={{ fill: 'var(--axis-color)' }}
-      />
-      <Tooltip content={<ThemedTooltip />} />
-      <Bar 
-        dataKey={sortField === 'rewards' ? 'staked' : sortField} 
-        fill="#7C63CC" 
-      />
-    </BarChart>
-  ), [topHolders, theme, sortField]);
-
   // Ensure priceUsd is defined before using toFixed
   const priceUsd = dexScreenerData?.pairs?.[0]?.priceUsd;
   const priceUsdDisplay = priceUsd !== undefined
@@ -1290,10 +583,12 @@ export function App() {
           )}
 
           {/* Add the modal component */}
-          <InfoModal 
-            isOpen={isInfoModalOpen} 
-            onClose={() => setIsInfoModalOpen(false)} 
-          />
+          <Suspense fallback={null}>
+            <InfoModal 
+              isOpen={isInfoModalOpen} 
+              onClose={() => setIsInfoModalOpen(false)} 
+            />
+          </Suspense>
 
           {/* Statistics Dashboard */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -1606,9 +901,13 @@ export function App() {
             <div className="mb-8">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 15 Holders Distribution</h2>
               <div className="h-64 w-full">
-                <ResponsiveContainer>
-                  {chart}
-                </ResponsiveContainer>
+                <Suspense fallback={null}>
+                  <StakersChart 
+                    topHolders={topHolders}
+                    sortField={sortField}
+                    formatLargeNumber={formatLargeNumber}
+                  />
+                </Suspense>
               </div>
             </div>
           )}

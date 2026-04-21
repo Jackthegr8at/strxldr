@@ -9,8 +9,9 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-800 transition-colors"
+      className="p-3 min-h-[44px] min-w-[44px] rounded-lg hover:bg-purple-100 dark:hover:bg-purple-800 transition-colors"
       title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+      aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
     >
       {theme === "light" ? (
         <MoonIcon className="w-5 h-5" />

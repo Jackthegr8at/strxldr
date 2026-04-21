@@ -145,6 +145,12 @@ body {
   }
 }
 
+/* Global focus-visible outline for accessibility */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -175,7 +181,7 @@ body {
   }
 
   .table-custom th {
-    @apply px-4 py-3 text-left text-sm font-semibold text-purple-700 dark:text-purple-400;
+    @apply px-4 py-3 text-left text-sm font-semibold text-purple-700 dark:text-purple-300;
   }
 
   .table-custom tbody {

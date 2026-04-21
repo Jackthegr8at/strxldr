@@ -13,7 +13,7 @@ export const SectionHeader: FC<SectionHeaderProps> = ({ title, isVisible, onTogg
     <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
     <button
       onClick={onToggle}
-      className="p-2 text-purple-600 hover:text-purple-800 transition-colors"
+      className="p-3 min-h-[44px] min-w-[44px] text-purple-600 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-200 transition-colors"
       aria-label={isVisible ? 'Hide section' : 'Show section'}
     >
       {isVisible ? (

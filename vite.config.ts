@@ -6,6 +6,15 @@ export default defineConfig({
   build: {
     outDir: 'build',
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'ui-vendor': ['@radix-ui/react-dropdown-menu'],
+          'charts-vendor': ['recharts'],
+        },
+      },
+    },
   },
   server: {
     port: 3000,

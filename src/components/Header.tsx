@@ -46,7 +46,7 @@ export function Header() {
             </a>
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-3xl font-bold text-purple-700 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300">
+                <button className="flex items-center gap-2 text-3xl font-bold text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-300">
                   <span className="md:hidden text-2xl">STRX LDRBDS</span>
                   <span className="hidden md:inline">STRX Staking Leaderboard</span>
                   <ChevronDownIcon className="h-5 w-5" />
@@ -95,7 +95,8 @@ export function Header() {
           <div className="flex items-center gap-4">
             <button
               onClick={handleShare}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/40 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/40 transition-colors"
+              aria-label="Share page"
             >
               <ShareIcon className="h-5 w-5" />
               <span className="hidden md:inline">Share</span>

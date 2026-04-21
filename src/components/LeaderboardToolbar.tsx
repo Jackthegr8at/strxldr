@@ -1,7 +1,8 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useState, useRef, type Dispatch, type SetStateAction } from 'react';
 import { MagnifyingGlassIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from '@radix-ui/react-dropdown-menu';
 import type { SortField, VisibleColumns } from '../lib/types';
+import { useSearchHotkey } from '../hooks/useSearchHotkey';
 
 export type LeaderboardToolbarProps = {
   searchTerm: string;
@@ -82,6 +83,9 @@ export const LeaderboardToolbar = ({
   setVisibleColumns,
   setSortField,
 }: LeaderboardToolbarProps) => {
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useSearchHotkey({ inputRef: searchInputRef });
+
   return (
     <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div className="relative">
@@ -93,6 +97,7 @@ export const LeaderboardToolbar = ({
           Search by username
         </label>
         <input
+          ref={searchInputRef}
           id="staker-search"
           type="search"
           placeholder="Search by username..."
@@ -107,7 +112,7 @@ export const LeaderboardToolbar = ({
             type="button"
             aria-label="Clear search"
             onClick={() => onSearchTermChange('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-gray-400 hover:text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 min-h-[36px] min-w-[36px] rounded text-gray-400 hover:text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -126,7 +131,7 @@ export const LeaderboardToolbar = ({
           <span className="text-gray-600">Sort by:</span>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300">
+              <button className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-200">
                 Sort by
                 <ChevronDownIcon className="h-4 w-4" />
               </button>
