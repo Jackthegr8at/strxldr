@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useDeferredValue, useRef, Suspense, lazy } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import useSWR from 'swr';
 import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon, CubeTransparentIcon, ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import * as React from 'react';
@@ -142,6 +143,7 @@ export function App() {
   );
 
   const appRootRef = useRef<HTMLDivElement | null>(null);
+  const tableParentRef = useRef<HTMLTableSectionElement | null>(null);
 
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [pageTitle, setPageTitle] = useState("STRX Staking Leaderboard");
@@ -283,6 +285,15 @@ export function App() {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  // Set up virtualization for large tables
+  const shouldVirtualize = processedData.length > 100;
+  const rowVirtualizer = useVirtualizer({
+    count: currentData.length,
+    getScrollElement: () => tableParentRef.current,
+    estimateSize: () => 60, // Approximate row height in pixels
+    overscan: 10,
+  });
 
   const topHolders = useMemo(() => {
     return processedData.slice(0, 15);
@@ -1035,172 +1046,342 @@ export function App() {
                     )}
                   </tr>
                 </thead>
-                <tbody>
-                  {currentData.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={Object.values(visibleColumns).filter(Boolean).length || 1}
-                        className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
-                      >
-                        {isLoading ? (
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="animate-spin h-5 w-5 border-2 border-purple-600 border-t-transparent rounded-full" />
-                            Loading stakers…
-                          </div>
-                        ) : deferredSearchTerm ? (
-                          <>No stakers match <span className="font-semibold">"{deferredSearchTerm}"</span>.</>
-                        ) : selectedTier ? (
-                          <>No stakers in the <span className="font-semibold">{selectedTier.name}</span> tier yet.</>
-                        ) : (
-                          <>No staker data available.</>
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                  {currentData.map((item, index) => (
-                    <tr key={item.username} className="hover:bg-purple-50">
-                      {visibleColumns.rank && (
-                        <td className="px-2 py-4 text-sm text-gray-900 w-12">
-                          <div className="flex items-center gap-1">
-                            {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                            {(currentPage === 1 && index < 3) && (
-                              <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                                {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                      {visibleColumns.username && (
-                        <td className="px-2 py-4 text-sm text-gray-900 w-40">
-                          <div className="flex items-center gap-1">
-                            <span title={getUserTier(item.staked).name}>
-                              {getUserTier(item.staked).emoji}
-                            </span>
-                            <UsernameLink username={item.username} />
-                            <a 
-                              href={`https://explorer.xprnetwork.org/account/${item.username}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-gray-400 hover:text-purple-600 transition-colors"
-                              title="View on Blockchain Explorer"
-                            >
-                              <CubeTransparentIcon className="h-4 w-4" />
-                            </a>
-                          </div>
-                        </td>
-                      )}
-                      {visibleColumns.staked && (
-                        <td 
-                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => {
-                            toggleAmountDisplay(item.username, 'staked');
-                            handleEasterEgg(null, item.username);
+                {shouldVirtualize ? (
+                  <tbody
+                    ref={tableParentRef}
+                    style={{
+                      height: `${rowVirtualizer.getTotalSize()}px`,
+                      position: 'relative',
+                    }}
+                  >
+                    {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                      const item = currentData[virtualRow.index];
+                      const index = virtualRow.index;
+                      return (
+                        <tr
+                          key={item.username}
+                          data-index={virtualRow.index}
+                          ref={rowVirtualizer.measureElement}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            transform: `translateY(${virtualRow.start}px)`,
                           }}
+                          className="hover:bg-purple-50"
                         >
-                          <div className="flex flex-col">
-                            {formatAmount(
-                              item.staked, 
-                              amountDisplays[`${item.username}-staked`] || 'strx'
-                            )}
-                            <span className="text-xs text-gray-500 dark:text-gray-300">
-                              ({(item.staked / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                            </span>
-                          </div>
-                        </td>
-                      )}
-                      {visibleColumns.unstaked && (
-                        <td 
-                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => {
-                            toggleAmountDisplay(item.username, 'unstaked');
-                            handleEasterEgg(null, item.username);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            {formatAmount(
-                              item.unstaked, 
-                              amountDisplays[`${item.username}-unstaked`] || 'strx'
-                            )}
-                            <span className="text-xs text-gray-500 dark:text-gray-300">
-                              ({(item.unstaked / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                            </span>
-                          </div>
-                        </td>
-                      )}
-                      {visibleColumns.total && (
-                        <td 
-                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => {
-                            toggleAmountDisplay(item.username, 'total');
-                            handleEasterEgg(null, item.username);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            {formatAmount(
-                              item.total, 
-                              amountDisplays[`${item.username}-total`] || 'strx'
-                            )}
-                            <span className="text-xs text-gray-500 dark:text-gray-300">
-                              ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                            </span>
-                          </div>
-                        </td>
-                      )}
-                      {visibleColumns.usdValue && (
-                        <td 
-                          className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                          onClick={() => {
-                            toggleAmountDisplay(item.username, 'usdValue');
-                            handleEasterEgg(null, item.username);
-                          }}
-                        >
-                          {formatAmount(
-                            item.total,
-                            amountDisplays[`${item.username}-usdValue`] || 'usd'
+                          {visibleColumns.rank && (
+                            <td className="px-2 py-4 text-sm text-gray-900 w-12">
+                              <div className="flex items-center gap-1">
+                                {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                                {(currentPage === 1 && index < 3) && (
+                                  <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
+                                    {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                           )}
-                        </td>
-                      )}
-                      {visibleColumns.rewards && (
-                        <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[220px]">
-                          {(() => {
-                            const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
-                              ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
-                              : 0;
-                            
-                            const rewards = calculateRewards(
-                              item.staked, 
-                              rewardsPerSec, 
-                              strxPrice,
-                              blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
-                            );
-                            const isUsd = amountDisplays[`${item.username}-rewards`] === 'usd';
-
-                            return (
-                              <div className="flex flex-col items-start">
-                                <span>
-                                  Daily: {isUsd 
-                                    ? `$${rewards.dailyUsd.toFixed(2)}` 
-                                    : `${rewards.daily.toFixed(4)}`}
+                          {visibleColumns.username && (
+                            <td className="px-2 py-4 text-sm text-gray-900 w-40">
+                              <div className="flex items-center gap-1">
+                                <span title={getUserTier(item.staked).name}>
+                                  {getUserTier(item.staked).emoji}
                                 </span>
+                                <UsernameLink username={item.username} />
+                                <a 
+                                  href={`https://explorer.xprnetwork.org/account/${item.username}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-gray-400 hover:text-purple-600 transition-colors"
+                                  title="View on Blockchain Explorer"
+                                >
+                                  <CubeTransparentIcon className="h-4 w-4" />
+                                </a>
+                              </div>
+                            </td>
+                          )}
+                          {visibleColumns.staked && (
+                            <td 
+                              className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                              onClick={() => {
+                                toggleAmountDisplay(item.username, 'staked');
+                                handleEasterEgg(null, item.username);
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                {formatAmount(
+                                  item.staked, 
+                                  amountDisplays[`${item.username}-staked`] || 'strx'
+                                )}
                                 <span className="text-xs text-gray-500 dark:text-gray-300">
-                                  Monthly: {isUsd 
-                                    ? `$${rewards.monthlyUsd.toFixed(2)}` 
-                                    : `${rewards.monthly.toFixed(4)}`}
-                                </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-300">
-                                  Yearly: {isUsd 
-                                    ? `$${rewards.yearlyUsd.toFixed(2)}` 
-                                    : `${rewards.yearly.toFixed(4)}`}
+                                  ({(item.staked / TOTAL_SUPPLY * 100).toFixed(4)}%)
                                 </span>
                               </div>
-                            );
-                          })()}
+                            </td>
+                          )}
+                          {visibleColumns.unstaked && (
+                            <td 
+                              className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                              onClick={() => {
+                                toggleAmountDisplay(item.username, 'unstaked');
+                                handleEasterEgg(null, item.username);
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                {formatAmount(
+                                  item.unstaked, 
+                                  amountDisplays[`${item.username}-unstaked`] || 'strx'
+                                )}
+                                <span className="text-xs text-gray-500 dark:text-gray-300">
+                                  ({(item.unstaked / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                                </span>
+                              </div>
+                            </td>
+                          )}
+                          {visibleColumns.total && (
+                            <td 
+                              className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                              onClick={() => {
+                                toggleAmountDisplay(item.username, 'total');
+                                handleEasterEgg(null, item.username);
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                {formatAmount(
+                                  item.total, 
+                                  amountDisplays[`${item.username}-total`] || 'strx'
+                                )}
+                                <span className="text-xs text-gray-500 dark:text-gray-300">
+                                  ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                                </span>
+                              </div>
+                            </td>
+                          )}
+                          {visibleColumns.usdValue && (
+                            <td 
+                              className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                              onClick={() => {
+                                toggleAmountDisplay(item.username, 'usdValue');
+                                handleEasterEgg(null, item.username);
+                              }}
+                            >
+                              {formatAmount(
+                                item.total,
+                                amountDisplays[`${item.username}-usdValue`] || 'usd'
+                              )}
+                            </td>
+                          )}
+                          {visibleColumns.rewards && (
+                            <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[220px]">
+                              {(() => {
+                                const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
+                                  ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                                  : 0;
+                                
+                                const rewards = calculateRewards(
+                                  item.staked, 
+                                  rewardsPerSec, 
+                                  strxPrice,
+                                  blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
+                                );
+                                const isUsd = amountDisplays[`${item.username}-rewards`] === 'usd';
+
+                                return (
+                                  <div className="flex flex-col items-start">
+                                    <span>
+                                      Daily: {isUsd 
+                                        ? `$${rewards.dailyUsd.toFixed(2)}` 
+                                        : `${rewards.daily.toFixed(4)}`}
+                                    </span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-300">
+                                      Monthly: {isUsd 
+                                        ? `$${rewards.monthlyUsd.toFixed(2)}` 
+                                        : `${rewards.monthly.toFixed(4)}`}
+                                    </span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-300">
+                                      Yearly: {isUsd 
+                                        ? `$${rewards.yearlyUsd.toFixed(2)}` 
+                                        : `${rewards.yearly.toFixed(4)}`}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                ) : (
+                  <tbody>
+                    {currentData.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={Object.values(visibleColumns).filter(Boolean).length || 1}
+                          className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
+                        >
+                          {isLoading ? (
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="animate-spin h-5 w-5 border-2 border-purple-600 border-t-transparent rounded-full" />
+                              Loading stakers…
+                            </div>
+                          ) : deferredSearchTerm ? (
+                            <>No stakers match <span className="font-semibold">"{deferredSearchTerm}"</span>.</>
+                          ) : selectedTier ? (
+                            <>No stakers in the <span className="font-semibold">{selectedTier.name}</span> tier yet.</>
+                          ) : (
+                            <>No staker data available.</>
+                          )}
                         </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
+                      </tr>
+                    )}
+                    {currentData.map((item, index) => (
+                      <tr key={item.username} className="hover:bg-purple-50">
+                        {visibleColumns.rank && (
+                          <td className="px-2 py-4 text-sm text-gray-900 w-12">
+                            <div className="flex items-center gap-1">
+                              {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                              {(currentPage === 1 && index < 3) && (
+                                <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
+                                  {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.username && (
+                          <td className="px-2 py-4 text-sm text-gray-900 w-40">
+                            <div className="flex items-center gap-1">
+                              <span title={getUserTier(item.staked).name}>
+                                {getUserTier(item.staked).emoji}
+                              </span>
+                              <UsernameLink username={item.username} />
+                              <a 
+                                href={`https://explorer.xprnetwork.org/account/${item.username}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-gray-400 hover:text-purple-600 transition-colors"
+                                title="View on Blockchain Explorer"
+                              >
+                                <CubeTransparentIcon className="h-4 w-4" />
+                              </a>
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.staked && (
+                          <td 
+                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                            onClick={() => {
+                              toggleAmountDisplay(item.username, 'staked');
+                              handleEasterEgg(null, item.username);
+                            }}
+                          >
+                            <div className="flex flex-col">
+                              {formatAmount(
+                                item.staked, 
+                                amountDisplays[`${item.username}-staked`] || 'strx'
+                              )}
+                              <span className="text-xs text-gray-500 dark:text-gray-300">
+                                ({(item.staked / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                              </span>
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.unstaked && (
+                          <td 
+                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                            onClick={() => {
+                              toggleAmountDisplay(item.username, 'unstaked');
+                              handleEasterEgg(null, item.username);
+                            }}
+                          >
+                            <div className="flex flex-col">
+                              {formatAmount(
+                                item.unstaked, 
+                                amountDisplays[`${item.username}-unstaked`] || 'strx'
+                              )}
+                              <span className="text-xs text-gray-500 dark:text-gray-300">
+                                ({(item.unstaked / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                              </span>
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.total && (
+                          <td 
+                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                            onClick={() => {
+                              toggleAmountDisplay(item.username, 'total');
+                              handleEasterEgg(null, item.username);
+                            }}
+                          >
+                            <div className="flex flex-col">
+                              {formatAmount(
+                                item.total, 
+                                amountDisplays[`${item.username}-total`] || 'strx'
+                              )}
+                              <span className="text-xs text-gray-500 dark:text-gray-300">
+                                ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
+                              </span>
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.usdValue && (
+                          <td 
+                            className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
+                            onClick={() => {
+                              toggleAmountDisplay(item.username, 'usdValue');
+                              handleEasterEgg(null, item.username);
+                            }}
+                          >
+                            {formatAmount(
+                              item.total,
+                              amountDisplays[`${item.username}-usdValue`] || 'usd'
+                            )}
+                          </td>
+                        )}
+                        {visibleColumns.rewards && (
+                          <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[220px]">
+                            {(() => {
+                              const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
+                                ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
+                                : 0;
+                              
+                              const rewards = calculateRewards(
+                                item.staked, 
+                                rewardsPerSec, 
+                                strxPrice,
+                                blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
+                              );
+                              const isUsd = amountDisplays[`${item.username}-rewards`] === 'usd';
+
+                              return (
+                                <div className="flex flex-col items-start">
+                                  <span>
+                                    Daily: {isUsd 
+                                      ? `$${rewards.dailyUsd.toFixed(2)}` 
+                                      : `${rewards.daily.toFixed(4)}`}
+                                  </span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-300">
+                                    Monthly: {isUsd 
+                                      ? `$${rewards.monthlyUsd.toFixed(2)}` 
+                                      : `${rewards.monthly.toFixed(4)}`}
+                                  </span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-300">
+                                    Yearly: {isUsd 
+                                      ? `$${rewards.yearlyUsd.toFixed(2)}` 
+                                      : `${rewards.yearly.toFixed(4)}`}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                )}
               </table>
             </div>
           )}

@@ -1,5 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTheme } from './ThemeProvider';
+import { memo } from 'react';
 
 const ThemedTooltip = ({ active, payload, label }: any) => {
   const { theme } = useTheme();
@@ -32,7 +33,7 @@ type StakersChartProps = {
   formatLargeNumber: (value: number) => string;
 };
 
-export const StakersChart = ({ topHolders, sortField, formatLargeNumber }: StakersChartProps) => {
+export const StakersChart = memo<StakersChartProps>(({ topHolders, sortField, formatLargeNumber }: StakersChartProps) => {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={topHolders} margin={{ left: 50, right: 20, top: 20, bottom: 20 }}>
@@ -52,4 +53,4 @@ export const StakersChart = ({ topHolders, sortField, formatLargeNumber }: Stake
       </BarChart>
     </ResponsiveContainer>
   );
-};
+});
