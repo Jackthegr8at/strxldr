@@ -29,7 +29,7 @@ export const InfoModal = memo<InfoModalProps>(({ isOpen, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn"
       role="dialog"
       aria-modal="true"
       aria-labelledby="info-modal-title"

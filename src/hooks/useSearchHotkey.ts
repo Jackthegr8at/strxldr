@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 type UseSearchHotkeyProps = {
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   enabled?: boolean;
 };
 

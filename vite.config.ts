@@ -6,12 +6,23 @@ export default defineConfig({
   build: {
     outDir: 'build',
     sourcemap: false,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'ui-vendor': ['@radix-ui/react-dropdown-menu'],
-          'charts-vendor': ['recharts'],
+        codeSplitting: {
+          groups: [
+            {
+              name: 'react-vendor',
+              test: /node_modules[\\/]react(?:-dom)?[\\/]/,
+            },
+            {
+              name: 'ui-vendor',
+              test: /node_modules[\\/]@radix-ui[\\/]react-dropdown-menu[\\/]/,
+            },
+            {
+              name: 'charts-vendor',
+              test: /node_modules[\\/]recharts[\\/]/,
+            },
+          ],
         },
       },
     },

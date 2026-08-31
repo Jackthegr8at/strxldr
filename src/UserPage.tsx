@@ -709,9 +709,12 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                             color: 'white',
                             fontWeight: 'bold',
                           }}
-                          formatter={(value: number, name: string) => [
-                            `${name}: ${value > 0 ? '+' : '-'}${Math.abs(value).toLocaleString()} STRX`
-                          ]}
+                          formatter={(value, name) => {
+                            const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+                            return [
+                              `${String(name)}: ${numericValue > 0 ? '+' : '-'}${Math.abs(numericValue).toLocaleString()} STRX`
+                            ];
+                          }}
                           position={isMobile ? { x: 10, y: 0 } : undefined}
                         />
                         <Legend />
@@ -1086,9 +1089,12 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                                 color: 'white',
                                 fontWeight: 'bold',
                               }}
-                              formatter={(value: number) => [
-                                `${value > 0 ? '+' : '-'}${Math.abs(value).toLocaleString()} STRX`
-                              ]}
+                              formatter={(value) => {
+                                const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+                                return [
+                                  `${numericValue > 0 ? '+' : '-'}${Math.abs(numericValue).toLocaleString()} STRX`
+                                ];
+                              }}
                               position={isMobile ? { x: 10, y: 0 } : undefined}
                             />
                             <Line 

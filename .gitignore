@@ -27,6 +27,5 @@ yarn-error.log*
 
 .env
 .env.local
-package-lock.json
 /scripts/*
 /scripts/
