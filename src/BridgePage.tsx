@@ -4,9 +4,9 @@ import { ArrowLeftIcon, CubeTransparentIcon, MagnifyingGlassIcon } from '@heroic
 import { Header } from './components/Header';
 import { ThemeProvider } from './components/ThemeProvider';
 import { StatisticCard } from './components/StatisticCard';
-import { fetchBridgeBalance, fetchDexScreenerPairs, fetchHistoryActions, fetchRaydiumPool } from './lib/api';
+import { fetchBridgeBalance, fetchHistoryActions, fetchPriceRows, fetchRaydiumPool } from './lib/api';
 import { cleanMemo, formatTimestamp, getTransactionType } from './lib/leaderboard';
-import type { ActionResponse, BridgeAction, RaydiumPoolData } from './lib/types';
+import type { ActionResponse, BridgeAction, PriceResponse, RaydiumPoolData } from './lib/types';
 
 
 
@@ -24,11 +24,23 @@ export function BridgePage() {
     { refreshInterval: 360000 }
   );
 
-  // Get price from the pool data
-  const price = raydiumPoolData?.data?.[0]?.price;
-  const priceDisplay = price !== undefined
-    ? `$${price.toFixed(6)}`
+  const { data: priceData } = useSWR<PriceResponse>(
+    'strx_price_data',
+    fetchPriceRows,
+    { refreshInterval: 300000 }
+  );
+
+  const strxPrice = useMemo(() => {
+    const strxRow = priceData?.rows?.find(row => row.sym === '4,STRX');
+    return strxRow ? parseFloat(strxRow.quantity.split(' ')[0]) : 0;
+  }, [priceData]);
+
+  const strxPriceDisplay = strxPrice > 0
+    ? `$${strxPrice.toFixed(6)}`
     : 'N/A';
+
+  // Get the pool price in SOL for pool-specific statistics.
+  const price = raydiumPoolData?.data?.[0]?.price;
 
   // For price changes, use week data instead of day data since day data has -1 values
   const weekPriceMin = raydiumPoolData?.data?.[0]?.week?.priceMin;
@@ -172,11 +184,14 @@ export function BridgePage() {
             <StatisticCard
               title="Bridge Balance"
               value={
-                bridgeData?.[0] && price ? (
+                bridgeData?.[0] && strxPrice > 0 ? (
                   <div className="flex flex-col">
                     <span>{parseFloat(bridgeData[0]).toLocaleString()} STRX</span>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      ≈ {priceDisplay}
+                      ≈ ${(parseFloat(bridgeData[0]) * strxPrice).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      })}
                     </span>
                   </div>
                 ) : '...'
@@ -230,7 +245,7 @@ export function BridgePage() {
                 value={
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                      <span>{priceDisplay}</span>
+                      <span>{strxPriceDisplay}</span>
                       <span className={`text-sm ${
                         priceChangePercent !== undefined && priceChangePercent >= 0 
                           ? 'text-green-500' 
@@ -401,7 +416,7 @@ export function BridgePage() {
                           <div className="flex flex-col">
                             <span>
                               {(showAllUsd || showUsd[action.trxId])
-                                ? `$${(action.amount * (price ? price : 0)).toLocaleString(undefined, {
+                                ? `$${(action.amount * strxPrice).toLocaleString(undefined, {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2
                                   })}`

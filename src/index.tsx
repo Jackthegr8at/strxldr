@@ -484,8 +484,8 @@ export function App() {
 
   // Get price from the Raydium pool data
   const raydiumPrice = raydiumPoolData?.data?.[0]?.price;
-  const raydiumPriceDisplay = raydiumPrice !== undefined
-    ? `$${raydiumPrice.toFixed(6)}`
+  const strxPriceDisplay = strxPrice > 0
+    ? `$${strxPrice.toFixed(6)}`
     : 'N/A';
 
   // For price changes, use week data instead of day data since day data has -1 values
@@ -727,11 +727,11 @@ export function App() {
             <StatisticCard
               title="Bridge Balance"
               value={
-                bridgeData?.[0] && raydiumPrice ? (
+                bridgeData?.[0] && strxPrice ? (
                   <div className="flex flex-col">
                     <span>{parseFloat(bridgeData[0]).toLocaleString()} STRX</span>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                      ≈ ${(parseFloat(bridgeData[0]) * raydiumPrice).toLocaleString(undefined, {
+                      ≈ ${(parseFloat(bridgeData[0]) * strxPrice).toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                       })}
@@ -825,7 +825,7 @@ export function App() {
                 raydiumPoolData?.success && raydiumPoolData?.data && raydiumPoolData.data.length > 0 ? (
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                      <span>{raydiumPriceDisplay}</span>
+                      <span>{strxPriceDisplay}</span>
                       <span className={`text-sm ${
                         raydiumPriceChangePercent !== undefined && raydiumPriceChangePercent >= 0 
                           ? 'text-green-500' 
