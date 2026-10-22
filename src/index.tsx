@@ -31,7 +31,7 @@ const ITEMS_PER_PAGE = 10;
 function StableCardResource({ resources, children }: React.ComponentProps<typeof ResourceState>) {
   const missing = resources.some(resource => resource.data === undefined);
   const unavailable = resources.some(resource => resource.data === undefined && resource.error);
-  return <div className="min-h-[120px]">
+  return <div className="metric-resource">
     {React.isValidElement<React.ComponentProps<typeof StatisticCard>>(children)
       ? React.cloneElement(children, {
           loading: children.props.loading || (missing && !unavailable),
@@ -454,12 +454,12 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
         <Header />
         {(error || snapshot.cached) && <LoadState loading={false} error={error} hasData={snapshot.hasData} stale={snapshot.cached} onRetry={() => { void snapshot.mutate(); }} />}
 
-        <div className="container mx-auto px-4 md:px-20 md:py-12 py-8">
-          <div className="flex justify-between items-center mb-6">
+        <div className="dashboard-shell">
+          <div className="page-heading">
             {/* Title on the left */}
             <div className="relative group">
               <h1
-                className="flex items-center gap-2 text-2xl md:text-3xl font-bold text-purple-700 dark:text-purple-400"
+                className="dashboard-title"
               >
                 {pageTitle}
               </h1>
@@ -470,14 +470,14 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
               href="https://storex.io/account/staking"
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-purple-600 hover:bg-purple-700 dark:hover:bg-purple-500 px-4 py-2 text-white font-bold rounded-lg transition-colors"
+              className="btn-primary stake-action"
             >
               <span>Stake STRX</span>
             </a>
           </div>
 
           {/* Last update info with info button */}
-            <div className="flex justify-between items-center text-sm mb-4 min-h-[48px]">
+            <div className="source-context flex justify-between items-center text-sm min-h-[48px]">
               <span className="text-gray-500 italic dark:text-gray-300">
                 {response ? (response.lastModified ? `Last updated ${formatTimeDiff(response.lastModified)}` : formatTimeDiff(null)) : 'Loading source update time…'}
               </span>
@@ -500,8 +500,8 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
           </Suspense>
 
         <>
-        {/* Statistics Dashboard */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        {/* Headline staking metrics */}
+          <div className="metric-grid primary-metrics">
             <StatisticCard
               unavailable={Boolean(error && !snapshot.hasData)}
               loading={isLoading || !snapshot.hasData}
@@ -509,11 +509,10 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
               value={statistics?.totalUsers.toLocaleString()}
               tooltip="Total number of unique addresses that currently have STRX tokens staked"
             />
-
             <StatisticCard
               unavailable={Boolean(error && !snapshot.hasData)}
               loading={isLoading || !snapshot.hasData}
-              title="Total Staked (Cleos Call)"
+              title="Total Staked"
               value={
                 <div className="flex flex-col">
                   {formatAmount(
@@ -528,77 +527,6 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
               tooltip="Total amount of STRX tokens currently staked in the protocol. Click to toggle between STRX and USD values."
               onClick={() => toggleAmountDisplay('statistics', 'totalStaked')}
             />
-
-            <StableCardResource resources={[blockchainDataResource]}>
-<StatisticCard
-              unavailable={Boolean(error && !snapshot.hasData)}
-              loading={isLoading || !snapshot.hasData}
-              title="Global Staked (API)"
-              value={
-                <div className="flex flex-col">
-                  {formatAmount(
-                    globalStaked,
-                    amountDisplays['statistics-globalStaked'] || 'strx'
-                  )}
-                  <span className="text-xs text-gray-500 dark:text-gray-300">
-                    ({(globalStaked / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
-                  </span>
-                </div>
-              }
-              tooltip="Total staked amount reported by the blockchain API. May differ slightly from Cleos call due to timing differences."
-              onClick={() => toggleAmountDisplay('statistics', 'globalStaked')}
-            />
-            </StableCardResource>
-
-            <StatisticCard
-              unavailable={Boolean(error && !snapshot.hasData)}
-              loading={isLoading || !snapshot.hasData}
-              title="Average Stake"
-              value={formatAmount(
-                statistics?.average || 0,
-                amountDisplays['statistics-average'] || 'strx'
-              )}
-              tooltip="Average amount of STRX tokens staked per user. Click to toggle between STRX and USD values."
-              onClick={() => toggleAmountDisplay('statistics', 'average')}
-            />
-
-            <StatisticCard
-              unavailable={Boolean(error && !snapshot.hasData)}
-              loading={isLoading || !snapshot.hasData}
-              title="Median Stake"
-              value={formatAmount(
-                statistics?.median || 0,
-                amountDisplays['statistics-median'] || 'strx'
-              )}
-              tooltip="The middle value of all stake amounts. 50% of stakers have more than this amount, 50% have less."
-              onClick={() => toggleAmountDisplay('statistics', 'median')}
-            />
-
-            <StatisticCard
-              unavailable={Boolean(error && !snapshot.hasData)}
-              loading={isLoading || !snapshot.hasData}
-              title="Stake Range"
-              value={
-                <div className="flex flex-col">
-                  <span className="text-sm">
-                    {formatAmount(
-                      statistics?.minStake || 0,
-                      amountDisplays['statistics-range'] || 'strx'
-                    )}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-300">to</span>
-                  <span className="text-sm">
-                    {formatAmount(
-                      statistics?.maxStake || 0,
-                      amountDisplays['statistics-range'] || 'strx'
-                    )}
-                  </span>
-                </div>
-              }
-              tooltip="The range between the smallest and largest stake amounts in the system. Click to toggle between STRX and USD values."
-              onClick={() => toggleAmountDisplay('statistics', 'range')}
-            />
-
             <StableCardResource resources={[rewardsPoolDataResource, blockchainDataResource]}>
 <StatisticCard
               unavailable={Boolean(error && !snapshot.hasData)}
@@ -625,35 +553,6 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
               tooltip="Current rewards pool balance and estimated days until depletion assuming daily compounding"
             />
             </StableCardResource>
-
-            <StableCardResource resources={[bridgeDataResource, priceDataResource]}>
-<StatisticCard
-              unavailable={Boolean(error && !snapshot.hasData)}
-              loading={isLoading || !snapshot.hasData}
-              title="Bridge Balance"
-              value={
-                bridgeData?.[0] && strxPrice ? (
-                  <div className="flex flex-col">
-                    <span>{parseFloat(bridgeData[0]).toLocaleString()} STRX</span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      ≈ ${(parseFloat(bridgeData[0]) * strxPrice).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                      })}
-                    </span>
-                  </div>
-                ) : '...'
-              }
-              tooltip="Current STRX balance in the bridge contract. Click to view bridge dashboard."
-              onClick={onBridgeSelect}
-            >
-              <ArrowTopRightOnSquareIcon
-                className="absolute bottom-2 right-2 h-5 w-5 text-gray-400 hover:text-purple-600 transition-colors"
-                title="View Bridge Dashboard"
-              />
-            </StatisticCard>
-            </StableCardResource>
-
             <StableCardResource resources={[priceDataResource]}>
 <StatisticCard
               unavailable={Boolean(error && !snapshot.hasData)}
@@ -667,128 +566,22 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
               tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
             />
             </StableCardResource>
-
-            <StableCardResource resources={[raydiumPoolDataResource]}>
-<StatisticCard
-              unavailable={Boolean(error && !snapshot.hasData)}
-              loading={isLoading || !snapshot.hasData}
-              variant="market"
-              title="STRX/SOL Pool"
-              value={
-                raydiumPoolData !== undefined ? (
-                  <div className="flex flex-col">
-                    <span>{formatOptionalNumber(market.price, 8)} SOL</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-300">
-                      TVL: ${formatOptionalNumber(market.tvl)}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-300">
-                      24h Vol: ${formatOptionalNumber(market.dayVolume)}
-                    </span>
-                    <div className="text-xs text-gray-500 dark:text-gray-300 mt-1">
-                      Liquidity:
-                      <div className="flex items-center gap-1 ml-2">
-                        <img
-                          src="/favicon-128.webp"
-                          alt="STRX"
-                          className="w-4 h-4"
-                        />
-                        {formatOptionalNumber(market.mintAmountA)} STRX
-                      </div>
-                      <div className="flex items-center gap-1 ml-2">
-                        <img
-                          src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
-                          alt="SOL"
-                          className="w-4 h-4 rounded-full"
-                        />
-                        {formatOptionalNumber(market.mintAmountB)} SOL
-                      </div>
-                    </div>
-                  </div>
-                ) : 'Loading...'
-              }
-              tooltip="STRX price and pool stats from Raydium"
-            />
-            </StableCardResource>
-
-            <StableCardResource resources={[raydiumPoolDataResource]}>
-<StatisticCard
-              unavailable={Boolean(error && !snapshot.hasData)}
-              loading={isLoading || !snapshot.hasData}
-              variant="market"
-              title="Trading Activity"
-              value={
-                raydiumPoolData ? (
-                  <div className="flex flex-col">
-                    <span className="text-xs text-green-500">
-                      Reward APR: {formatOptionalNumber(market.rewardApr, 2)}%
-                    </span>
-                    <div className="text-xs  text-gray-500 dark:text-gray-300 mt-1">
-                      Volume:
-                      <div className="ml-2">
-                        24h: ${formatOptionalNumber(market.dayVolume)}<br/>
-                        7d: ${formatOptionalNumber(market.weekVolume)}<br/>
-                        30d: ${formatOptionalNumber(market.monthVolume)}
-                      </div>
-                    </div>
-                  </div>
-                ) : 'Loading...'
-              }
-              tooltip="Trading volume and APR stats from Raydium"
-            />
-            </StableCardResource>
-
-            <StableCardResource resources={[raydiumPoolDataResource, priceDataResource]}>
-            <StatisticCard
-              unavailable={Boolean(error && !snapshot.hasData)}
-              loading={isLoading || !snapshot.hasData}
-              variant="market"
-              title="Market Stats"
-              value={
-                raydiumPoolData !== undefined ? (
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <span>{strxPriceDisplay}</span>
-                      <span className={`text-sm ${
-                        raydiumPriceChangePercent !== null && raydiumPriceChangePercent >= 0
-                          ? 'text-green-500'
-                          : 'text-red-500'
-                      }`}>
-                        {raydiumPriceChangeDisplay}
-                      </span>
-                    </div>
-                    {raydiumPoolData !== undefined && (
-                      <span className="text-xs text-gray-500 dark:text-gray-300">
-                        TVL: ${formatOptionalNumber(market.tvl)}
-                      </span>
-                    )}
-                    {raydiumPoolData !== undefined && (
-                      <div className="text-xs text-gray-500 dark:text-gray-300">
-                        APR: {formatOptionalNumber(market.apr, 2)}%
-                        <span className="ml-2">
-                          (Fee: {formatOptionalNumber(market.feeApr, 2)}%)
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ) : 'Loading...'
-              }
-              tooltip="Market statistics from Raydium"
-            />
-            </StableCardResource>
           </div>
 
           {/* Staking Tiers Dashboard */}
-          <div className="mb-8">
+          <div className="tier-filter-section">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Staking Tiers Distribution</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="tier-filters">
               {tierStatistics?.map((tier) => (
-                <div
+                <button
+                  type="button"
+                  aria-pressed={selectedTier?.name === tier.name}
                   key={tier.name}
                   onClick={() => {
                     setSelectedTier(selectedTier?.name === tier.name ? null : tier);
                     handleEasterEgg(tier);
                   }}
-                  className={`tier-card p-4 rounded-lg shadow border cursor-pointer ${
+                  className={`tier-card ${
                     selectedTier?.name === tier.name
                       ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400  transition-colors'
                       : 'hover:bg-purple-200 dark:hover:bg-purple-900/40'
@@ -804,69 +597,15 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
                   <div className="text-xs text-muted-foreground dark:text-gray-300">
                    {tier.minimum > 0 ? tier.minimum.toLocaleString() + '+ STRX' : 'Nada'}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
 
-          <TierMilestoneTracker
-            loading={isLoading || (!snapshot.hasData && !error)}
-            error={!snapshot.hasData ? error : undefined}
-            stakersData={processedData}
-            setSearchTerm={setSearchTerm}
-            selectedTier={selectedTier}
-            sectionVisibility={sectionVisibility}
-            setSectionVisibility={setSectionVisibility}
-            SectionHeader={SectionHeader}
-          />
-
-          {/* Add the recent actions dashboard */}
-          <div className="mb-8">
-            <SectionHeader
-              title="Recent Staking Activity"
-              sectionKey="recentActivity"
-              isVisible={sectionVisibility.recentActivity}
-              onToggle={() => setSectionVisibility(prev => ({
-                ...prev,
-                recentActivity: !prev.recentActivity
-              }))}
-            />
-
-            {sectionVisibility.recentActivity && (
-              <RecentActionsDashboard
-                strxPrice={strxPrice}
-                stakersData={response?.data}
-                setSearchTerm={setSearchTerm}
-                selectedTier={selectedTier}
-              />
-            )}
-          </div>
-
-          {/* Add the new stakers panel before the leaderboard table */}
-          <ResourceState resources={[newStakersDataResource]} />
-          <NewStakersPanel
-            newStakers={processedNewStakers}
-            strxPrice={strxPrice}
-          />
-
-          {selectedTier?.name !== 'No Stake' && (
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Top 15 Holders Distribution</h2>
-              <div className="min-h-[300px] w-full">
-                <Suspense fallback={null}>
-                  <DeferredStakersChart
-                    topHolders={topHolders}
-                    sortField={sortField}
-                    formatLargeNumber={formatLargeNumber}
-                  />
-                </Suspense>
-              </div>
-            </div>
-          )}
-
           {/* Add the stakers list section */}
-          <div className="mt-8">
-            <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <section className="leaderboard-section section-surface" data-testid="leaderboard-section" aria-labelledby="leaderboard-heading">
+            <h2 id="leaderboard-heading" className="section-title">Stakers Leaderboard</h2>
+            <div className="leaderboard-toolbar">
               <div className="relative">
                 <MagnifyingGlassIcon
                   aria-hidden="true"
@@ -909,7 +648,6 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
                   setSortField={setSortField}
                 />
                 <div className="hidden md:flex items-center gap-2">
-                  <span className="text-gray-600 dark:text-gray-300">Sort by:</span>
                   <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <button className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300">
@@ -959,9 +697,17 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
               </div>
             </div>
 
-          {selectedTier?.name !== 'No Stake' && (
-            <div className="bg-card rounded-lg shadow overflow-x-auto">
-              <table className="table-custom">
+          <div className="leaderboard-scroll" data-loading={isLoading || !snapshot.hasData} role="region" aria-label="Stakers leaderboard" tabIndex={0}>
+              <table className="table-custom leaderboard-table" data-testid="leaderboard-table">
+                <colgroup>
+                  {visibleColumns.rank && <col className="leaderboard-col-rank" />}
+                  {visibleColumns.username && <col className="leaderboard-col-username" />}
+                  {visibleColumns.staked && <col className="leaderboard-col-staked" />}
+                  {visibleColumns.unstaked && <col className="leaderboard-col-unstaked" />}
+                  {visibleColumns.total && <col className="leaderboard-col-total" />}
+                  {visibleColumns.usdValue && <col className="leaderboard-col-usdValue" />}
+                  {visibleColumns.rewards && <col className="leaderboard-col-rewards" />}
+                </colgroup>
                 <thead>
                   <tr>
                     {visibleColumns.rank && (
@@ -1156,7 +902,6 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
                   </tbody>
               </table>
             </div>
-          )}
 
 
 
@@ -1169,7 +914,7 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
                   useGrouping: true,
                 })}
               </div>
-              <div className="flex items-center gap-2 justify-center md:justify-end">
+              <div className="leaderboard-pagination flex flex-wrap items-center gap-2 justify-center md:justify-end">
                 <button
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
@@ -1203,7 +948,269 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
                 </button>
               </div>
             </div>
+          </section>
+
+          <section className="dashboard-secondary" aria-labelledby="supporting-metrics-heading">
+            <h2 id="supporting-metrics-heading" className="section-title">Market & Staking Overview</h2>
+            <div className="metric-grid supporting-metrics">
+            <StableCardResource resources={[blockchainDataResource]}>
+<StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
+              title="Protocol Staked"
+              value={
+                <div className="flex flex-col">
+                  {formatAmount(
+                    globalStaked,
+                    amountDisplays['statistics-globalStaked'] || 'strx'
+                  )}
+                  <span className="text-xs text-gray-500 dark:text-gray-300">
+                    ({(globalStaked / TOTAL_SUPPLY * 100).toFixed(2)}% of supply)
+                  </span>
+                </div>
+              }
+              tooltip="Total staked amount reported by the blockchain API. May differ slightly from Cleos call due to timing differences."
+              onClick={() => toggleAmountDisplay('statistics', 'globalStaked')}
+            />
+            </StableCardResource>
+            <StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
+              title="Average Stake"
+              value={formatAmount(
+                statistics?.average || 0,
+                amountDisplays['statistics-average'] || 'strx'
+              )}
+              tooltip="Average amount of STRX tokens staked per user. Click to toggle between STRX and USD values."
+              onClick={() => toggleAmountDisplay('statistics', 'average')}
+            />
+            <StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
+              title="Median Stake"
+              value={formatAmount(
+                statistics?.median || 0,
+                amountDisplays['statistics-median'] || 'strx'
+              )}
+              tooltip="The middle value of all stake amounts. 50% of stakers have more than this amount, 50% have less."
+              onClick={() => toggleAmountDisplay('statistics', 'median')}
+            />
+            <StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
+              title="Stake Range"
+              value={
+                <div className="flex flex-col">
+                  <span className="text-sm">
+                    {formatAmount(
+                      statistics?.minStake || 0,
+                      amountDisplays['statistics-range'] || 'strx'
+                    )}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-300">to</span>
+                  <span className="text-sm">
+                    {formatAmount(
+                      statistics?.maxStake || 0,
+                      amountDisplays['statistics-range'] || 'strx'
+                    )}
+                  </span>
+                </div>
+              }
+              tooltip="The range between the smallest and largest stake amounts in the system. Click to toggle between STRX and USD values."
+              onClick={() => toggleAmountDisplay('statistics', 'range')}
+            />
+            <StableCardResource resources={[bridgeDataResource, priceDataResource]}>
+<StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
+              title="Bridge Balance"
+              value={
+                bridgeData?.[0] && strxPrice ? (
+                  <div className="flex flex-col">
+                    <span>{parseFloat(bridgeData[0]).toLocaleString()} STRX</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      ≈ ${(parseFloat(bridgeData[0]) * strxPrice).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                      })}
+                    </span>
+                  </div>
+                ) : '...'
+              }
+              tooltip="Current STRX balance in the bridge contract. Click to view bridge dashboard."
+              onClick={onBridgeSelect}
+            >
+              <ArrowTopRightOnSquareIcon
+                className="absolute bottom-2 right-2 h-5 w-5 text-gray-400 hover:text-purple-600 transition-colors"
+                title="View Bridge Dashboard"
+              />
+            </StatisticCard>
+            </StableCardResource>
+            <StableCardResource resources={[raydiumPoolDataResource]}>
+<StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
+              variant="market"
+              title="STRX/SOL Pool"
+              value={
+                raydiumPoolData !== undefined ? (
+                  <div className="flex flex-col">
+                    <span>{formatOptionalNumber(market.price, 8)} SOL</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-300">
+                      TVL: ${formatOptionalNumber(market.tvl)}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-300">
+                      24h Vol: ${formatOptionalNumber(market.dayVolume)}
+                    </span>
+                    <div className="text-xs text-gray-500 dark:text-gray-300 mt-1">
+                      Liquidity:
+                      <div className="flex items-center gap-1 ml-2">
+                        <img
+                          src="/favicon-128.webp"
+                          alt="STRX"
+                          className="w-4 h-4"
+                        />
+                        {formatOptionalNumber(market.mintAmountA)} STRX
+                      </div>
+                      <div className="flex items-center gap-1 ml-2">
+                        <img
+                          src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+                          alt="SOL"
+                          className="w-4 h-4 rounded-full"
+                        />
+                        {formatOptionalNumber(market.mintAmountB)} SOL
+                      </div>
+                    </div>
+                  </div>
+                ) : 'Loading...'
+              }
+              tooltip="STRX price and pool stats from Raydium"
+            />
+            </StableCardResource>
+            <StableCardResource resources={[raydiumPoolDataResource]}>
+<StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
+              variant="market"
+              title="Trading Activity"
+              value={
+                raydiumPoolData ? (
+                  <div className="flex flex-col">
+                    <span className="text-xs text-green-700 dark:text-green-400">
+                      Reward APR: {formatOptionalNumber(market.rewardApr, 2)}%
+                    </span>
+                    <div className="text-xs  text-gray-500 dark:text-gray-300 mt-1">
+                      Volume:
+                      <div className="ml-2">
+                        24h: ${formatOptionalNumber(market.dayVolume)}<br/>
+                        7d: ${formatOptionalNumber(market.weekVolume)}<br/>
+                        30d: ${formatOptionalNumber(market.monthVolume)}
+                      </div>
+                    </div>
+                  </div>
+                ) : 'Loading...'
+              }
+              tooltip="Trading volume and APR stats from Raydium"
+            />
+            </StableCardResource>
+            <StableCardResource resources={[raydiumPoolDataResource, priceDataResource]}>
+            <StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
+              variant="market"
+              title="Market Stats"
+              value={
+                raydiumPoolData !== undefined ? (
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span>{strxPriceDisplay}</span>
+                      <span className={`text-sm ${
+                        raydiumPriceChangePercent !== null && raydiumPriceChangePercent >= 0
+                          ? 'text-green-700 dark:text-green-400'
+                          : 'text-red-700 dark:text-red-400'
+                      }`}>
+                        {raydiumPriceChangeDisplay}
+                      </span>
+                    </div>
+                    {raydiumPoolData !== undefined && (
+                      <span className="text-xs text-gray-500 dark:text-gray-300">
+                        TVL: ${formatOptionalNumber(market.tvl)}
+                      </span>
+                    )}
+                    {raydiumPoolData !== undefined && (
+                      <div className="text-xs text-gray-500 dark:text-gray-300">
+                        APR: {formatOptionalNumber(market.apr, 2)}%
+                        <span className="ml-2">
+                          (Fee: {formatOptionalNumber(market.feeApr, 2)}%)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : 'Loading...'
+              }
+              tooltip="Market statistics from Raydium"
+            />
+            </StableCardResource>
+            </div>
+          <div className="dashboard-activity-grid">
+          <TierMilestoneTracker
+            loading={isLoading || (!snapshot.hasData && !error)}
+            error={!snapshot.hasData ? error : undefined}
+            stakersData={processedData}
+            setSearchTerm={setSearchTerm}
+            selectedTier={selectedTier}
+            sectionVisibility={sectionVisibility}
+            setSectionVisibility={setSectionVisibility}
+            SectionHeader={SectionHeader}
+          />
+
+          {/* Add the recent actions dashboard */}
+          <div className="mb-8">
+            <SectionHeader
+              title="Recent Staking Activity"
+              sectionKey="recentActivity"
+              isVisible={sectionVisibility.recentActivity}
+              onToggle={() => setSectionVisibility(prev => ({
+                ...prev,
+                recentActivity: !prev.recentActivity
+              }))}
+            />
+
+            {sectionVisibility.recentActivity && (
+              <RecentActionsDashboard
+                strxPrice={strxPrice}
+                stakersData={response?.data}
+                setSearchTerm={setSearchTerm}
+                selectedTier={selectedTier}
+              />
+            )}
           </div>
+
+          </div>
+
+          {/* New accounts follow the main staking activity. */}
+          <ResourceState resources={[newStakersDataResource]} />
+          <NewStakersPanel
+            newStakers={processedNewStakers}
+            strxPrice={strxPrice}
+          />
+
+          {selectedTier?.name !== 'No Stake' && (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Top 15 Holders Distribution</h2>
+              <div className="min-h-[300px] w-full">
+                <Suspense fallback={null}>
+                  <DeferredStakersChart
+                    topHolders={topHolders}
+                    sortField={sortField}
+                    formatLargeNumber={formatLargeNumber}
+                  />
+                </Suspense>
+              </div>
+            </div>
+          )}
+
+          </section>
         </>
         </div>
       </div>

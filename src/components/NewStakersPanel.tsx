@@ -24,13 +24,13 @@ export const NewStakersPanel = memo<NewStakersPanelProps>(({ newStakers, strxPri
   if (!newStakers.length) return null;
 
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+    <div className="new-stakers">
+      <h2 className="new-stakers__title">
         New Stakers 🎉
       </h2>
-      <div className="bg-card rounded-lg shadow overflow-hidden">
+      <div className="section-surface overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="table-custom">
+          <table className="analytics-table">
             <thead>
               <tr>
                 <th>Time</th>

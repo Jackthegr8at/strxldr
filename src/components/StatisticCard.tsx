@@ -25,17 +25,14 @@ export const StatisticCard = ({ title, value, tooltip, onClick, children, loadin
   return (
     <div
       aria-busy={loading && !unavailable}
-      style={{ minHeight: variant === 'market' ? 240 : 120 }}
-      className={`bg-card p-4 rounded-lg shadow border relative ${
-        onClick ? 'cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors' : ''
-      }`}
+      className={`statistic-card statistic-card--${variant} ${onClick ? 'statistic-card--interactive' : ''}`}
       onClick={onClick}
       onKeyDown={handleKeyDown}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
-      <div className="flex justify-between items-start mb-1">
-        <div className="text-sm text-muted-foreground dark:text-gray-300">{title}</div>
+      <div className="statistic-card__heading">
+        <div className="statistic-card__label">{title}</div>
         <button
           type="button"
           aria-label={tooltip}
@@ -54,7 +51,7 @@ export const StatisticCard = ({ title, value, tooltip, onClick, children, loadin
           </span>
         </button>
       </div>
-      <div className="text-xl font-semibold text-purple-700 dark:text-purple-300">
+      <div className="statistic-card__value">
         {unavailable ? 'Unavailable' : loading || value === undefined || value === null || value === '' ? (
           <div className="skeleton h-6 w-24" aria-label="Loading" />
         ) : (

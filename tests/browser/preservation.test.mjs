@@ -81,7 +81,7 @@ async function finish(s) {
   assert.deepEqual(s.fixture.blocked, [], 'external requests are fixtures or blocked before DNS');
   await s.context.close();
 }
-const table = page => page.locator('table.table-custom').last();
+const table = page => page.getByTestId('leaderboard-table');
 async function search(page, term) {
   await page.getByPlaceholder('Search by username...').fill(term);
   await page.waitForFunction(q => new URL(location.href).searchParams.get('q') === (q || null), term);

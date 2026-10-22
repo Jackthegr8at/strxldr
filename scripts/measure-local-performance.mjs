@@ -247,7 +247,7 @@ export async function captureScenario(browser, origin, options = {}) {
     if (!options.fail) {
       if (options.route === '/bridge') await page.getByRole('heading', {
         name: 'STRX Bridge Dashboard'
-      }).waitFor();else if (options.route?.includes('user=')) await page.getByPlaceholder('Staked amount').waitFor();else await page.waitForFunction(() => [...document.querySelectorAll('table.table-custom tbody tr')].some(row => row.querySelector('td:not([colspan])')));
+      }).waitFor();else if (options.route?.includes('user=')) await page.getByPlaceholder('Staked amount').waitFor();else await page.waitForFunction(() => [...document.querySelectorAll('[data-testid="leaderboard-table"] tbody tr')].some(row => row.querySelector('td:not([colspan])')));
     }
     await frames(page);
     await page.waitForTimeout(500);
@@ -280,7 +280,7 @@ export async function captureScenario(browser, origin, options = {}) {
       encoded: result.metrics.resources.filter(r => new URL(r.name).origin !== origin && r.initiatorType === 'img').reduce((n, r) => n + r.encodedBodySize, 0),
       note: 'Synthetic SVG responses; encodedBodySize may be zero without Timing-Allow-Origin. Real remote image bytes unmeasured.'
     };
-    result.geometry = await page.locator('table').last().evaluate(table => ({
+    result.geometry = await (options.route ? page.locator('table').last() : page.getByTestId('leaderboard-table')).evaluate(table => ({
       rowCount: table.tBodies[0]?.rows.length,
       rowHeights: [...(table.tBodies[0]?.rows || [])].map(row => row.getBoundingClientRect().height),
       headers: [...table.querySelectorAll('th')].map(cell => ({

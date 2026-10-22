@@ -312,7 +312,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
       <Header />
 
       <ResourceState resources={[priceDataResource, blockchainDataResource, rewardsPoolDataResource, dexScreenerDataResource]}>
-      <main className="container mx-auto px-4 md:px-20 md:py-12 py-8">
+      <main className="dashboard-shell profile-page">
         <div className="min-h-screen bg-background">
           <div className="">
               <div className="mb-8">
@@ -332,7 +332,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <h1 className="text-3xl font-bold text-purple-700 dark:text-purple-400">
+                  <h1 className="dashboard-title">
                     {username}'s Staking Profile
                   </h1>
                   <div className="flex gap-2">
@@ -348,9 +348,47 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6" data-testid="profile-overview">
+                <div className="section-surface p-4">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Staked</div>
+                  <div className="text-xl font-semibold text-foreground tabular-nums">
+                    {adjustedStaked.toLocaleString()} STRX
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    ${(adjustedStaked * strxPrice).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </div>
+                </div>
+
+                <div className="section-surface p-4">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Unstaked</div>
+                  <div className="text-xl font-semibold text-foreground tabular-nums">
+                    {userData.unstaked.toLocaleString()} STRX
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    ${(userData.unstaked * strxPrice).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </div>
+                </div>
+
+                <div className="section-surface p-4">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Pool Share</div>
+                  <div className="text-xl font-semibold text-foreground tabular-nums">
+                    {stakingStats?.percentageOfPool?.toFixed(4) ?? 'N/A'}%
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    of total staked STRX
+                  </div>
+                </div>
+              </div>
+
               <div className="mb-8">
                 <div className="flex flex-col gap-4 mb-4">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-3">
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
                     Rewards Projection
                   </h2>
@@ -358,6 +396,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                       {(['1y', '2y', '5y'] as const).map((range) => (
                         <button
                           key={range}
+                          aria-pressed={projectionRange === range}
                           onClick={() => setProjectionRange(range)}
                           className={`flex items-center gap-2 px-4 py-1 text-sm rounded-lg ${
                             projectionRange === range
@@ -371,7 +410,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                       ))}
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-3">
                     <div className="flex items-center gap-2">
                       <input
                         type="number"
@@ -384,6 +423,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                           const value = parseFloat(e.target.value) || 0;
                           setSimulation(Number.isFinite(value) ? Math.max(0, value) : 0);
                         }}
+                        aria-label="Staked amount"
                         placeholder="Staked amount"
                         min="0"
                         step="50000"
@@ -414,7 +454,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                     </div>
                   </div>
                 </div>
-                <div className="bg-card rounded-lg shadow p-4">
+                <div className="section-surface p-4">
                   <div className="h-64">
                     <ResponsiveContainer>
                       <LineChart data={rewardsProjection}>
@@ -478,8 +518,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                   </div>
                 </div>
                 
-                {tierAnalysis?.comparison && simulatedStaked !== adjustedStaked && (
-                  <div className="mt-4 p-4 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
+                {tierAnalysis?.comparison && simulatedStaked > 0 && simulatedStaked !== adjustedStaked && (
+                  <div className="mt-4 p-4 bg-muted/50 rounded-lg border border-border">
                     <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
                       {isShowingRecentChanges ? 'Recent Changes Impact Analysis' : 'Simulation Analysis'}
                     </h4>
@@ -528,7 +568,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
 
               <div className="mb-8">
                 {tierProgress && nextTier && (
-                  <div className="bg-card rounded-lg shadow p-4 mb-8">
+                  <div className="section-surface p-4 mb-8">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
                         <span className="text-2xl">{currentTier?.emoji}</span>
@@ -574,13 +614,16 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
 
                     <div className="text-sm text-gray-600 dark:text-gray-400">
                       <span className="font-medium text-purple-700 dark:text-purple-400">
-                        {tierProgress.remaining.toLocaleString()} STRX
+                        {tierProgress.remaining.toLocaleString(undefined, { maximumFractionDigits: 6 })} STRX
                       </span>
                       {' '}remaining to {nextTier.name}
                     </div>
 
-                    {tierAnalysis && (
-                      <div className="mt-4 p-3 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
+                    {simulatedStaked <= 0 && (
+                      <p className="mt-4 text-sm text-muted-foreground">Stake STRX to begin earning rewards. Tier timing requires a positive stake.</p>
+                    )}
+                    {tierAnalysis && simulatedStaked > 0 && (
+                      <div className="mt-4 p-3 bg-muted/50 rounded-lg border border-border">
                         <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
                           {isShowingRecentChanges ? 'Recent Changes Impact Analysis' : 'Time to Next Tier Analysis'}
                         </h4>
@@ -669,51 +712,13 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div className="bg-card rounded-lg shadow p-4">
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Staked</div>
-                  <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-                    {adjustedStaked.toLocaleString()} STRX
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    ${(adjustedStaked * strxPrice).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}
-                  </div>
-                </div>
-
-                <div className="bg-card rounded-lg shadow p-4">
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Unstaked</div>
-                  <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-                    {userData.unstaked.toLocaleString()} STRX
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    ${(userData.unstaked * strxPrice).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}
-                  </div>
-                </div>
-
-                <div className="bg-card rounded-lg shadow p-4">
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Pool Share</div>
-                  <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-                    {stakingStats?.percentageOfPool?.toFixed(4) ?? 'N/A'}%
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    of total staked STRX
-                  </div>
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <div className="bg-card rounded-lg shadow p-4">
+                <div className="section-surface p-4">
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Estimated Rewards</h2>
                   <div className="space-y-4">
                     <div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">Daily</div>
-                      <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                      <div className="text-lg font-semibold text-foreground tabular-nums">
                         {stakingStats?.rewards?.daily.toFixed(4) ?? 'N/A'} STRX
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -722,7 +727,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                     </div>
                     <div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">Monthly</div>
-                      <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                      <div className="text-lg font-semibold text-foreground tabular-nums">
                         {stakingStats?.rewards?.monthly.toFixed(4) ?? 'N/A'} STRX
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -731,7 +736,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                     </div>
                     <div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">Yearly</div>
-                      <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                      <div className="text-lg font-semibold text-foreground tabular-nums">
                         {stakingStats?.rewards?.yearly.toFixed(4) ?? 'N/A'} STRX
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -741,12 +746,12 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                   </div>
                 </div>
 
-                <div className="bg-card rounded-lg shadow p-4">
+                <div className="section-surface p-4">
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Supply Statistics</h2>
                   <div className="space-y-4">
                     <div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">Total Balance</div>
-                      <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                      <div className="text-lg font-semibold text-foreground tabular-nums">
                         {totalAmount.toLocaleString()} STRX
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -758,7 +763,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                     </div>
                     <div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">% of Total Supply</div>
-                      <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                      <div className="text-lg font-semibold text-foreground tabular-nums">
                         {(totalAmount / TOTAL_SUPPLY * 100).toFixed(4)}%
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -770,13 +775,14 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
               </div>
 
               <div className="mb-8">
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Staking Activity</h2>
                   <div className="flex gap-2">
                     {(['24h', '7d', '30d'] as const).map((range) => (
                       <button
                         key={range}
-                        onClick={() => setTimeRange(range)}
+                        aria-pressed={timeRange === range}
+                          onClick={() => setTimeRange(range)}
                         className={`flex items-center gap-2 px-4 py-1 text-sm rounded-lg  ${
                           timeRange === range
                             ? 'bg-purple-600 text-white dark:bg-purple-500'
@@ -788,9 +794,13 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                     ))}
                   </div>
                 </div>
-                <div className="bg-card rounded-lg shadow p-4">
+                <div className="section-surface p-4">
                   <div>
-                    {isMobile ? (
+                    {activityData.length === 0 ? (
+                      <p className="py-10 text-center text-sm text-muted-foreground">
+                        {actionsData === undefined ? (actionsDataResource.error ? 'Activity unavailable.' : 'Loading staking activity...') : 'No staking activity in this time range.'}
+                      </p>
+                    ) : isMobile ? (
                       <ResponsiveContainer>
                         <LineChart data={activityData}>
                           {/* Chart configuration for mobile */}
@@ -860,9 +870,9 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
                   Transaction History
                 </h2>
-                <div className="bg-card rounded-lg shadow overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="table-custom">
+                <div className="section-surface overflow-hidden">
+                  <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Staking transaction history">
+                    <table className="analytics-table table-custom">
                       <thead>
                         <tr>
                           <th>Time</th>
@@ -873,6 +883,9 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                         </tr>
                       </thead>
                       <tbody>
+                        {actionsData !== undefined && !actionsDataResource.error && paginatedTransactions.length === 0 && (
+                          <tr><td colSpan={5} className="py-10 text-center text-muted-foreground">No staking transactions found.</td></tr>
+                        )}
                         {paginatedTransactions.map((tx, index) => (
                           <tr key={index}>
                             <td>{formatTimestamp(tx.time)}</td>
@@ -920,30 +933,33 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastMod
                   </button>
                 </div>
 
-                <div className="bg-card rounded-lg shadow overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full table-fixed md:table-auto">
+                <div className="section-surface overflow-hidden">
+                  <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable transaction details">
+                    <table className="analytics-table min-w-[720px] w-full">
                       <thead>
-                        <tr className="bg-purple-50 dark:bg-purple-900/20">
-                          <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                        <tr className="bg-muted">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             Time
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             From/To
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             Amount
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             Address
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                          <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             Explorer
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {currentBridgePageData.map((action, index) => (
+                        {!history.isPending && !history.error && currentBridgePageData.length === 0 && (
+                      <tr><td colSpan={5} className="py-10 text-center text-muted-foreground">No bridge activity found.</td></tr>
+                    )}
+                    {currentBridgePageData.map((action, index) => (
                           <tr 
                             key={index} 
                             className={`

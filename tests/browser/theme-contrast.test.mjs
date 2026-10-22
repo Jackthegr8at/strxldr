@@ -30,17 +30,17 @@ async function inspectText(page) {
       const contrast = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
       const neutral = Math.max(...foreground.slice(0, 3)) - Math.min(...foreground.slice(0, 3)) <= 45;
       const heading = /^H[1-6]$/.test(el.tagName);
-      if (heading || (neutral && b < .08 && !el.closest(':disabled'))) results.push({ text: text.slice(0, 100), tag: el.tagName, classes: el.className, foreground, background, contrast, heading });
+      if (heading || el.closest('.statistic-card__value') || (neutral && b < .08 && !el.closest(':disabled'))) results.push({ text: text.slice(0, 100), tag: el.tagName, classes: el.className, foreground, background, contrast, heading });
     }
     return results;
   });
 }
 
-test('theme contrast: all route headings and neutral dark-mode text remain readable at mobile and desktop widths', async () => {
+test('theme contrast: route headings, financial metrics and neutral dark-mode text remain readable at mobile and desktop widths', async () => {
   const server = await startAuditServer({ port: 4182 }); let browser; const runs = [];
   try {
     browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, args: ['--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1', '--disable-background-networking', `--log-file=${path.join(evidence, 'chromium.log')}`] });
-    for (const width of [390, 1440]) for (const theme of ['dark', 'light']) for (const [name, route] of [['home', '/'], ['bridge', '/bridge'], ['profile', '/?user=audituser'], ['no-stake', '/?user=nostake']]) {
+    for (const width of [320, 390, 768, 1440]) for (const theme of ['dark', 'light']) for (const [name, route] of [['home', '/'], ['bridge', '/bridge'], ['profile', '/?user=audituser'], ['no-stake', '/?user=nostake']]) {
       const context = await browser.newContext({ viewport: { width, height: 1000 }, serviceWorkers: 'block', reducedMotion: 'reduce' });
       try {
         await context.addCookies([{ name: 'strxldr-theme', value: theme, url: server.origin }]);
@@ -49,7 +49,15 @@ test('theme contrast: all route headings and neutral dark-mode text remain reada
         const page = await context.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
         await page.goto(server.origin + route); await page.waitForLoadState('networkidle');
         assert.equal(await page.locator('html').evaluate(el => el.classList.contains('dark')), theme === 'dark');
+        const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
+        assert.equal(await navigation.getByRole('link', { name: 'Leaderboard', exact: true }).getAttribute('href'), '/');
+        assert.equal(await navigation.getByRole('link', { name: 'Bridge', exact: true }).getAttribute('href'), '/bridge');
+        await page.screenshot({ path: path.join(evidence, width+'-'+theme+'-'+name+'-viewport.png'), animations: 'disabled' });
         if (name === 'home') {
+          assert.equal(await page.locator('.primary-metrics .statistic-card').count(), 4);
+          assert.equal(await page.locator('.statistic-card').count(), 12);
+          const positions = await page.evaluate(() => ({leaderboard: document.querySelector('[data-testid="leaderboard-section"]').getBoundingClientRect().top + scrollY, supporting: document.querySelector('.supporting-metrics').getBoundingClientRect().top + scrollY}));
+          assert.ok(positions.leaderboard < positions.supporting, 'leaderboard precedes secondary market data');
           await page.getByRole('heading', { name: 'New Stakers 🎉', exact: true }).waitFor();
           await page.getByRole('heading', { name: 'Top 15 Holders Distribution', exact: true }).scrollIntoViewIfNeeded();
           await page.locator('.recharts-surface').waitFor(); await page.waitForLoadState('networkidle');
@@ -68,7 +76,7 @@ test('theme contrast: all route headings and neutral dark-mode text remain reada
         assert.deepEqual(errors, []); assert.deepEqual(fixtures.blocked, []);
       } finally { await context.close(); }
     }
-    assert.equal(runs.length, 16);
+    assert.equal(runs.length, 32);
     assert.deepEqual(runs.flatMap(run => run.failures.map(failure => ({ width: run.width, theme: run.theme, route: run.route, ...failure }))), []);
   } finally { fs.writeFileSync(path.join(evidence, 'results.json'), JSON.stringify(runs, null, 2)); await browser?.close(); await server.close(); }
 });

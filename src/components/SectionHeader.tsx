@@ -9,11 +9,11 @@ export type SectionHeaderProps = {
 };
 
 export const SectionHeader: FC<SectionHeaderProps> = ({ title, isVisible, onToggle }) => (
-  <div className="flex justify-between items-center mb-4">
-    <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
+  <div className="section-heading">
+    <h2 className="section-heading__title">{title}</h2>
     <button
       onClick={onToggle}
-      className="p-3 min-h-[44px] min-w-[44px] text-purple-600 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-200 transition-colors"
+      className="icon-control"
       aria-label={isVisible ? 'Hide section' : 'Show section'}
     >
       {isVisible ? (

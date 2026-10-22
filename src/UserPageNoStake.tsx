@@ -116,7 +116,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
       <div className="min-h-screen bg-background text-foreground">
         <Header />
 
-        <div className="container mx-auto px-4 md:px-20 md:py-12 py-8">
+        <main className="dashboard-shell profile-page">
           <div className="mb-4 flex items-center justify-between">
             <button
               onClick={onBack}
@@ -129,8 +129,8 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
           </div>
 
           <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <h1 className="text-3xl font-bold text-purple-700 dark:text-purple-400">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h1 className="dashboard-title">
                 {username}'s Profile
               </h1>
               <a 
@@ -149,9 +149,9 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
 
           <ResourceState resources={[blockchainDataResource, dexScreenerDataResource, userBalanceResource]}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div className="bg-card rounded-lg shadow p-4">
+            <div className="section-surface p-4">
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Staked</div>
-              <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
+              <div className="text-xl font-semibold text-foreground tabular-nums">
                 0 STRX
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -159,9 +159,9 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
               </div>
             </div>
 
-            <div className="bg-card rounded-lg shadow p-4">
+            <div className="section-surface p-4">
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Unstaked</div>
-              <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
+              <div className="text-xl font-semibold text-foreground tabular-nums">
                 {userBalance?.[0] ? parseFloat(userBalance[0]).toFixed(4) : userBalance ? '0' : 'N/A'} STRX
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -171,12 +171,12 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div className="bg-card rounded-lg shadow p-4">
+            <div className="section-surface p-4">
               <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Supply Statistics</h2>
               <div className="space-y-4">
                 <div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">Total Balance</div>
-                  <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                  <div className="text-lg font-semibold text-foreground tabular-nums">
                     {userBalance?.[0] ? parseFloat(userBalance[0]).toFixed(4) : userBalance ? '0' : 'N/A'} STRX
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -185,7 +185,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
                 </div>
                 <div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">% of Total Supply</div>
-                  <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
+                  <div className="text-lg font-semibold text-foreground tabular-nums">
                     {userBalance?.[0] ? ((parseFloat(userBalance[0]) / 2000000000) * 100).toFixed(4) : userBalance ? '0' : 'N/A'}%
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -202,9 +202,9 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
             <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
               Transaction History
             </h2>
-            <div className="bg-card rounded-lg shadow overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="table-custom">
+            <div className="section-surface overflow-hidden">
+              <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable transaction details">
+                <table className="analytics-table table-custom">
                   <thead>
                     <tr>
                       <th>Time</th>
@@ -215,7 +215,10 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedTransactions.map((tx, index) => (
+                    {actionsData !== undefined && !actionsDataResource.error && paginatedTransactions.length === 0 && (
+                          <tr><td colSpan={5} className="py-10 text-center text-muted-foreground">No staking transactions found.</td></tr>
+                        )}
+                        {paginatedTransactions.map((tx, index) => (
                       <tr key={index}>
                         <td>{formatTimestamp(tx.time)}</td>
                         <td>{tx.amount.toFixed(4)} STRX</td>
@@ -263,29 +266,32 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
               </button>
             </div>
 
-            <div className="bg-card rounded-lg shadow overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full table-fixed md:table-auto">
+            <div className="section-surface overflow-hidden">
+              <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable transaction details">
+                <table className="analytics-table min-w-[720px] w-full">
                   <thead>
-                    <tr className="bg-purple-50 dark:bg-purple-900/20">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                    <tr className="bg-muted">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Time
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         From/To
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Amount
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Address
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Explorer
                       </th>
                     </tr>
                   </thead>
                   <tbody>
+                    {!history.isPending && !history.error && currentBridgePageData.length === 0 && (
+                      <tr><td colSpan={5} className="py-10 text-center text-muted-foreground">No bridge activity found.</td></tr>
+                    )}
                     {currentBridgePageData.map((action, index) => (
                       <tr 
                         key={index} 
@@ -437,7 +443,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
               <button onClick={history.lastLoaded} disabled={history.page === history.pageCount} className="px-4 py-2 rounded border disabled:opacity-50">{history.hasOlder ? 'Last loaded' : 'Last'}</button>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </>
   );

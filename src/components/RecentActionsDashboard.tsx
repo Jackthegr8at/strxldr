@@ -98,9 +98,9 @@ export const RecentActionsDashboard = memo<RecentActionsDashboardProps>(({ strxP
   }, [actionsData, stakersData, selectedTier]);
 
   return (
-    <div className="bg-card rounded-lg shadow h-[560px] md:h-[540px] overflow-y-auto" tabIndex={0} aria-label="Recent staking activity" aria-busy={isLoading}>
+    <div className="activity-panel" tabIndex={0} aria-label="Recent staking activity" aria-busy={isLoading}>
       <div className="overflow-x-auto">
-        <table className="table-custom">
+        <table className="analytics-table">
           <thead>
             <tr>
               <th>Time</th>

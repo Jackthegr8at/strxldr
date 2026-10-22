@@ -31,16 +31,12 @@ export const ColumnSelector = memo<ColumnSelectorProps>(({
   }
 
   return (
-    <div className="mb-4">
-      <label className="block text-sm text-gray-600 mb-1 dark:text-gray-300">
+    <div className="column-selector">
+      <label htmlFor="leaderboard-additional-column">
         Select additional column:
       </label>
       <select
-        className="w-full px-3 py-2 
-                   border border-gray-300 dark:border-gray-600 rounded-lg 
-                   focus:outline-none focus:ring-2 focus:ring-purple-500 
-                   bg-white dark:bg-gray-800 
-                   text-gray-900 dark:text-gray-100"
+        id="leaderboard-additional-column"
         value={Object.entries(visibleColumns)
           .filter(([key]) => !['rank', 'username'].includes(key))
           .filter(([_, value]) => value)

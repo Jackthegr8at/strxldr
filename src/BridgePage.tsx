@@ -65,7 +65,7 @@ export function BridgePage({ onBack }: { onBack: () => void }) {
       <div className="min-h-screen bg-background text-foreground">
         <Header />
 
-        <div className="container mx-auto px-4 md:px-20 md:py-12 py-8">
+        <main className="dashboard-shell bridge-page">
           {/* Add back button */}
           <button
             onClick={onBack}
@@ -76,11 +76,11 @@ export function BridgePage({ onBack }: { onBack: () => void }) {
           </button>
 
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-purple-700 dark:text-purple-300">STRX Bridge Dashboard</h1>
+            <h1 className="dashboard-title">STRX Bridge Dashboard</h1>
           </div>
 
           {/* Statistics Dashboard */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 auto-rows-[minmax(180px,auto)] gap-4 mb-8" data-testid="bridge-statistics">
+          <div className="grid grid-cols-2 lg:grid-cols-4 auto-rows-[minmax(192px,auto)] gap-4 mb-8" data-testid="bridge-statistics">
             <StatisticCard
               loading={[bridgeDataResource, priceDataResource].some(resource => resource.data === undefined && !resource.error)}
               unavailable={[bridgeDataResource, priceDataResource].some(resource => resource.data === undefined && Boolean(resource.error))}
@@ -128,7 +128,7 @@ export function BridgePage({ onBack }: { onBack: () => void }) {
               value={
                 raydiumPoolData ? (
                   <div className="flex flex-col">
-                    <span className="text-xs text-green-500">
+                    <span className="text-xs text-green-700 dark:text-green-400">
                       Reward APR: {formatOptionalNumber(market.rewardApr, 2)}%
                     </span>
                     <div className="text-xs text-gray-500 dark:text-gray-300 mt-1">
@@ -155,8 +155,8 @@ export function BridgePage({ onBack }: { onBack: () => void }) {
                     <span>{strxPriceDisplay}</span>
                     <span className={`text-sm ${
                       priceChangePercent !== null && priceChangePercent >= 0
-                        ? 'text-green-500'
-                        : 'text-red-500'
+                        ? 'text-green-700 dark:text-green-400'
+                        : 'text-red-700 dark:text-red-400'
                     }`}>
                       {priceChangeDisplay}
                     </span>
@@ -184,10 +184,11 @@ export function BridgePage({ onBack }: { onBack: () => void }) {
           {/* Bridge Activity Table */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Recent Bridge Activity</h2>
-            <div className="mb-4 flex items-center justify-between gap-4">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
               <div className="relative flex-1 max-w-md">
                 <input
                   type="text"
+                  aria-label="Search bridge activity by username"
                   placeholder="Search by username..."
                   value={searchTerm}
                   onChange={(e) => {
@@ -209,29 +210,32 @@ export function BridgePage({ onBack }: { onBack: () => void }) {
                 </span>
               </button>
             </div>
-            <div className="bg-card rounded-lg shadow h-[560px] md:h-[540px] overflow-y-auto" tabIndex={0} role="region" aria-label="Bridge activity history">
-              <div className="overflow-x-auto">
-                <table className="min-w-full table-fixed md:table-auto">
+            <div className="section-surface h-[560px] md:h-[540px] overflow-y-auto" tabIndex={0} role="region" aria-label="Bridge activity history">
+              <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Scrollable transaction details">
+                <table className="analytics-table min-w-[720px] w-full">
                   <thead>
-                    <tr className="bg-purple-50 dark:bg-purple-900/20">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                    <tr className="bg-muted">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Time
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         From/To
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Amount
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Address
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-purple-500 dark:text-purple-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Explorer
                       </th>
                     </tr>
                   </thead>
                   <tbody>
+                    {!history.isPending && !history.error && currentPageData.length === 0 && (
+                      <tr><td colSpan={5} className="py-10 text-center text-muted-foreground">No bridge activity found.</td></tr>
+                    )}
                     {currentPageData.map((action, index) => (
                       <tr
                         key={index}
@@ -383,7 +387,7 @@ export function BridgePage({ onBack }: { onBack: () => void }) {
               <button onClick={history.lastLoaded} disabled={history.page === history.pageCount} className="px-4 py-2 rounded border disabled:opacity-50">{history.hasOlder ? 'Last loaded' : 'Last'}</button>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </>
   );

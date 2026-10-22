@@ -54,7 +54,7 @@ test('TEST-016: 27 cold layout runs stay at CLS <= .10 with native viewport/full
       const viewportImage=path.join(evidence,label+'-viewport.png'),fullPageImage=path.join(evidence,label+'-full.png');
       await state.page.screenshot({path:viewportImage,fullPage:false,scale:'css'});
       await state.page.screenshot({path:fullPageImage,fullPage:true,scale:'css'});
-      const rows=await state.page.locator('table.table-custom').last().locator('tbody tr').filter({hasNot:state.page.locator('[colspan]')}).count();
+      const rows=await state.page.getByTestId('leaderboard-table').locator('tbody tr').filter({hasNot:state.page.locator('[colspan]')}).count();
       results.push({label,viewport,delay,repeat,theme:repeat===1?'dark':'light',reducedMotion:repeat===2,cls:maximum,shifts,rows,viewportImage,fullPageImage});
       await finish(state);
     }
@@ -64,8 +64,8 @@ test('TEST-016: 27 cold layout runs stay at CLS <= .10 with native viewport/full
   assert.ok(results.every(run=>run.rows===10),'ten loaded leaderboard rows remain present');
 }));
 async function tableGeometry(page,expectedRows) {
-  await page.waitForFunction(expected=>[...[...document.querySelectorAll('table.table-custom')].at(-1).querySelectorAll('tbody tr')].filter(row=>!row.querySelector('[colspan]')).length===Math.min(10,expected),expectedRows);
-  const result=await page.locator('table.table-custom').last().evaluate(table=>{
+  await page.waitForFunction(expected=>[...document.querySelector('[data-testid="leaderboard-table"]').querySelectorAll('tbody tr')].filter(row=>!row.querySelector('[colspan]')).length===Math.min(10,expected),expectedRows);
+  const result=await page.getByTestId('leaderboard-table').evaluate(table=>{
     const headers=[...table.querySelectorAll('thead th')];
     const rows=[...table.querySelectorAll('tbody tr')].filter(row=>!row.querySelector('[colspan]'));
     return {rows:rows.length,overflow:document.documentElement.scrollWidth>innerWidth,display:getComputedStyle(table.tBodies[0]).display,geometry:rows.map(row=>({position:getComputedStyle(row).position,display:getComputedStyle(row).display,deltas:[...row.cells].map((cell,index)=>Math.abs(cell.getBoundingClientRect().x-headers[index].getBoundingClientRect().x))}))};
@@ -87,7 +87,7 @@ test('TEST-017: semantic ten-row pagination, alignment, filters and every mobile
     await page.getByPlaceholder('Search by username...').fill('no-synthetic-account');
     await tableGeometry(page,0);
     await page.getByPlaceholder('Search by username...').fill('');await tableGeometry(page,count);
-    if(count){const amount=page.locator('table.table-custom').last().locator('tbody tr').first().locator('td.cursor-pointer').first();const before=await amount.innerText();await amount.click();assert.notEqual(await amount.innerText(),before,'amount toggles to an alternate unit');await tableGeometry(page,count);}
+    if(count){const amount=page.getByTestId('leaderboard-table').locator('tbody tr').first().locator('td.cursor-pointer').first();const before=await amount.innerText();await amount.click();assert.notEqual(await amount.innerText(),before,'amount toggles to an alternate unit');await tableGeometry(page,count);}
     await page.getByText('No Stake',{exact:true}).first().click();await tableGeometry(page,0);
     await page.getByText('No Stake',{exact:true}).first().click();await tableGeometry(page,count);
     await finish(state);
@@ -104,7 +104,7 @@ test('loading and recoverable errors keep visible local content in both themes',
     const state=await open(browser,origin,viewports[0],{dark,fail:'raydium'});
     const alert=state.page.getByRole('alert').first();await alert.waitFor();assert.equal(await alert.isVisible(),true);
     const retry=alert.getByRole('button',{name:'Retry',exact:true});assert.equal(await retry.isEnabled(),true);
-    assert.equal(await state.page.locator('table.table-custom').last().locator('tbody tr').first().isVisible(),true);
+    assert.equal(await state.page.getByTestId('leaderboard-table').locator('tbody tr').first().isVisible(),true);
     await state.page.screenshot({path:path.join(evidence,`error-${dark?'dark':'light'}.png`),fullPage:true,scale:'css'});
     await finish(state);
   }
@@ -112,7 +112,7 @@ test('loading and recoverable errors keep visible local content in both themes',
 test('failed config/oracle keeps unavailable financial cards explicit and healthy snapshot rows usable',async()=>session(async(browser,origin)=>{
   for(const dark of [false,true]){
     const state=await open(browser,origin,viewports[0],{dark,fail:'table'});
-    for(const title of ['Global Staked (API)','STRX Price']){
+    for(const title of ['Protocol Staked','STRX Price']){
       const card=state.page.getByText(title,{exact:true}).locator('..').locator('..');
       assert.match(await card.innerText(),/Unavailable|N\/A/i,`${title} unavailable is explicit`);
       assert.doesNotMatch(await card.innerText(),/\b0\.0000|\$0(?:\.00)?\b/,`${title} does not invent a zero`);

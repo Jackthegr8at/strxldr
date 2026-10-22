@@ -1,129 +1,60 @@
 import { ThemeToggle } from './ThemeToggle';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from '@radix-ui/react-dropdown-menu';
 import { ChevronDownIcon, ShareIcon } from '@heroicons/react/24/outline';
-import { useState, useContext } from 'react';
+import { useState, useContext, type MouseEvent } from 'react';
 import { NavigationContext } from '../contexts/UserSelectContext';
 
 export function Header() {
   const navigation = useContext(NavigationContext);
+  const isBridge = window.location.pathname === '/bridge';
+  const isLeaderboard = !isBridge && !new URLSearchParams(window.location.search).has('user');
   const [showShareToast, setShowShareToast] = useState(false);
-
+  const navigate = (event: MouseEvent<HTMLAnchorElement>, destination: 'home' | 'bridge') => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    navigation[destination]();
+  };
   const handleShare = async () => {
     const currentUrl = window.location.href;
-    
     if (navigator.share) {
-      // Use native share on mobile devices
-      try {
-        await navigator.share({
-          title: 'STRX Leaderboard',
-          url: currentUrl
-        });
-      } catch {
-        /* user cancelled share */
-      }
+      try { await navigator.share({ title: 'STRX Leaderboard', url: currentUrl }); } catch { /* user cancelled share */ }
     } else {
-      // Fallback to clipboard copy on desktop
       try {
         await navigator.clipboard.writeText(currentUrl);
         setShowShareToast(true);
         setTimeout(() => setShowShareToast(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy:', err);
-      }
+      } catch (err) { console.error('Failed to copy:', err); }
     }
   };
-
-  return (
-    <>
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="mx-auto grid grid-cols-[1fr_max-content] p-4 items-center sticky top-0 z-50 border-b border-purple-100 dark:border-purple-800">
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <a href="/" onClick={event => { if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); navigation.home(); }}>
-              <img 
-                src="/favicon-128.webp"
-                width={32}
-                height={32}
-                alt="STRX Logo" 
-                className="h-8 w-8 md:hidden rounded-lg"
-              />
-            </a>
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1 md:gap-2 text-3xl font-bold text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-300">
-                  <span className="md:hidden text-lg">STRX LDRBDS</span>
-                  <span className="hidden md:inline">STRX Staking Leaderboard</span>
-                  <ChevronDownIcon className="h-5 w-5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent 
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 min-w-[200px] mt-2 z-50 border border-purple-100 dark:border-purple-800"
-                sideOffset={5}
-              >
-                <DropdownMenuItem className="outline-none">
-                  <a 
-                    href="/" onClick={event => { if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); navigation.home(); }}
-                    className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
-                  >
-                    STRX Staking Leaderboard
-                  </a>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="outline-none">
-                  <a 
-                    href="https://mint.strxldr.app/"
-                    className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
-                  >
-                    NFT Minting System
-                  </a>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="outline-none">
-                  <a 
-                    href="https://mint.strxldr.app/escrow"
-                    className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
-                  >
-                    NFT Escrow System
-                  </a>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="outline-none">
-                  <a 
-                    href="https://storex.io"
-                    className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
-                  >
-                    STRX Website
-                  </a>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/40 transition-colors"
-              aria-label="Share page"
-            >
-              <ShareIcon className="h-5 w-5" />
-              <span className="hidden md:inline">Share</span>
-            </button>
-          </div>
+  return <>
+    <header className="app-header">
+      <div className="header-inner">
+        <div className="header-navigation">
+          <a className="brand-link" href="/" onClick={event => navigate(event, 'home')}>
+            <img src="/favicon-128.webp" width={32} height={32} alt="STRX Logo" />
+            <span>STRX<span className="brand-description"> Staking</span></span>
+          </a>
+          <nav className="primary-navigation" aria-label="Primary navigation">
+            <a href="/" aria-current={isLeaderboard ? 'page' : undefined} onClick={event => navigate(event, 'home')}>Leaderboard</a>
+            <a href="/bridge" aria-current={isBridge ? 'page' : undefined} onClick={event => navigate(event, 'bridge')}>Bridge</a>
+          </nav>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild><button className="header-more" aria-label="More STRX links"><span>More</span><ChevronDownIcon className="h-4 w-4" /></button></DropdownMenuTrigger>
+            <DropdownMenuContent className="header-menu" sideOffset={8}>
+              {[
+                ['NFT Minting System', 'https://mint.strxldr.app/'],
+                ['NFT Escrow System', 'https://mint.strxldr.app/escrow'],
+                ['STRX Website', 'https://storex.io'],
+              ].map(([label, href]) => <DropdownMenuItem key={href} asChild><a href={href}>{label}</a></DropdownMenuItem>)}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </header>
-
-      {showShareToast && (
-        <div className="fixed top-20 right-4 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-4 py-2 rounded-lg shadow-lg transition-opacity duration-200">
-          Link copied to clipboard!
+        <div className="header-actions">
+          <ThemeToggle />
+          <button onClick={handleShare} className="icon-control share-control" aria-label="Share page"><ShareIcon className="h-5 w-5" /><span>Share</span></button>
         </div>
-      )}
-
-      <div className="hidden md:block fixed bottom-4 left-4 z-50">
-        <a href="/" onClick={event => { if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); navigation.home(); }}>
-          <img 
-            src="/icons/icon-512x512.png" 
-            alt="STRX Logo" 
-            className="w-24 h-24 rounded-lg shadow-lg hover:scale-110 transition-transform duration-200"
-          />
-        </a>
       </div>
-    </>
-  );
+    </header>
+    {showShareToast && <div className="share-toast" role="status">Link copied to clipboard!</div>}
+  </>;
 }

@@ -125,13 +125,13 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
       />
 
       {sectionVisibility.tierMilestones && (
-        <div className="rounded-lg border-t shadow dark:shadow-purple-500 h-[560px] md:h-[540px] overflow-y-auto" tabIndex={0} aria-label="Tier milestones" aria-busy={loading}>
+        <div className="milestone-panel" tabIndex={0} aria-label="Tier milestones" aria-busy={loading}>
           {(loading || error || milestones.length === 0) && <p className="p-4 text-muted-foreground">{loading ? 'Loading milestones…' : error ? 'Milestones unavailable. Retry the snapshot above.' : 'No stakers close to the next tier.'}</p>}
           {/* Mobile view */}
           <div className="md:hidden">
             <div className="grid grid-cols-1 gap-4 p-4">
               {milestones.slice(0, 3).map((milestone, index) => (
-                <div key={index} className="bg-card p-4 rounded-lg border">
+                <div key={index} className="milestone-card">
                   <div className="flex justify-between items-start mb-2">
                     <UsernameLink username={milestone.username} />
                   </div>
@@ -147,9 +147,9 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
                       <span>Progress to {milestone.nextTier.name}</span>
                       <span>{milestone.percentageComplete.toFixed(1)}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className="w-full bg-muted rounded-full h-2.5">
                       <div
-                        className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
+                        className="bg-primary h-2.5 rounded-full"
                         style={{ width: `${milestone.percentageComplete}%` }}
                       ></div>
                     </div>
@@ -167,12 +167,12 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
 
             {/* Compact table for remaining items */}
             {milestones.length > 3 && (
-              <div className="border-t border-gray-200 dark:border-purple-500">
+              <div className="border-t border-border">
                 <div className="overflow-x-auto">
                   <table className="min-w-full">
-                    <tbody className="divide-y divide-gray-200 dark:divide-purple-500">
+                    <tbody className="divide-y divide-border">
                       {milestones.slice(3).map((milestone, index) => (
-                        <tr key={index} className="hover:bg-purple-50 dark:hover:bg-purple-900">
+                        <tr key={index} className="hover:bg-muted">
                           <td className="px-4 py-2 text-sm">
                             <UsernameLink username={milestone.username} />
                           </td>
@@ -199,7 +199,7 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
           <div className="hidden md:block p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {milestones.map((milestone, index) => (
-                <div key={index} className="bg-card p-4 rounded-lg border">
+                <div key={index} className="milestone-card">
                   <div className="flex justify-between items-start mb-2">
                     <UsernameLink username={milestone.username} />
                   </div>
@@ -215,9 +215,9 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
                       <span>Progress to {milestone.nextTier.name}</span>
                       <span>{milestone.percentageComplete.toFixed(1)}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className="w-full bg-muted rounded-full h-2.5">
                       <div
-                        className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
+                        className="bg-primary h-2.5 rounded-full"
                         style={{ width: `${milestone.percentageComplete}%` }}
                       ></div>
                     </div>
