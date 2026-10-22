@@ -1,35 +1,46 @@
-import { useState, useMemo, useEffect, useDeferredValue, useRef, Suspense, lazy } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import useSWR from 'swr';
+import { readSectionVisibility, writeSectionVisibility, preferenceStorage } from './lib/preferences';
+import { getRaydiumStats, formatOptionalNumber } from './lib/marketData';
+import { useState, useMemo, useEffect, useDeferredValue, useRef, useCallback, Suspense, lazy } from 'react';
+import { useSnapshot, useConfig, useOraclePrices, useRewardsPool, useBridgeBalance, useRaydium, useXsol, useDexPairs, useNewStakers } from './hooks/useResources';
+import { LoadState } from './components/LoadState';
+import { ResourceState } from './components/ResourceState';
+import { UserSelectContext } from './contexts/UserSelectContext';
 import { ArrowUpIcon, ArrowDownIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, ChevronUpIcon, ChevronDownIcon, CubeTransparentIcon, ArrowLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import * as React from 'react';
-import { ThemeProvider, useTheme } from './components/ThemeProvider';
+import { useTheme } from './components/ThemeProvider';
 import { Header } from './components/Header';
 import { PageFallback } from './components/PageFallback';
 import { SectionHeader } from './components/SectionHeader';
 import { StatisticCard } from './components/StatisticCard';
-import { Skeleton } from './components/Skeleton';
 import { ColumnSelector } from './components/ColumnSelector';
 import { NewStakersPanel } from './components/NewStakersPanel';
 import { TierMilestoneTracker } from './components/TierMilestoneTracker';
 import { RecentActionsDashboard } from './components/RecentActionsDashboard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
 import { calculateDaysUntilEmpty, getUserTier, STAKING_TIERS, TOTAL_SUPPLY } from './lib/leaderboard';
-import { fetchBlockchainConfig, fetchBridgeBalance, fetchDexScreenerPairs, fetchHistoryActions, fetchNewStakers, fetchPriceRows, fetchRaydiumPool, fetchRewardsPool, fetchStakeSnapshot, fetchXsolPrice } from './lib/api';
 import type { ActionResponse, BlockchainResponse, DexScreenerData, FetchResponse, NewStaker, NewStakersResponse, PriceResponse, RaydiumPoolData, SectionVisibility, SortField, StakingTier, VisibleColumns, XSolPriceData } from './lib/types';
 import { useLeaderboardState } from './hooks/useLeaderboardState';
-import { useRouteSelection } from './hooks/useRouteSelection';
-import { useRouteMeta } from './hooks/useRouteMeta';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { DeferredStakersChart } from './components/DeferredStakersChart';
 
 // Lazy-load pages that aren't needed on first paint
-const UserPage = lazy(() => import('./UserPage'));
-const UserPageNoStake = lazy(() => import('./UserPageNoStake'));
-const BridgePage = lazy(() => import('./BridgePage').then(m => ({ default: m.BridgePage })));
 const InfoModal = lazy(() => import('./components/InfoModal').then(m => ({ default: m.InfoModal })));
-const StakersChart = lazy(() => import('./components/StakersChart').then(m => ({ default: m.StakersChart })));
+
 
 const ITEMS_PER_PAGE = 10;
+function StableCardResource({ resources, children }: React.ComponentProps<typeof ResourceState>) {
+  const missing = resources.some(resource => resource.data === undefined);
+  const unavailable = resources.some(resource => resource.data === undefined && resource.error);
+  return <div className="min-h-[120px]">
+    {React.isValidElement<React.ComponentProps<typeof StatisticCard>>(children)
+      ? React.cloneElement(children, {
+          loading: children.props.loading || (missing && !unavailable),
+          unavailable: children.props.unavailable || unavailable,
+        })
+      : children}
+    {resources.some(resource => resource.error) && <ResourceState resources={resources} />}
+  </div>;
+}
 
 // Add this type for the display mode
 type AmountDisplay = 'strx' | 'usd';
@@ -43,7 +54,7 @@ const calculateRewards = (
   const dailyReward = rewardsPerSec * 86400 * (stakedAmount / globalStaked);
   const monthlyReward = dailyReward * 30;
   const yearlyReward = dailyReward * 365;
-  
+
   return {
     daily: dailyReward,
     monthly: monthlyReward,
@@ -55,13 +66,12 @@ const calculateRewards = (
 };
 
 // Add this near the top of the file, after imports
-export const UserSelectContext = React.createContext<(username: string) => void>(() => {});
 
 // Update UsernameLink to use context
 const UsernameLink: React.FC<{ username: string }> = ({ username }) => (
   <UserSelectContext.Consumer>
     {onSelect => (
-      <button 
+      <button
         onClick={() => onSelect(username)}
         className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
       >
@@ -71,22 +81,20 @@ const UsernameLink: React.FC<{ username: string }> = ({ username }) => (
   </UserSelectContext.Consumer>
 );
 
-export function App() {
+export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect }: { onUserSelect: (username: string) => void; onBridgeSelect: () => void }) {
   const { theme } = useTheme();
 
   // Update the SWR hook to use the shared fetchStakeSnapshot function
-  const { data: response, error, isLoading } = useSWR<FetchResponse>(
-    'stakes_snapshot',
-    fetchStakeSnapshot,
-    { refreshInterval: 120000 }  // 2 minutes (correct)
-  );
+  const snapshot = useSnapshot();
+  const { data: response, error, isLoading } = snapshot;
 
   // Function to format the time difference
-  const formatTimeDiff = (lastModified: string) => {
+  const formatTimeDiff = (lastModified: string | null) => {
+    if (!lastModified || !Number.isFinite(Date.parse(lastModified))) return 'Source update time unavailable';
     const diff = Date.now() - new Date(lastModified).getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(minutes / 60);
-    
+
     if (minutes < 1) return 'just now';
     if (minutes === 1) return '1 minute ago';
     if (minutes < 60) return `${minutes} minutes ago`;
@@ -95,56 +103,34 @@ export function App() {
     return 'more than a day ago';
   };
 
-  const { data: blockchainData } = useSWR<BlockchainResponse>(
-    'blockchain_data',
-    fetchBlockchainConfig,
-    { refreshInterval: 300000 }  // 5 minutes
-  );
+  const blockchainDataResource = useConfig();
+  const { data: blockchainData } = blockchainDataResource;
 
   // Add new SWR call for price data with a unique key
-  const { data: priceData } = useSWR<PriceResponse>(
-    'strx_price_data', // Unique key
-    fetchPriceRows,
-    { refreshInterval: 300000 }  // 5 minutes
-  );
+  const priceDataResource = useOraclePrices();
+  const { data: priceData } = priceDataResource;
 
   // Add this with your other SWR fetches
-  const { data: rewardsPoolData } = useSWR<any>(
-    'rewards_pool',
-    fetchRewardsPool,
-    { refreshInterval: 300000 }  // 5 minutes
-  );
+  const rewardsPoolDataResource = useRewardsPool();
+  const { data: rewardsPoolData } = rewardsPoolDataResource;
 
   // Add this SWR hook near your other data fetches
-  const { data: bridgeData } = useSWR<any>(
-    'bridge_balance',
-    fetchBridgeBalance,
-    { refreshInterval: 300000 }  // 5 minutes
-  );
+  const bridgeDataResource = useBridgeBalance();
+  const { data: bridgeData } = bridgeDataResource;
 
   // Add with other SWR hooks
-  const { data: raydiumPoolData } = useSWR<RaydiumPoolData>(
-    'raydium_pool_v3',
-    fetchRaydiumPool,
-    { refreshInterval: 300000 }  // 5 minutes
-  );
+  const raydiumPoolDataResource = useRaydium();
+  const { data: raydiumPoolData } = raydiumPoolDataResource;
 
   // Add with other SWR hooks in Leaderboard component
-  const { data: xsolPriceData } = useSWR<XSolPriceData>(
-    'xsol_price',
-    fetchXsolPrice,
-    { refreshInterval: 300000 }  // 5 minutes
-  );
+  const xsolPriceDataResource = useXsol();
+  const { data: xsolPriceData } = xsolPriceDataResource;
 
   // Add new SWR hook in Leaderboard component
-  const { data: dexScreenerData } = useSWR<DexScreenerData>(
-    'dexscreener_data',
-    fetchDexScreenerPairs,
-    { refreshInterval: 300000 }  // 5 minutes
-  );
+  const dexScreenerDataResource = useDexPairs();
+  const { data: dexScreenerData } = dexScreenerDataResource;
 
   const appRootRef = useRef<HTMLDivElement | null>(null);
-  const tableParentRef = useRef<HTMLTableSectionElement | null>(null);
 
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [pageTitle, setPageTitle] = useState("STRX Staking Leaderboard");
@@ -165,18 +151,12 @@ export function App() {
     setCurrentPage,
   } = useLeaderboardState();
 
-  const {
-    selectedUser,
-    handleUserSelect,
-    handleBackToLeaderboard,
-    isBridgePage,
-  } = useRouteSelection();
 
-  // Update page title and meta description based on route
-  useRouteMeta(isBridgePage, selectedUser);
 
   // Add this state
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const infoOpener = useRef<HTMLButtonElement | null>(null);
+  const closeInfo = useCallback(() => { setIsInfoModalOpen(false); if (infoOpener.current?.isConnected) infoOpener.current.focus(); }, []);
 
   // Add this state to track display mode for each cell
   const [amountDisplays, setAmountDisplays] = useState<{ [key: string]: AmountDisplay }>({});
@@ -192,6 +172,7 @@ export function App() {
   // Add this helper function to format amounts
   const formatAmount = (amount: number, displayMode: AmountDisplay) => {
     if (displayMode === 'usd') {
+      if (!priceData?.rows?.some(row => row.sym === '4,STRX')) return 'N/A';
       return `$${(amount * strxPrice).toLocaleString(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
@@ -220,7 +201,6 @@ export function App() {
 
   // Update tierStatistics to use getAllStakersData instead of processedData
   const tierStatistics = useMemo(() => {
-    if (!getAllStakersData.length) return null;
 
     const tiers = STAKING_TIERS.map((tier, index) => {
       const nextTier = STAKING_TIERS[index - 1];
@@ -228,12 +208,12 @@ export function App() {
         ...tier,
         count: getAllStakersData.filter(user => {
           const amount = user.staked;
-          
+
           // Special handling for "No Stake" tier
           if (tier.name === 'No Stake') {
             return amount === 0;
           }
-          
+
           // If this is the highest tier, only check minimum
           if (!nextTier) {
             return amount >= tier.minimum;
@@ -255,23 +235,23 @@ export function App() {
       .filter((item) => {
         // If no tier is selected, show all
         if (!selectedTier) return true;
-        
+
         // Special handling for "No Stake" tier
         if (selectedTier.name === 'No Stake') {
           return item.staked === 0;
         }
-        
+
         // Find the index of the selected tier
         const tierIndex = STAKING_TIERS.findIndex(t => t.name === selectedTier.name);
         const nextTierUp = STAKING_TIERS[tierIndex - 1];
-        
+
         // For "Whale" tier (first tier)
         if (selectedTier.name === 'Whale') {
           return item.staked >= selectedTier.minimum;
         }
-        
+
         // For all other tiers
-        return item.staked >= selectedTier.minimum && 
+        return item.staked >= selectedTier.minimum &&
                (!nextTierUp || item.staked < nextTierUp.minimum);
       })
       .sort((a, b) => {
@@ -281,20 +261,13 @@ export function App() {
       });
   }, [getAllStakersData, deferredSearchTerm, selectedTier, sortOrder, sortField]);
 
-  const totalPages = Math.ceil(processedData.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(processedData.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+  useEffect(() => { if (safePage !== currentPage) setCurrentPage(safePage); }, [safePage, currentPage, setCurrentPage]);
   const currentData = processedData.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (safePage - 1) * ITEMS_PER_PAGE,
+    safePage * ITEMS_PER_PAGE
   );
-
-  // Set up virtualization for large tables
-  const shouldVirtualize = processedData.length > 100;
-  const rowVirtualizer = useVirtualizer({
-    count: currentData.length,
-    getScrollElement: () => tableParentRef.current,
-    estimateSize: () => 60, // Approximate row height in pixels
-    overscan: 10,
-  });
 
   const topHolders = useMemo(() => {
     return processedData.slice(0, 15);
@@ -330,7 +303,7 @@ export function App() {
 
     const totalUsers = processedData.length;
     const totalStaked = processedData.reduce((sum, item) => sum + item.staked, 0);
-    
+
     // Calculate median of staked amounts
     const sortedAmounts = [...processedData].sort((a, b) => a.staked - b.staked);
     const midPoint = Math.floor(sortedAmounts.length / 2);
@@ -421,16 +394,12 @@ export function App() {
     };
 
     window.addEventListener('resize', handleResize);
-    handleResize(); // Call once on mount
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Add new SWR fetch for new stakers inside the Leaderboard function
-  const { data: newStakersData } = useSWR<NewStakersResponse>(
-    'new_stakers',
-    fetchNewStakers,
-    { refreshInterval: 120000 }  // 2 minute
-  );
+  const newStakersDataResource = useNewStakers();
+  const { data: newStakersData } = newStakersDataResource;
 
   // Move processedNewStakers inside the Leaderboard function
   const processedNewStakers = useMemo(() => {
@@ -438,7 +407,7 @@ export function App() {
 
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
+
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
@@ -463,99 +432,28 @@ export function App() {
   }, [newStakersData]);
 
   // Inside your Leaderboard component, add this state
-  const [sectionVisibility, setSectionVisibility] = useState<SectionVisibility>(() => {
-    const saved = localStorage.getItem('sectionVisibility');
-    return saved ? JSON.parse(saved) : {
-      recentActivity: true,
-      newStakers: true,
-      tierMilestones: true
-    };
-  });
-
+  const [sectionVisibility, setSectionVisibility] = useState<SectionVisibility>(() => readSectionVisibility(preferenceStorage()));
   useEffect(() => {
-    localStorage.setItem('sectionVisibility', JSON.stringify(sectionVisibility));
+    writeSectionVisibility(preferenceStorage(), sectionVisibility);
   }, [sectionVisibility]);
-
   // Ensure priceUsd is defined before using toFixed
   const priceUsd = dexScreenerData?.pairs?.[0]?.priceUsd;
-  const priceUsdDisplay = priceUsd !== undefined
-    ? `$${parseFloat(priceUsd).toFixed(6)}`
+  const priceUsdDisplay = priceUsd !== undefined && Number.isFinite(Number.parseFloat(priceUsd))
+    ? `$${Number.parseFloat(priceUsd).toFixed(6)}`
     : 'N/A'; // or any default value you prefer
 
-  // Get price from the Raydium pool data
-  const raydiumPrice = raydiumPoolData?.data?.[0]?.price;
-  const strxPriceDisplay = strxPrice > 0
-    ? `$${strxPrice.toFixed(6)}`
-    : 'N/A';
+  const market = getRaydiumStats(raydiumPoolData);
+  const strxPriceDisplay = priceData?.rows?.some(row => row.sym === '4,STRX') && Number.isFinite(strxPrice) && strxPrice >= 0 ? `$${strxPrice.toFixed(6)}` : 'N/A';
+  const raydiumPriceChangePercent = market.priceChangePercent;
+  const raydiumPriceChangeDisplay = raydiumPriceChangePercent === null ? 'N/A' : `${raydiumPriceChangePercent > 0 ? '+' : ''}${formatOptionalNumber(raydiumPriceChangePercent, 2)}%`;
 
-  // For price changes, use week data instead of day data since day data has -1 values
-  const weekPriceMin = raydiumPoolData?.data?.[0]?.week?.priceMin;
-  const weekPriceMax = raydiumPoolData?.data?.[0]?.week?.priceMax;
-  let raydiumPriceChangePercent: number | undefined;
-
-  if (raydiumPrice !== undefined && weekPriceMin !== undefined && weekPriceMin > 0 && weekPriceMax !== undefined && weekPriceMax > 0) {
-    // Calculate a rough change percentage based on week range
-    const priceMid = (weekPriceMin + weekPriceMax) / 2;
-    raydiumPriceChangePercent = ((raydiumPrice - priceMid) / priceMid) * 100;
-  }
-
-  const raydiumPriceChangeDisplay = raydiumPriceChangePercent !== undefined
-    ? `${raydiumPriceChangePercent > 0 ? '+' : ''}${raydiumPriceChangePercent.toFixed(2)}%`
-    : 'N/A';
-
-  // Check route-specific content only after every hook above has been called.
-  if (isBridgePage) {
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageFallback />}>
-          <BridgePage />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
-
-  if (selectedUser) {
-    if (isLoading || !response) {
-      return <PageFallback />;
-    }
-
-    const userData = response?.data?.[selectedUser];
-
-    if (!userData) {
-      return (
-        <ErrorBoundary>
-          <Suspense fallback={<PageFallback />}>
-            <UserPageNoStake
-              username={selectedUser}
-              onBack={handleBackToLeaderboard}
-            />
-          </Suspense>
-        </ErrorBoundary>
-      );
-    }
-
-    return (
-      <ErrorBoundary>
-        <Suspense fallback={<PageFallback />}>
-          <UserPage
-            username={selectedUser}
-            onBack={handleBackToLeaderboard}
-            userData={userData}
-            globalData={{
-              blockchainData,
-              priceData,
-              lastModified: response.lastModified
-            }}
-          />
-        </Suspense>
-      </ErrorBoundary>
-    );
-  }
 
   return (
     <UserSelectContext.Provider value={handleUserSelect}>
       <div ref={appRootRef} id="app-root" className="min-h-screen bg-background text-foreground">
         <Header />
+        {(error || snapshot.cached) && <LoadState loading={false} error={error} hasData={snapshot.hasData} stale={snapshot.cached} onRetry={() => { void snapshot.mutate(); }} />}
+
         <div className="container mx-auto px-4 md:px-20 md:py-12 py-8">
           <div className="flex justify-between items-center mb-6">
             {/* Title on the left */}
@@ -566,9 +464,9 @@ export function App() {
                 {pageTitle}
               </h1>
             </div>
-            
+
             {/* Stake button on the right */}
-            <a 
+            <a
               href="https://storex.io/account/staking"
               target="_blank"
               rel="noopener noreferrer"
@@ -579,52 +477,42 @@ export function App() {
           </div>
 
           {/* Last update info with info button */}
-          {response?.lastModified && (
-            <div className="flex justify-between items-center text-sm mb-4">
+            <div className="flex justify-between items-center text-sm mb-4 min-h-[48px]">
               <span className="text-gray-500 italic dark:text-gray-300">
-                Last updated {formatTimeDiff(response.lastModified)}
+                {response ? (response.lastModified ? `Last updated ${formatTimeDiff(response.lastModified)}` : formatTimeDiff(null)) : 'Loading source update time…'}
               </span>
               <button
-                onClick={() => setIsInfoModalOpen(true)}
+                onClick={event => { infoOpener.current = event.currentTarget; setIsInfoModalOpen(true); }}
                 className="p-2 inline-flex items-center gap-2 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
                 aria-label="About STRX Staking Leaderboard"
               >
                 <QuestionMarkCircleIcon className="h-6 w-6" />
               </button>
             </div>
-          )}
 
           {/* Add the modal component */}
           <Suspense fallback={null}>
-            <InfoModal 
-              isOpen={isInfoModalOpen} 
-              onClose={() => setIsInfoModalOpen(false)} 
-            />
+            {isInfoModalOpen && <InfoModal
+              isOpen={true}
+              opener={infoOpener.current}
+              onClose={closeInfo}
+            />}
           </Suspense>
 
+        <>
         {/* Statistics Dashboard */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="bg-card p-4 rounded-lg shadow border">
-                <div className="flex justify-between items-start mb-1">
-                  <Skeleton variant="text" className="h-4 w-24" />
-                  <Skeleton variant="circle" className="h-5 w-5" />
-                </div>
-                <Skeleton variant="text" className="h-6 w-32 mt-2" />
-                <Skeleton variant="text" className="h-3 w-20 mt-1" />
-              </div>
-            ))}
-          </div>
-        ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
               title="Total Stakers"
               value={statistics?.totalUsers.toLocaleString()}
               tooltip="Total number of unique addresses that currently have STRX tokens staked"
             />
 
             <StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
               title="Total Staked (Cleos Call)"
               value={
                 <div className="flex flex-col">
@@ -641,7 +529,10 @@ export function App() {
               onClick={() => toggleAmountDisplay('statistics', 'totalStaked')}
             />
 
-            <StatisticCard
+            <StableCardResource resources={[blockchainDataResource]}>
+<StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
               title="Global Staked (API)"
               value={
                 <div className="flex flex-col">
@@ -657,8 +548,11 @@ export function App() {
               tooltip="Total staked amount reported by the blockchain API. May differ slightly from Cleos call due to timing differences."
               onClick={() => toggleAmountDisplay('statistics', 'globalStaked')}
             />
+            </StableCardResource>
 
             <StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
               title="Average Stake"
               value={formatAmount(
                 statistics?.average || 0,
@@ -669,6 +563,8 @@ export function App() {
             />
 
             <StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
               title="Median Stake"
               value={formatAmount(
                 statistics?.median || 0,
@@ -679,6 +575,8 @@ export function App() {
             />
 
             <StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
               title="Stake Range"
               value={
                 <div className="flex flex-col">
@@ -701,13 +599,16 @@ export function App() {
               onClick={() => toggleAmountDisplay('statistics', 'range')}
             />
 
-            <StatisticCard
+            <StableCardResource resources={[rewardsPoolDataResource, blockchainDataResource]}>
+<StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
               title="Rewards Pool"
               value={
                 <div className="flex flex-col">
                   <span>
-                    {rewardsPoolData?.[0] 
-                      ? parseFloat(rewardsPoolData[0]).toLocaleString() 
+                    {rewardsPoolData?.[0]
+                      ? parseFloat(rewardsPoolData[0]).toLocaleString()
                       : '...'} STRX
                   </span>
                   {blockchainData?.rows?.[0] && rewardsPoolData?.[0] && (
@@ -723,8 +624,12 @@ export function App() {
               }
               tooltip="Current rewards pool balance and estimated days until depletion assuming daily compounding"
             />
+            </StableCardResource>
 
-            <StatisticCard
+            <StableCardResource resources={[bridgeDataResource, priceDataResource]}>
+<StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
               title="Bridge Balance"
               value={
                 bridgeData?.[0] && strxPrice ? (
@@ -740,17 +645,19 @@ export function App() {
                 ) : '...'
               }
               tooltip="Current STRX balance in the bridge contract. Click to view bridge dashboard."
-              onClick={() => {
-                window.location.pathname = '/bridge';
-              }}
+              onClick={onBridgeSelect}
             >
-              <ArrowTopRightOnSquareIcon 
-                className="absolute bottom-2 right-2 h-5 w-5 text-gray-400 hover:text-purple-600 transition-colors" 
+              <ArrowTopRightOnSquareIcon
+                className="absolute bottom-2 right-2 h-5 w-5 text-gray-400 hover:text-purple-600 transition-colors"
                 title="View Bridge Dashboard"
               />
             </StatisticCard>
+            </StableCardResource>
 
-            <StatisticCard
+            <StableCardResource resources={[priceDataResource]}>
+<StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
               title="STRX Price"
               value={`$${strxPrice.toLocaleString(undefined, {
                 minimumFractionDigits: 6,
@@ -759,36 +666,41 @@ export function App() {
               })}`}
               tooltip="Current market price of STRX token, updated every 2 minutes from the blockchain oracle"
             />
+            </StableCardResource>
 
-            <StatisticCard
+            <StableCardResource resources={[raydiumPoolDataResource]}>
+<StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
+              variant="market"
               title="STRX/SOL Pool"
               value={
-                raydiumPoolData?.success && raydiumPoolData?.data && raydiumPoolData.data.length > 0 ? (
+                raydiumPoolData !== undefined ? (
                   <div className="flex flex-col">
-                    <span>{raydiumPoolData.data[0].price.toFixed(8)} SOL</span>
+                    <span>{formatOptionalNumber(market.price, 8)} SOL</span>
                     <span className="text-xs text-gray-500 dark:text-gray-300">
-                      TVL: ${raydiumPoolData.data[0].tvl.toLocaleString()}
+                      TVL: ${formatOptionalNumber(market.tvl)}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-300">
-                      24h Vol: ${raydiumPoolData.data[0].day.volume.toLocaleString()}
+                      24h Vol: ${formatOptionalNumber(market.dayVolume)}
                     </span>
                     <div className="text-xs text-gray-500 dark:text-gray-300 mt-1">
                       Liquidity:
                       <div className="flex items-center gap-1 ml-2">
-                        <img 
-                          src="/favicon-128.webp" 
-                          alt="STRX" 
+                        <img
+                          src="/favicon-128.webp"
+                          alt="STRX"
                           className="w-4 h-4"
                         />
-                        {raydiumPoolData.data[0].mintAmountA.toLocaleString()} STRX
+                        {formatOptionalNumber(market.mintAmountA)} STRX
                       </div>
                       <div className="flex items-center gap-1 ml-2">
-                        <img 
-                          src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" 
-                          alt="SOL" 
+                        <img
+                          src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+                          alt="SOL"
                           className="w-4 h-4 rounded-full"
                         />
-                        {raydiumPoolData.data[0].mintAmountB.toLocaleString()} SOL
+                        {formatOptionalNumber(market.mintAmountB)} SOL
                       </div>
                     </div>
                   </div>
@@ -796,21 +708,26 @@ export function App() {
               }
               tooltip="STRX price and pool stats from Raydium"
             />
+            </StableCardResource>
 
-            <StatisticCard
+            <StableCardResource resources={[raydiumPoolDataResource]}>
+<StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
+              variant="market"
               title="Trading Activity"
               value={
                 raydiumPoolData ? (
                   <div className="flex flex-col">
                     <span className="text-xs text-green-500">
-                      Reward APR: {raydiumPoolData.data[0].day.rewardApr[0].toFixed(2)}%
+                      Reward APR: {formatOptionalNumber(market.rewardApr, 2)}%
                     </span>
                     <div className="text-xs  text-gray-500 dark:text-gray-300 mt-1">
                       Volume:
                       <div className="ml-2">
-                        24h: ${raydiumPoolData.data[0].day.volume.toLocaleString()}<br/>
-                        7d: ${raydiumPoolData.data[0].week.volume.toLocaleString()}<br/>
-                        30d: ${raydiumPoolData.data[0].month.volume.toLocaleString()}
+                        24h: ${formatOptionalNumber(market.dayVolume)}<br/>
+                        7d: ${formatOptionalNumber(market.weekVolume)}<br/>
+                        30d: ${formatOptionalNumber(market.monthVolume)}
                       </div>
                     </div>
                   </div>
@@ -818,32 +735,37 @@ export function App() {
               }
               tooltip="Trading volume and APR stats from Raydium"
             />
+            </StableCardResource>
 
+            <StableCardResource resources={[raydiumPoolDataResource, priceDataResource]}>
             <StatisticCard
+              unavailable={Boolean(error && !snapshot.hasData)}
+              loading={isLoading || !snapshot.hasData}
+              variant="market"
               title="Market Stats"
               value={
-                raydiumPoolData?.success && raydiumPoolData?.data && raydiumPoolData.data.length > 0 ? (
+                raydiumPoolData !== undefined ? (
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <span>{strxPriceDisplay}</span>
                       <span className={`text-sm ${
-                        raydiumPriceChangePercent !== undefined && raydiumPriceChangePercent >= 0 
-                          ? 'text-green-500' 
+                        raydiumPriceChangePercent !== null && raydiumPriceChangePercent >= 0
+                          ? 'text-green-500'
                           : 'text-red-500'
                       }`}>
                         {raydiumPriceChangeDisplay}
                       </span>
                     </div>
-                    {raydiumPoolData.data[0].tvl !== undefined && (
+                    {raydiumPoolData !== undefined && (
                       <span className="text-xs text-gray-500 dark:text-gray-300">
-                        TVL: ${raydiumPoolData.data[0].tvl.toLocaleString()}
+                        TVL: ${formatOptionalNumber(market.tvl)}
                       </span>
                     )}
-                    {raydiumPoolData.data[0].day?.apr !== undefined && (
+                    {raydiumPoolData !== undefined && (
                       <div className="text-xs text-gray-500 dark:text-gray-300">
-                        APR: {raydiumPoolData.data[0].day.apr.toFixed(2)}%
+                        APR: {formatOptionalNumber(market.apr, 2)}%
                         <span className="ml-2">
-                          (Fee: {raydiumPoolData.data[0].day.feeApr.toFixed(2)}%)
+                          (Fee: {formatOptionalNumber(market.feeApr, 2)}%)
                         </span>
                       </div>
                     )}
@@ -852,8 +774,8 @@ export function App() {
               }
               tooltip="Market statistics from Raydium"
             />
+            </StableCardResource>
           </div>
-          )}
 
           {/* Staking Tiers Dashboard */}
           <div className="mb-8">
@@ -867,8 +789,8 @@ export function App() {
                     handleEasterEgg(tier);
                   }}
                   className={`tier-card p-4 rounded-lg shadow border cursor-pointer ${
-                    selectedTier?.name === tier.name 
-                      ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400  transition-colors' 
+                    selectedTier?.name === tier.name
+                      ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400  transition-colors'
                       : 'hover:bg-purple-200 dark:hover:bg-purple-900/40'
                   }`}
                 >
@@ -880,14 +802,16 @@ export function App() {
                     {tier.count > 0 ? tier.count.toLocaleString() : 'X'}
                   </div>
                   <div className="text-xs text-muted-foreground dark:text-gray-300">
-                   {tier.minimum > 0 ? tier.minimum.toLocaleString() + '+ STRX' : 'Nada'} 
+                   {tier.minimum > 0 ? tier.minimum.toLocaleString() + '+ STRX' : 'Nada'}
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <TierMilestoneTracker 
+          <TierMilestoneTracker
+            loading={isLoading || (!snapshot.hasData && !error)}
+            error={!snapshot.hasData ? error : undefined}
             stakersData={processedData}
             setSearchTerm={setSearchTerm}
             selectedTier={selectedTier}
@@ -907,9 +831,9 @@ export function App() {
                 recentActivity: !prev.recentActivity
               }))}
             />
-            
+
             {sectionVisibility.recentActivity && (
-              <RecentActionsDashboard 
+              <RecentActionsDashboard
                 strxPrice={strxPrice}
                 stakersData={response?.data}
                 setSearchTerm={setSearchTerm}
@@ -919,7 +843,8 @@ export function App() {
           </div>
 
           {/* Add the new stakers panel before the leaderboard table */}
-          <NewStakersPanel 
+          <ResourceState resources={[newStakersDataResource]} />
+          <NewStakersPanel
             newStakers={processedNewStakers}
             strxPrice={strxPrice}
           />
@@ -927,9 +852,9 @@ export function App() {
           {selectedTier?.name !== 'No Stake' && (
             <div className="mb-8">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Top 15 Holders Distribution</h2>
-              <div className="h-64 w-full">
+              <div className="min-h-[300px] w-full">
                 <Suspense fallback={null}>
-                  <StakersChart 
+                  <DeferredStakersChart
                     topHolders={topHolders}
                     sortField={sortField}
                     formatLargeNumber={formatLargeNumber}
@@ -978,8 +903,8 @@ export function App() {
                 )}
               </div>
               <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
-                <ColumnSelector 
-                  visibleColumns={visibleColumns} 
+                <ColumnSelector
+                  visibleColumns={visibleColumns}
                   setVisibleColumns={setVisibleColumns}
                   setSortField={setSortField}
                 />
@@ -992,12 +917,12 @@ export function App() {
                         <ChevronDownIcon className="h-4 w-4" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent 
+                    <DropdownMenuContent
                       className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 min-w-[150px] mt-2 z-50 border border-purple-100 dark:border-purple-800"
                       sideOffset={5}
                     >
                       <DropdownMenuItem className="outline-none">
-                        <button 
+                        <button
                           onClick={() => setSortField('staked')}
                           className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
                         >
@@ -1005,7 +930,7 @@ export function App() {
                         </button>
                       </DropdownMenuItem>
                       <DropdownMenuItem className="outline-none">
-                        <button 
+                        <button
                           onClick={() => setSortField('unstaked')}
                           className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
                         >
@@ -1013,7 +938,7 @@ export function App() {
                         </button>
                       </DropdownMenuItem>
                       <DropdownMenuItem className="outline-none">
-                        <button 
+                        <button
                           onClick={() => setSortField('total')}
                           className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
                         >
@@ -1021,7 +946,7 @@ export function App() {
                         </button>
                       </DropdownMenuItem>
                       <DropdownMenuItem className="outline-none">
-                        <button 
+                        <button
                           onClick={() => setSortField('rewards')}
                           className="block w-full px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-800 rounded-md text-gray-700 dark:text-gray-200"
                         >
@@ -1035,7 +960,7 @@ export function App() {
             </div>
 
           {selectedTier?.name !== 'No Stake' && (
-            <div className="bg-card rounded-lg shadow overflow-hidden">
+            <div className="bg-card rounded-lg shadow overflow-x-auto">
               <table className="table-custom">
                 <thead>
                   <tr>
@@ -1062,175 +987,6 @@ export function App() {
                     )}
                   </tr>
                 </thead>
-                {shouldVirtualize ? (
-                  <tbody
-                    ref={tableParentRef}
-                    style={{
-                      height: `${rowVirtualizer.getTotalSize()}px`,
-                      position: 'relative',
-                    }}
-                  >
-                    {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                      const item = currentData[virtualRow.index];
-                      const index = virtualRow.index;
-                      return (
-                        <tr
-                          key={item.username}
-                          data-index={virtualRow.index}
-                          ref={rowVirtualizer.measureElement}
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            transform: `translateY(${virtualRow.start}px)`,
-                          }}
-                          className="hover:bg-purple-50"
-                        >
-                          {visibleColumns.rank && (
-                            <td className="px-2 py-4 text-sm text-gray-900 w-12">
-                              <div className="flex items-center gap-1">
-                                {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                                {(currentPage === 1 && index < 3) && (
-                                  <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
-                                    {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                          )}
-                          {visibleColumns.username && (
-                            <td className="px-2 py-4 text-sm text-gray-900 w-40">
-                              <div className="flex items-center gap-1">
-                                <span title={getUserTier(item.staked).name}>
-                                  {getUserTier(item.staked).emoji}
-                                </span>
-                                <UsernameLink username={item.username} />
-                                <a 
-                                  href={`https://explorer.xprnetwork.org/account/${item.username}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-gray-400 hover:text-purple-600 transition-colors"
-                                  title="View on Blockchain Explorer"
-                                >
-                                  <CubeTransparentIcon className="h-4 w-4" />
-                                </a>
-                              </div>
-                            </td>
-                          )}
-                          {visibleColumns.staked && (
-                            <td 
-                              className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                              onClick={() => {
-                                toggleAmountDisplay(item.username, 'staked');
-                                handleEasterEgg(null, item.username);
-                              }}
-                            >
-                              <div className="flex flex-col">
-                                {formatAmount(
-                                  item.staked, 
-                                  amountDisplays[`${item.username}-staked`] || 'strx'
-                                )}
-                                <span className="text-xs text-gray-500 dark:text-gray-300">
-                                  ({(item.staked / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                                </span>
-                              </div>
-                            </td>
-                          )}
-                          {visibleColumns.unstaked && (
-                            <td 
-                              className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                              onClick={() => {
-                                toggleAmountDisplay(item.username, 'unstaked');
-                                handleEasterEgg(null, item.username);
-                              }}
-                            >
-                              <div className="flex flex-col">
-                                {formatAmount(
-                                  item.unstaked, 
-                                  amountDisplays[`${item.username}-unstaked`] || 'strx'
-                                )}
-                                <span className="text-xs text-gray-500 dark:text-gray-300">
-                                  ({(item.unstaked / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                                </span>
-                              </div>
-                            </td>
-                          )}
-                          {visibleColumns.total && (
-                            <td 
-                              className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                              onClick={() => {
-                                toggleAmountDisplay(item.username, 'total');
-                                handleEasterEgg(null, item.username);
-                              }}
-                            >
-                              <div className="flex flex-col">
-                                {formatAmount(
-                                  item.total, 
-                                  amountDisplays[`${item.username}-total`] || 'strx'
-                                )}
-                                <span className="text-xs text-gray-500 dark:text-gray-300">
-                                  ({(item.total / TOTAL_SUPPLY * 100).toFixed(4)}%)
-                                </span>
-                              </div>
-                            </td>
-                          )}
-                          {visibleColumns.usdValue && (
-                            <td 
-                              className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
-                              onClick={() => {
-                                toggleAmountDisplay(item.username, 'usdValue');
-                                handleEasterEgg(null, item.username);
-                              }}
-                            >
-                              {formatAmount(
-                                item.total,
-                                amountDisplays[`${item.username}-usdValue`] || 'usd'
-                              )}
-                            </td>
-                          )}
-                          {visibleColumns.rewards && (
-                            <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[220px]">
-                              {(() => {
-                                const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
-                                  ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
-                                  : 0;
-                                
-                                const rewards = calculateRewards(
-                                  item.staked, 
-                                  rewardsPerSec, 
-                                  strxPrice,
-                                  blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
-                                );
-                                const isUsd = amountDisplays[`${item.username}-rewards`] === 'usd';
-
-                                return (
-                                  <div className="flex flex-col items-start">
-                                    <span>
-                                      Daily: {isUsd 
-                                        ? `$${rewards.dailyUsd.toFixed(2)}` 
-                                        : `${rewards.daily.toFixed(4)}`}
-                                    </span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-300">
-                                      Monthly: {isUsd 
-                                        ? `$${rewards.monthlyUsd.toFixed(2)}` 
-                                        : `${rewards.monthly.toFixed(4)}`}
-                                    </span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-300">
-                                      Yearly: {isUsd 
-                                        ? `$${rewards.yearlyUsd.toFixed(2)}` 
-                                        : `${rewards.yearly.toFixed(4)}`}
-                                    </span>
-                                  </div>
-                                );
-                              })()}
-                            </td>
-                          )}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                ) : (
                   <tbody>
                     {currentData.length === 0 && (
                       <tr>
@@ -1238,7 +994,7 @@ export function App() {
                           colSpan={Object.values(visibleColumns).filter(Boolean).length || 1}
                           className="px-4 py-12 text-center text-sm text-gray-500 dark:text-gray-400"
                         >
-                          {isLoading ? (
+                          {isLoading || !snapshot.hasData ? (
                             <div className="flex items-center justify-center gap-2">
                               <div className="animate-spin h-5 w-5 border-2 border-purple-600 border-t-transparent rounded-full" />
                               Loading stakers…
@@ -1258,7 +1014,7 @@ export function App() {
                         {visibleColumns.rank && (
                           <td className="px-2 py-4 text-sm text-gray-900 w-12">
                             <div className="flex items-center gap-1">
-                              {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                              {(safePage - 1) * ITEMS_PER_PAGE + index + 1}
                               {(currentPage === 1 && index < 3) && (
                                 <span className="text-yellow-500" title={`Top ${index + 1} Holder`}>
                                   {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
@@ -1274,7 +1030,7 @@ export function App() {
                                 {getUserTier(item.staked).emoji}
                               </span>
                               <UsernameLink username={item.username} />
-                              <a 
+                              <a
                                 href={`https://explorer.xprnetwork.org/account/${item.username}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -1287,7 +1043,7 @@ export function App() {
                           </td>
                         )}
                         {visibleColumns.staked && (
-                          <td 
+                          <td
                             className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
                             onClick={() => {
                               toggleAmountDisplay(item.username, 'staked');
@@ -1296,7 +1052,7 @@ export function App() {
                           >
                             <div className="flex flex-col">
                               {formatAmount(
-                                item.staked, 
+                                item.staked,
                                 amountDisplays[`${item.username}-staked`] || 'strx'
                               )}
                               <span className="text-xs text-gray-500 dark:text-gray-300">
@@ -1306,7 +1062,7 @@ export function App() {
                           </td>
                         )}
                         {visibleColumns.unstaked && (
-                          <td 
+                          <td
                             className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
                             onClick={() => {
                               toggleAmountDisplay(item.username, 'unstaked');
@@ -1315,7 +1071,7 @@ export function App() {
                           >
                             <div className="flex flex-col">
                               {formatAmount(
-                                item.unstaked, 
+                                item.unstaked,
                                 amountDisplays[`${item.username}-unstaked`] || 'strx'
                               )}
                               <span className="text-xs text-gray-500 dark:text-gray-300">
@@ -1325,7 +1081,7 @@ export function App() {
                           </td>
                         )}
                         {visibleColumns.total && (
-                          <td 
+                          <td
                             className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
                             onClick={() => {
                               toggleAmountDisplay(item.username, 'total');
@@ -1334,7 +1090,7 @@ export function App() {
                           >
                             <div className="flex flex-col">
                               {formatAmount(
-                                item.total, 
+                                item.total,
                                 amountDisplays[`${item.username}-total`] || 'strx'
                               )}
                               <span className="text-xs text-gray-500 dark:text-gray-300">
@@ -1344,7 +1100,7 @@ export function App() {
                           </td>
                         )}
                         {visibleColumns.usdValue && (
-                          <td 
+                          <td
                             className="px-6 py-4 text-sm text-gray-900 cursor-pointer hover:text-purple-600"
                             onClick={() => {
                               toggleAmountDisplay(item.username, 'usdValue');
@@ -1360,13 +1116,14 @@ export function App() {
                         {visibleColumns.rewards && (
                           <td className="px-4 py-4 text-sm cursor-pointer hover:text-purple-600 min-w-[220px]">
                             {(() => {
-                              const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec 
+                              if (!blockchainData?.rows?.[0] || !priceData?.rows?.some(row => row.sym === '4,STRX')) return 'N/A';
+                                const rewardsPerSec = blockchainData?.rows[0]?.rewards_sec
                                 ? parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0])
                                 : 0;
-                              
+
                               const rewards = calculateRewards(
-                                item.staked, 
-                                rewardsPerSec, 
+                                item.staked,
+                                rewardsPerSec,
                                 strxPrice,
                                 blockchainData?.rows[0]?.stakes ? parseFloat(blockchainData.rows[0].stakes.split(' ')[0]) : 0
                               );
@@ -1375,18 +1132,18 @@ export function App() {
                               return (
                                 <div className="flex flex-col items-start">
                                   <span>
-                                    Daily: {isUsd 
-                                      ? `$${rewards.dailyUsd.toFixed(2)}` 
+                                    Daily: {isUsd
+                                      ? `$${rewards.dailyUsd.toFixed(2)}`
                                       : `${rewards.daily.toFixed(4)}`}
                                   </span>
                                   <span className="text-xs text-gray-500 dark:text-gray-300">
-                                    Monthly: {isUsd 
-                                      ? `$${rewards.monthlyUsd.toFixed(2)}` 
+                                    Monthly: {isUsd
+                                      ? `$${rewards.monthlyUsd.toFixed(2)}`
                                       : `${rewards.monthly.toFixed(4)}`}
                                   </span>
                                   <span className="text-xs text-gray-500 dark:text-gray-300">
-                                    Yearly: {isUsd 
-                                      ? `$${rewards.yearlyUsd.toFixed(2)}` 
+                                    Yearly: {isUsd
+                                      ? `$${rewards.yearlyUsd.toFixed(2)}`
                                       : `${rewards.yearly.toFixed(4)}`}
                                   </span>
                                 </div>
@@ -1397,12 +1154,11 @@ export function App() {
                       </tr>
                     ))}
                   </tbody>
-                )}
               </table>
             </div>
           )}
 
-          
+
 
             {/* Add pagination controls */}
             <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -1429,7 +1185,7 @@ export function App() {
                   Previous
                 </button>
                 <span className="text-sm text-gray-600 px-2 dark:text-gray-300">
-                  Page {currentPage} of {totalPages}
+                  Page {safePage} of {totalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
@@ -1448,12 +1204,13 @@ export function App() {
               </div>
             </div>
           </div>
+        </>
         </div>
       </div>
     </UserSelectContext.Provider>
   );
 }
 
-export default App;
+export default LeaderboardPage;
 // smapshot version
 // 1.2.0

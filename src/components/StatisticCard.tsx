@@ -2,6 +2,9 @@ import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import type { ReactNode, KeyboardEvent } from 'react';
 
 export type StatisticCardProps = {
+  loading?: boolean;
+  unavailable?: boolean;
+  variant?: 'standard' | 'market';
   title: string;
   value: ReactNode;
   tooltip: string;
@@ -9,7 +12,7 @@ export type StatisticCardProps = {
   children?: ReactNode;
 };
 
-export const StatisticCard = ({ title, value, tooltip, onClick, children }: StatisticCardProps) => {
+export const StatisticCard = ({ title, value, tooltip, onClick, children, loading = false, unavailable = false, variant = 'standard' }: StatisticCardProps) => {
   const handleKeyDown = onClick
     ? (e: KeyboardEvent<HTMLDivElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -21,6 +24,8 @@ export const StatisticCard = ({ title, value, tooltip, onClick, children }: Stat
 
   return (
     <div
+      aria-busy={loading && !unavailable}
+      style={{ minHeight: variant === 'market' ? 240 : 120 }}
       className={`bg-card p-4 rounded-lg shadow border relative ${
         onClick ? 'cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/10 transition-colors' : ''
       }`}
@@ -50,13 +55,13 @@ export const StatisticCard = ({ title, value, tooltip, onClick, children }: Stat
         </button>
       </div>
       <div className="text-xl font-semibold text-purple-700 dark:text-purple-300">
-        {value === undefined || value === null || value === '' ? (
+        {unavailable ? 'Unavailable' : loading || value === undefined || value === null || value === '' ? (
           <div className="skeleton h-6 w-24" aria-label="Loading" />
         ) : (
           value
         )}
       </div>
-      {children}
+      {!unavailable && children}
     </div>
   );
 };

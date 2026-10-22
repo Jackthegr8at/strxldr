@@ -1,15 +1,17 @@
+import { useBridgeHistory } from './hooks/useBridgeHistory';
+import { LoadState } from './components/LoadState';
 import * as React from 'react';
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import useSWR from 'swr';
+import { useState, useMemo, useEffect, useDeferredValue } from 'react';
+import { useConfig, useDexPairs, useOraclePrices, useRewardsPool, useUserActions } from './hooks/useResources';
+import { ResourceState } from './components/ResourceState';
 import { ArrowLeftIcon, InformationCircleIcon, MagnifyingGlassIcon, CubeTransparentIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid } from 'recharts';
-import debounce from 'lodash/debounce';
+import { calculateScenarioRewards, reconcileStake, normalizeActionTime, projectStake, findDaysToTarget } from './lib/stakingMath';
 import { ThemeToggle } from './components/ThemeToggle';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem } from "@radix-ui/react-dropdown-menu";
 import { Header } from './components/Header';
-import { fetchBlockchainConfig, fetchDexScreenerPairs, fetchHistoryActions, fetchPriceRows, fetchRewardsPool } from './lib/api';
 import { calculateDaysUntilEmpty, cleanMemo, formatTimestamp, getTransactionType, getUserTier, STAKING_TIERS, TOTAL_SUPPLY } from './lib/leaderboard';
-import type { ActionResponse, BlockchainResponse, BridgeAction, DailyDataPoint, DexScreenerPairsData, PriceResponse, StakingTier } from './lib/types';
+import type { ActionResponse, BlockchainResponse, DexScreenerPairsData, PriceResponse, StakingTier } from './lib/types';
 
 type UserPageProps = {
   username: string;
@@ -18,65 +20,18 @@ type UserPageProps = {
     staked: number;
     unstaked: number;
   };
-  globalData: {
-    blockchainData?: BlockchainResponse;
-    priceData?: PriceResponse;
-    lastModified: string;
-  };
+  lastModified: string | null;
 };
 
-// Add these new types and helpers
-type StakeTransaction = {
-  time: Date;
-  amount: number;
-  type: string;
-  trxId?: string;
-};
-
-const getUpdatedStakedAmount = (
-  baseAmount: number,
-  transactions: StakeTransaction[],
-  lastJsonUpdate: Date | string | undefined
-) => {
-  // Validate and create date
-  let lastUpdateUTC: Date;
-  try {
-    if (!lastJsonUpdate) {
-      lastUpdateUTC = new Date();
-    } else {
-      lastUpdateUTC = new Date(lastJsonUpdate);
-      if (isNaN(lastUpdateUTC.getTime())) {
-        lastUpdateUTC = new Date();
-      }
-    }
-  } catch (error) {
-    lastUpdateUTC = new Date();
-  }
-  
-  return transactions
-    .filter(tx => tx.time > lastUpdateUTC)
-    .reduce((total, tx) => {
-      if (tx.type === 'add stake') return total + tx.amount;
-      if (tx.type === 'withdraw stake') return total - tx.amount;
-      return total;
-    }, baseAmount);
-};
-
-const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalData }) => {
-  const [adjustedStaked, setAdjustedStaked] = useState(userData.staked);
+const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, lastModified }) => {
   const [projectionRange, setProjectionRange] = useState<'1y' | '2y' | '5y'>('1y');
-  const [simulatedStaked, setSimulatedStaked] = useState(adjustedStaked);
+  const [simulation, setSimulation] = useState<number | null>(null);
   const [transactionPage, setTransactionPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 10;
 
   // Add bridge-related states here
-  const [allUserBridgeActions, setAllUserBridgeActions] = useState<BridgeAction[]>([]);
-  const [isLoadingBridge, setIsLoadingBridge] = useState(false);
-  const [hasMoreBridgeData, setHasMoreBridgeData] = useState(true);
-  const [skipBridge, setSkipBridge] = useState(0);
   const [showAllUsd, setShowAllUsd] = useState(false);
   const [showUsd, setShowUsd] = useState<{[key: string]: boolean}>({});
-  const FETCH_LIMIT = 300;
 
   // Update the transaction type to use string for time
   type Transaction = {
@@ -88,25 +43,12 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   };
 
   // First, get the actions data
-  const { data: actionsData } = useSWR<ActionResponse>(
-    ['user_actions', username],
-    () => fetchHistoryActions<ActionResponse>({
-      limit: 50,
-      'act.account': 'storex',
-      'act.name': 'transfer',
-    }, username),
-    { refreshInterval: 60000 }
-  );
+  const actionsDataResource = useUserActions(username);
+  const { data: actionsData } = actionsDataResource;
 
   // First get priceData
-  const { data: priceData } = useSWR<PriceResponse>(
-    'strx_price',
-    fetchPriceRows,
-    {
-      refreshInterval: 300000,
-      fallbackData: globalData.priceData,
-    }
-  );
+  const priceDataResource = useOraclePrices();
+  const { data: priceData } = priceDataResource;
 
   // Then get strxPrice
   const strxPrice = useMemo(() => {
@@ -127,7 +69,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
       .map(action => {
         const amount = parseFloat(action.act.data.quantity.split(' ')[0]);
         // Properly handle UTC timestamp
-        const time = new Date(action.timestamp + 'Z'); // Add Z to ensure UTC parsing
+        const time = new Date(normalizeActionTime(action.timestamp)); // Add Z to ensure UTC parsing
         return {
           time,
           amount,
@@ -160,58 +102,17 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   }, [userActions]);
 
   // We don't need to fetch the full staking data since we have the user's data
-  const { data: blockchainData } = useSWR<BlockchainResponse>(
-    'blockchain_data',
-    fetchBlockchainConfig,
-    {
-      refreshInterval: 300000,
-      fallbackData: globalData.blockchainData,
-    }
-  );
+  const blockchainDataResource = useConfig();
+  const { data: blockchainData } = blockchainDataResource;
 
-  const calculateRewards = (stakedAmount: number) => {
-    if (!blockchainData?.rows?.[0]) return null;
-    
-    const rewardsPerSec = parseFloat(blockchainData.rows[0].rewards_sec.split(' ')[0]);
-    const globalStaked = parseFloat(blockchainData.rows[0].stakes.split(' ')[0]);
-    
-    const dailyReward = rewardsPerSec * 86400 * (stakedAmount / globalStaked);
-    const monthlyReward = dailyReward * 30;
-    const yearlyReward = dailyReward * 365;
-    
-    return {
-      daily: dailyReward,
-      monthly: monthlyReward,
-      yearly: yearlyReward,
-      dailyUsd: dailyReward * strxPrice,
-      monthlyUsd: monthlyReward * strxPrice,
-      yearlyUsd: yearlyReward * strxPrice,
-    };
-  };
-
-  // Calculate the adjusted staked amount whenever transactions or userData changes
-  useEffect(() => {
-    if (!userActions.length || !userData.staked) return;
-
-    // Parse the GMT date string properly
-    const lastJsonUpdate = globalData.lastModified 
-      ? new Date(Date.parse(globalData.lastModified))
-      : new Date();
-
-    const updatedAmount = getUpdatedStakedAmount(
-      userData.staked,
-      userActions.map(tx => ({
-        time: new Date(tx.time), // Transaction times are already in UTC
-        amount: tx.amount,
-        type: tx.type
-      })),
-      lastJsonUpdate
-    );
-
-    if (updatedAmount !== adjustedStaked) {
-      setAdjustedStaked(updatedAmount);
-    }
-  }, [userActions, userData.staked, globalData.lastModified]);
+  const adjustedStaked = useMemo(() => reconcileStake(userData.staked, userActions, lastModified), [userData.staked, userActions, lastModified]);
+  // Null means unedited: follow fresh principal until the user changes the input.
+  const simulatedStaked = simulation ?? adjustedStaked;
+  const deferredSimulatedStaked = useDeferredValue(simulatedStaked);
+  const rewardsPerSecond = Number.parseFloat(blockchainData?.rows?.[0]?.rewards_sec?.split(' ')[0] ?? '');
+  const globalStaked = Number.parseFloat(blockchainData?.rows?.[0]?.stakes?.split(' ')[0] ?? '');
+  const calculateRewards = (stake: number) => calculateScenarioRewards(stake, rewardsPerSecond, globalStaked, strxPrice);
+  const dailyRate = Number.isFinite(rewardsPerSecond) && rewardsPerSecond >= 0 && globalStaked > 0 && Number.isFinite(globalStaked) ? rewardsPerSecond * 86400 / globalStaked : null;
 
   // Add total calculation
   const totalAmount = adjustedStaked + userData.unstaked;
@@ -220,7 +121,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     if (!blockchainData?.rows?.[0]) return null;
 
     const totalStaked = parseFloat(blockchainData.rows[0].stakes.split(' ')[0]);
-    const percentageOfPool = (adjustedStaked / totalStaked) * 100;
+    const poolShare = totalStaked > 0 ? (adjustedStaked / totalStaked) * 100 : NaN;
+    const percentageOfPool = Number.isFinite(poolShare) ? poolShare : null;
     const percentageOfSupply = (totalAmount / TOTAL_SUPPLY) * 100;
 
     return {
@@ -283,233 +185,81 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     };
   }, [currentTier, nextTier, adjustedStaked]);
 
-  // Add this debounced function
-  const debouncedSetSimulated = useCallback(
-    debounce((value: number) => {
-      setSimulatedStaked(value);
-    }, 500),
-    []
-  );
-
-  // Update rewards projection calculation
   const rewardsProjection = useMemo(() => {
-    const rewards = stakingStats?.rewards;
-    if (!rewards?.daily) return [];
-    
-    const dailyReward = rewards.daily * (simulatedStaked / userData.staked);
-    const data = [];
+    if (dailyRate === null) return [];
     const years = projectionRange === '1y' ? 1 : projectionRange === '2y' ? 2 : 5;
-    const months = years * 12;
-    
     const startDate = new Date();
     startDate.setHours(0, 0, 0, 0);
-
-    const interval = years === 1 ? 1 : years === 2 ? 2 : 3;
-
-    for (let i = 0; i <= months; i += interval) {
+    const data = [];
+    for (let i = 0; i <= years * 12; i += years === 1 ? 1 : years === 2 ? 2 : 3) {
       const date = new Date(startDate);
       date.setMonth(startDate.getMonth() + i);
-      
-      const daysSinceStart = Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      // No compound - just add daily rewards
-      const noCompound = simulatedStaked + (dailyReward * daysSinceStart);
-      
-      // Daily compound
-      const dailyRate = dailyReward / simulatedStaked;
-      const dailyCompound = simulatedStaked * Math.pow(1 + dailyRate, daysSinceStart);
-      
-      // Monthly compound
-      const monthlyRate = (dailyReward * 30) / simulatedStaked;
-      const monthlyCompound = simulatedStaked * Math.pow(1 + monthlyRate, i);
-      
-      // Annual compound
-      const annualRate = (dailyReward * 365) / simulatedStaked;
-      const annualPeriods = Math.floor(daysSinceStart / 365);
-      const annualCompound = simulatedStaked * Math.pow(1 + annualRate, annualPeriods);
-
+      const day = Math.floor((date.getTime() - startDate.getTime()) / 86400000);
       data.push({
-        date: years === 1 
-          ? date.toLocaleDateString(undefined, { month: 'short' })
-          : years === 2 
-            ? date.toLocaleDateString(undefined, { year: '2-digit', month: 'short' })
-            : date.toLocaleDateString(undefined, { year: '2-digit' }),
-        fullDate: date.toLocaleDateString(undefined, { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+        date: date.toLocaleDateString(undefined, years === 1 ? {
+          month: 'short'
+        } : years === 2 ? {
+          year: '2-digit',
+          month: 'short'
+        } : {
+          year: '2-digit'
         }),
-        amountNoCompound: noCompound,
-        amountDaily: dailyCompound,
-        amountMonthly: monthlyCompound,
-        amountAnnually: annualCompound,
-        day: daysSinceStart
+        fullDate: date.toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        amountNoCompound: projectStake(deferredSimulatedStaked, dailyRate, day, i, 'noCompound'),
+        amountDaily: projectStake(deferredSimulatedStaked, dailyRate, day, i, 'dailyCompound'),
+        amountMonthly: projectStake(deferredSimulatedStaked, dailyRate, day, i, 'monthlyCompound'),
+        amountAnnually: projectStake(deferredSimulatedStaked, dailyRate, day, i, 'annualCompound'),
+        day
       });
     }
-    
     return data;
-  }, [stakingStats, simulatedStaked, projectionRange, userData.staked]);
+  }, [dailyRate, deferredSimulatedStaked, projectionRange]);
 
   // Add this with your other SWR fetches
-  const { data: rewardsPoolData } = useSWR<string[]>(
-    'rewards_pool',
-    fetchRewardsPool
-  );
+  const rewardsPoolDataResource = useRewardsPool();
+  const { data: rewardsPoolData } = rewardsPoolDataResource;
 
-  // Then update the analysis section
   const tierAnalysis = useMemo(() => {
-    const rewards = stakingStats?.rewards;
-    if (!tierProgress || !rewards?.daily || !nextTier) return null;
-
-    // Calculate scenarios for both current and simulated amounts
-    const calculateScenarios = (amount: number, dailyReward: number) => {
-      const dailyData: DailyDataPoint[] = [];
-      const startDate = new Date();
-      startDate.setHours(0, 0, 0, 0);
-
-      // Generate 5 years of daily data (should be enough to find next tier)
-      for (let i = 0; i <= 365 * 5; i++) {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + i);
-        
-        const daysSinceStart = i;
-        
-        // No compound
-        const noCompound = amount + (dailyReward * daysSinceStart);
-        
-        // Daily compound
-        const dailyRate = dailyReward / amount;
-        const dailyCompound = amount * Math.pow(1 + dailyRate, daysSinceStart);
-        
-        // Monthly compound
-        const monthsSinceStart = Math.floor(daysSinceStart / 30);
-        const monthlyRate = (dailyReward * 30) / amount;
-        const monthlyCompound = amount * Math.pow(1 + monthlyRate, monthsSinceStart);
-        
-        // Annual compound
-        const yearsSinceStart = Math.floor(daysSinceStart / 365);
-        const annualRate = (dailyReward * 365) / amount;
-        const annualCompound = amount * Math.pow(1 + annualRate, yearsSinceStart);
-
-        dailyData.push({
-          day: i,
-          date,
-          noCompound,
-          dailyCompound,
-          monthlyCompound,
-          annualCompound
-        });
-
-        // Stop if all strategies have reached the target
-        if (Math.min(noCompound, dailyCompound, monthlyCompound, annualCompound) >= nextTier.minimum) {
-          break;
-        }
-      }
-
-      const findDaysToTarget = (strategy: 'noCompound' | 'dailyCompound' | 'monthlyCompound' | 'annualCompound') => {
-        const dataPoint = dailyData.find(d => d[strategy] >= nextTier.minimum);
-        return dataPoint?.day || Infinity;
-      };
-
-      return {
-        daily: findDaysToTarget('dailyCompound'),
-        monthly: findDaysToTarget('monthlyCompound'),
-        annually: findDaysToTarget('annualCompound'),
-        noCompound: findDaysToTarget('noCompound')
-      };
-    };
-
-    const currentScenarios = calculateScenarios(userData.staked, rewards.daily);
-    const simulatedScenarios = calculateScenarios(simulatedStaked, rewards.daily * (simulatedStaked / userData.staked));
-
-    const rewardDifference = (rewards.daily * (simulatedStaked / userData.staked)) - rewards.daily;
-
-    const adjustedDailyReward = rewards.daily * (simulatedStaked / userData.staked);
-    const adjustedMonthlyReward = adjustedDailyReward * 30;
-
+    const currentRewards = calculateScenarioRewards(adjustedStaked, rewardsPerSecond, globalStaked, strxPrice);
+    const simulatedRewards = calculateScenarioRewards(deferredSimulatedStaked, rewardsPerSecond, globalStaked, strxPrice);
+    if (!tierProgress || !nextTier || !currentRewards || !simulatedRewards || dailyRate === null) return null;
+    const scenariosFor = (stake: number) => ({
+      daily: findDaysToTarget(stake, dailyRate, nextTier.minimum, 'dailyCompound'),
+      monthly: findDaysToTarget(stake, dailyRate, nextTier.minimum, 'monthlyCompound'),
+      annually: findDaysToTarget(stake, dailyRate, nextTier.minimum, 'annualCompound'),
+      noCompound: findDaysToTarget(stake, dailyRate, nextTier.minimum, 'noCompound')
+    });
+    const currentScenarios = scenariosFor(adjustedStaked);
+    const scenarios = scenariosFor(deferredSimulatedStaked);
+    const difference = (a: number | null, b: number | null) => a === null || b === null ? null : a - b;
     return {
-      scenarios: simulatedScenarios,
+      scenarios,
       currentScenarios,
       comparison: {
-        stakeDifference: simulatedStaked - userData.staked,
-        dailyRewardDifference: rewardDifference,
-        monthlyRewardDifference: rewardDifference * 30,
-        yearlyRewardDifference: rewardDifference * 365,
+        stakeDifference: deferredSimulatedStaked - adjustedStaked,
+        dailyRewardDifference: simulatedRewards.daily - currentRewards.daily,
+        monthlyRewardDifference: simulatedRewards.monthly - currentRewards.monthly,
+        yearlyRewardDifference: simulatedRewards.yearly - currentRewards.yearly,
         daysDifference: {
-          daily: currentScenarios.daily - simulatedScenarios.daily,
-          monthly: currentScenarios.monthly - simulatedScenarios.monthly,
-          annually: currentScenarios.annually - simulatedScenarios.annually,
-          noCompound: currentScenarios.noCompound - simulatedScenarios.noCompound
+          daily: difference(currentScenarios.daily, scenarios.daily),
+          monthly: difference(currentScenarios.monthly, scenarios.monthly),
+          annually: difference(currentScenarios.annually, scenarios.annually),
+          noCompound: difference(currentScenarios.noCompound, scenarios.noCompound)
         }
-      },
-      monthlyProgress: (adjustedMonthlyReward / (nextTier.minimum - simulatedStaked)) * 100
+      }
     };
-  }, [tierProgress, stakingStats, simulatedStaked, nextTier, userData.staked]);
+  }, [tierProgress, nextTier, adjustedStaked, deferredSimulatedStaked, rewardsPerSecond, globalStaked, strxPrice, dailyRate]);
 
-  // Add the bridge actions fetching
-  const { data: bridgeActions, mutate: refetchBridgeActions } = useSWR<ActionResponse>(
-    ['bridge_actions', skipBridge, username],
-    async () => {
-      setIsLoadingBridge(true);
-      const data = await fetchHistoryActions<ActionResponse>({
-        limit: FETCH_LIMIT,
-        'act.name': 'transfer',
-        skip: skipBridge,
-      }, 'bridge.strx');
-      setIsLoadingBridge(false);
-      return data;
-    },
-    { refreshInterval: 60000 }
-  );
-
-  // Effect to accumulate and filter user's bridge actions
-  useEffect(() => {
-    if (bridgeActions?.actions) {
-      setAllUserBridgeActions(prev => {
-        const existingIds = new Set(prev.map(a => a.trx_id));
-        
-        // Filter for user's transactions and remove duplicates
-        const newActions = bridgeActions.actions.filter(a => 
-          !existingIds.has(a.trx_id) && 
-          (a.act.data.from === username || a.act.data.to === username)
-        );
-        
-        // If no new user-related actions, we've reached the end
-        if (newActions.length === 0) {
-          setHasMoreBridgeData(false);
-        }
-
-        return [...prev, ...newActions].sort(
-          (a, b) => new Date(b.timestamp + 'Z').getTime() - new Date(a.timestamp + 'Z').getTime()
-        );
-      });
-    }
-  }, [bridgeActions, username]);
-
-  // Process bridge actions
-  const processedBridgeActions = useMemo(() => {
-    return allUserBridgeActions
-      .filter(action => !action.act.data.memo.includes('Cross-chain wrap fee'))
-      .map(action => ({
-        time: formatTimestamp(action.timestamp),
-        from: action.act.data.from,
-        to: action.act.data.to,
-        amount: parseFloat(action.act.data.quantity.split(' ')[0]),
-        memo: cleanMemo(action.act.data.memo),
-        trxId: action.trx_id,
-        type: getTransactionType(action.act.data.memo)
-      }));
-  }, [allUserBridgeActions]);
-
-  // Add pagination states for bridge actions
-  const [currentBridgePage, setCurrentBridgePage] = useState(1);
-  const ITEMS_PER_PAGE = 30;
-
-  const totalBridgePages = Math.ceil(processedBridgeActions.length / ITEMS_PER_PAGE);
-  const currentBridgePageData = processedBridgeActions.slice(
-    (currentBridgePage - 1) * ITEMS_PER_PAGE,
-    currentBridgePage * ITEMS_PER_PAGE
-  );
+  const history = useBridgeHistory(username);
+  const currentBridgePageData = history.actions.map(action => ({
+    time: formatTimestamp(action.timestamp), from: action.act.data.from, to: action.act.data.to,
+    amount: parseFloat(action.act.data.quantity.split(' ')[0]), memo: cleanMemo(action.act.data.memo),
+    trxId: action.trx_id, type: getTransactionType(action.act.data.memo)
+  }));
 
   // Add toggle function for USD display
   const toggleAmountDisplay = (trxId: string) => {
@@ -520,11 +270,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   };
 
   // Add near other SWR hooks
-  const { data: dexScreenerData } = useSWR<DexScreenerPairsData>(
-    'dexscreener_data',
-    fetchDexScreenerPairs,
-    { refreshInterval: 300000 }  // 5 minutes
-  );
+  const dexScreenerDataResource = useDexPairs();
+  const { data: dexScreenerData } = dexScreenerDataResource;
 
   // Reactive isMobile that updates on resize / rotate
   const [isMobile, setIsMobile] = useState(() =>
@@ -536,11 +283,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Update simulatedStaked when adjustedStaked changes
-  useEffect(() => {
-    setSimulatedStaked(adjustedStaked);
-  }, [adjustedStaked]);
-
+  const remainingMonths = stakingStats?.rewards && stakingStats.rewards.monthly > 0 && nextTier ? Math.ceil(Math.max(0, nextTier.minimum - adjustedStaked) / stakingStats.rewards.monthly) : null;
   // Add a check for whether we're showing simulation or recent changes
   const isShowingRecentChanges = adjustedStaked !== userData.staked;
 
@@ -567,6 +310,8 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
   return (
     <>
       <Header />
+
+      <ResourceState resources={[priceDataResource, blockchainDataResource, rewardsPoolDataResource, dexScreenerDataResource]}>
       <main className="container mx-auto px-4 md:px-20 md:py-12 py-8">
         <div className="min-h-screen bg-background">
           <div className="">
@@ -637,7 +382,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                         value={simulatedStaked}
                         onChange={(e) => {
                           const value = parseFloat(e.target.value) || 0;
-                          debouncedSetSimulated(value);
+                          setSimulation(Number.isFinite(value) ? Math.max(0, value) : 0);
                         }}
                         placeholder="Staked amount"
                         min="0"
@@ -733,7 +478,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                   </div>
                 </div>
                 
-                {tierAnalysis?.comparison && simulatedStaked !== userData.staked && (
+                {tierAnalysis?.comparison && simulatedStaked !== adjustedStaked && (
                   <div className="mt-4 p-4 bg-purple-50/50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
                     <h4 className="text-sm font-semibold text-purple-700 dark:text-purple-400 mb-2">
                       {isShowingRecentChanges ? 'Recent Changes Impact Analysis' : 'Simulation Analysis'}
@@ -772,7 +517,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                           {strategy === 'noCompound' ? 'Without compounding' : 
                            `${strategy.charAt(0).toUpperCase() + strategy.slice(1)} compound`}: {' '}
                           <span className="font-medium text-purple-700 dark:text-purple-400">
-                            {Math.abs(Math.ceil(diff))} days {diff > 0 ? 'faster' : 'slower'}
+                            {diff === null ? 'Beyond five-year projection' : `${Math.abs(Math.ceil(diff))} days ${diff > 0 ? 'faster' : 'slower'}`}
                           </span>
                         </p>
                       ))}
@@ -850,11 +595,11 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                           // Filter out annual scenarios when creating possible/impossible lists
                           const possibleScenarios = Object.entries(tierAnalysis.scenarios)
                             .filter(([strategy]) => strategy !== 'annually')
-                            .filter(([_, days]) => days <= daysUntilEmpty);
+                            .filter((entry): entry is [string, number] => entry[1] !== null && entry[1] <= daysUntilEmpty);
 
                           const impossibleScenarios = Object.entries(tierAnalysis.scenarios)
                             .filter(([strategy]) => strategy !== 'annually')
-                            .filter(([_, days]) => days > daysUntilEmpty);
+                            .filter(([_, days]) => days === null || days > daysUntilEmpty);
 
                           return (
                             <>
@@ -894,7 +639,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                                          strategy === 'daily' ? 'Daily compound: ' :
                                          strategy === 'monthly' ? 'Monthly compound: ' : 'Unknown'}
                                       </span>
-                                      ~{Math.ceil(days)} days (exceeds pool duration)
+                                      {days === null ? 'Beyond five-year projection' : `~${Math.ceil(days)} days (exceeds pool duration)`}
                                     </p>
                                   ))}
                                 </div>
@@ -906,15 +651,15 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
                           Monthly rewards of{' '}
                           <span className="font-medium text-purple-700 dark:text-purple-400">
-                            {stakingStats?.rewards?.monthly.toFixed(4)} STRX
+                            {stakingStats?.rewards?.monthly.toFixed(4) ?? 'N/A'} STRX
                           </span>
                           {' '}contribute{' '}
                           <span className="font-medium text-purple-700 dark:text-purple-400">
-                            {((stakingStats?.rewards?.monthly ?? 0) / (nextTier.minimum - userData.staked) * 100).toFixed(2)}%
+                            {nextTier.minimum > adjustedStaked && stakingStats?.rewards ? Number.isFinite(stakingStats.rewards.monthly / (nextTier.minimum - adjustedStaked) * 100) ? (stakingStats.rewards.monthly / (nextTier.minimum - adjustedStaked) * 100).toFixed(2) : 'N/A' : 'N/A'}%
                           </span>
                           {' '}towards your next tier goal. At this rate, it will take approximately{' '}
                           <span className="font-medium text-purple-700 dark:text-purple-400">
-                            {Math.ceil((nextTier.minimum - userData.staked) / (stakingStats?.rewards?.monthly ?? 0))}
+                            {remainingMonths !== null && Number.isFinite(remainingMonths) ? remainingMonths : 'N/A'}
                           </span>
                           {' '}months to reach the next tier.
                         </p>
@@ -954,7 +699,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 <div className="bg-card rounded-lg shadow p-4">
                   <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Pool Share</div>
                   <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-                    {stakingStats?.percentageOfPool.toFixed(4)}%
+                    {stakingStats?.percentageOfPool?.toFixed(4) ?? 'N/A'}%
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     of total staked STRX
@@ -969,28 +714,28 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                     <div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">Daily</div>
                       <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
-                        {stakingStats?.rewards?.daily.toFixed(4)} STRX
+                        {stakingStats?.rewards?.daily.toFixed(4) ?? 'N/A'} STRX
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                        ≈ ${stakingStats?.rewards?.dailyUsd.toFixed(2)}
+                        ≈ ${stakingStats?.rewards?.dailyUsd.toFixed(2) ?? 'N/A'}
                       </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">Monthly</div>
                       <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
-                        {stakingStats?.rewards?.monthly.toFixed(4)} STRX
+                        {stakingStats?.rewards?.monthly.toFixed(4) ?? 'N/A'} STRX
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                        ≈ ${stakingStats?.rewards?.monthlyUsd.toFixed(2)}
+                        ≈ ${stakingStats?.rewards?.monthlyUsd.toFixed(2) ?? 'N/A'}
                       </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">Yearly</div>
                       <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
-                        {stakingStats?.rewards?.yearly.toFixed(4)} STRX
+                        {stakingStats?.rewards?.yearly.toFixed(4) ?? 'N/A'} STRX
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                        ≈ ${stakingStats?.rewards?.yearlyUsd.toFixed(2)}
+                        ≈ ${stakingStats?.rewards?.yearlyUsd.toFixed(2) ?? 'N/A'}
                       </div>
                     </div>
                   </div>
@@ -1234,7 +979,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                                   ) : (
                                     <div className="flex items-center gap-1">
                                       <a
-                                        href={`/user/${action.from}`}
+                                        href={`/?user=${action.from}`}
                                         className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
                                       >
                                         {action.from}
@@ -1264,7 +1009,7 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                                   ) : (
                                     <div className="flex items-center gap-1">
                                       <a
-                                        href={`/user/${action.to}`}
+                                        href={`/?user=${action.to}`}
                                         className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
                                       >
                                         {action.to}
@@ -1340,58 +1085,19 @@ const UserPage: React.FC<UserPageProps> = ({ username, onBack, userData, globalD
                 </div>
 
                 {/* Pagination */}
-                <div className="mt-4 flex justify-end items-center gap-2">
-                  <button
-                    onClick={() => setCurrentBridgePage(1)}
-                    disabled={currentBridgePage === 1}
-                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                  >
-                    First
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (currentBridgePage > 1) {
-                        setCurrentBridgePage(prev => prev - 1);
-                      }
-                    }}
-                    disabled={currentBridgePage === 1}
-                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-sm text-gray-600 px-2">
-                    Page {currentBridgePage} of {totalBridgePages}
-                  </span>
-                  <button
-                    onClick={async () => {
-                      const nextPage = currentBridgePage + 1;
-                      const maxCurrentPage = Math.ceil(processedBridgeActions.length / ITEMS_PER_PAGE);
-
-                      if (nextPage <= maxCurrentPage) {
-                        setCurrentBridgePage(nextPage);
-                      } else if (hasMoreBridgeData && !isLoadingBridge) {
-                        setSkipBridge(prev => prev + FETCH_LIMIT);
-                        await refetchBridgeActions();
-                        setCurrentBridgePage(nextPage);
-                      }
-                    }}
-                    disabled={isLoadingBridge || (!hasMoreBridgeData && currentBridgePage === totalBridgePages)}
-                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                  >
-                    {isLoadingBridge ? 'Loading...' : 'Next'}
-                  </button>
-                  <button
-                    onClick={() => setCurrentBridgePage(totalBridgePages)}
-                    disabled={currentBridgePage === totalBridgePages}
-                    className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-                  >
-                    Last
-                  </button>
-                </div>
+                <div className="mt-4 flex flex-wrap justify-end items-center gap-2" data-testid="bridge-pagination">
+              <LoadState loading={history.isPending} error={history.error} hasData={history.actions.length > 0} onRetry={history.retry} />
+              <button onClick={history.first} disabled={history.page === 1} className="px-4 py-2 rounded border disabled:opacity-50">First</button>
+              <button onClick={history.previous} disabled={history.page === 1} className="px-4 py-2 rounded border disabled:opacity-50">Previous</button>
+              <span>Page {history.page} of {history.pageCount}</span>
+              <button onClick={history.next} disabled={history.isPending || (!history.hasOlder && history.page === history.pageCount)} className="px-4 py-2 rounded border disabled:opacity-50">{history.isPending ? 'Loading...' : history.continueSearching ? 'Continue searching older activity' : 'Next'}</button>
+              <button onClick={history.lastLoaded} disabled={history.page === history.pageCount} className="px-4 py-2 rounded border disabled:opacity-50">{history.hasOlder ? 'Last loaded' : 'Last'}</button>
+            </div>
               </div>
           </div>
         </div>
       </main>
+      </ResourceState>
     </>
   );
 };

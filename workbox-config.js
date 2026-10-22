@@ -1,107 +1,31 @@
 module.exports = {
   globDirectory: 'build/',
-  globPatterns: [
-    ...(process.env.NODE_ENV === 'production' ? [
-      '**/*.{html,js,css}', // Core web assets (production only)
-      '**/*.{png,jpg,jpeg,gif,webp,svg}', // Asset images
-      'icons/*.{png,webp}', // Icons
-      'manifest.json',
-      'favicon*.{ico,webp,png}' // Favicons
-    ] : [
-      // In development, ONLY cache images and other static assets
-      '**/*.{png,jpg,jpeg,gif,webp,svg}',
-      'icons/*.{png,webp}',
-      'manifest.json',
-      'favicon*.{ico,webp,png}'
-    ]),
-  ],
-  globIgnores: [
-    '**/service-worker.js',
-    '**/sw.js',
-    '**/workbox-*.js',
-    '**/index.tsx',
-    '**/index.js',
-    '**/App.tsx',
-    '**/App.js',
-    '**/*.map',
-    '**/asset-manifest.json',
-    'robots.txt',
-    '.DS_Store',
-    ...(process.env.NODE_ENV === 'development' ? [
-      '**/*.tsx',
-      '**/*.ts',
-      '**/*.jsx',
-      '**/*.js',
-      '**/*.css',
-      '**/*.html'
-    ] : [])
-  ],
+  globPatterns: ['**/*.{html,js,css,png,jpg,jpeg,gif,webp,svg,woff,woff2,eot,ttf,otf}', 'manifest.json', 'favicon*.ico'],
+  globIgnores: ['**/sw.js', '**/workbox-*.js', '**/*.map', '.vite/**'],
   swDest: 'build/sw.js',
   clientsClaim: true,
-  skipWaiting: true,
+  skipWaiting: false,
   inlineWorkboxRuntime: true,
+  navigateFallback: 'index.html',
   runtimeCaching: [
-    // Navigation routes with different strategies for dev/prod
     {
-      urlPattern: ({ request }) => request.mode === 'navigate',
-      handler: process.env.NODE_ENV === 'production' ? 'NetworkFirst' : 'NetworkOnly',
-      options: {
-        cacheName: 'pages',
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: process.env.NODE_ENV === 'production' ? 1 * 60 * 60 : 5 * 60 // 1 hour in prod, 5 minutes in dev
-        }
-      }
-    },
-    // API endpoints with shorter cache times in dev
-    {
+      // Exact origins and endpoint paths; query strings cannot impersonate APIs.
       urlPattern: ({ url }) => {
-        const apiEndpoints = [
-          'api-xprnetwork-main.saltant.io',
-          'proton.eosusa.io',
-          'api-v3.raydium.io',
-          'api.bloks.io',
-          'api.dexscreener.com',
-          'nfts.jessytremblay.com',
-          'raw.githubusercontent.com'
-        ];
-        return apiEndpoints.some(endpoint => url.href.includes(endpoint));
+        const paths = {
+          'https://proton.eosusa.io': ['/v1/chain/get_table_rows', '/v1/chain/get_currency_balance', '/v2/history/get_actions'],
+          'https://proton.greymass.com': ['/v1/chain/get_table_rows', '/v1/chain/get_currency_balance', '/v2/history/get_actions'],
+          'https://api-xprnetwork-main.saltant.io': ['/v1/chain/get_table_rows', '/v1/chain/get_currency_balance', '/v2/history/get_actions'],
+          'https://api-v3.raydium.io': ['/pools/info/ids'],
+          'https://api.dexscreener.com': ['/latest/dex/pairs/solana/5XVsERryqVvKPDMUh851H4NsSiK68gGwRg9Rpqf9yMmf'],
+          'https://www.api.bloks.io': ['/proton/tokens/XSOL-proton-xtokens'],
+          'https://nfts.jessytremblay.com': ['/STRX/stakes.json', '/STRX/newstakers.json'],
+        };
+        return (paths[url.origin] || []).includes(url.pathname);
       },
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'api-cache',
-        expiration: {
-          maxEntries: 100,
-          maxAgeSeconds: process.env.NODE_ENV === 'production' ? 5 * 60 : 60 // 5 minutes in prod, 1 minute in dev
-        },
-        cacheableResponse: {
-          statuses: [0, 200]
-        }
-      }
+      handler: 'NetworkOnly',
+      method: 'GET',
     },
-    // Static assets
-    {
-      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'images',
-        expiration: {
-          maxEntries: 60,
-          maxAgeSeconds: 24 * 60 * 60 // 24 hours
-        }
-      }
-    },
-    // Web fonts
-    {
-      urlPattern: /\.(?:woff|woff2|eot|ttf|otf)$/,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'fonts',
-        expiration: {
-          maxEntries: 20,
-          maxAgeSeconds: 24 * 60 * 60 // 24 hours
-        }
-      }
-    }
-  ]
-}; 
+    { urlPattern: ({ request, url }) => request.destination === 'image' && /\.(?:png|jpg|jpeg|svg|gif|webp)$/i.test(url.pathname), handler: 'CacheFirst', method: 'GET', options: { cacheName: 'images', expiration: { maxEntries: 60, maxAgeSeconds: 86400 } } },
+    { urlPattern: ({ request, url }) => request.destination === 'font' && /\.(?:woff|woff2|eot|ttf|otf)$/i.test(url.pathname), handler: 'CacheFirst', method: 'GET', options: { cacheName: 'fonts', expiration: { maxEntries: 20, maxAgeSeconds: 86400 } } },
+  ],
+};

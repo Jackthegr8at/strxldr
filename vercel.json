@@ -2,7 +2,7 @@
   "version": 2,
   "routes": [
     {
-      "src": "/sw.js",
+      "src": "^/sw\\.js$",
       "dest": "/sw.js",
       "headers": {
         "content-type": "application/javascript",
@@ -10,8 +10,8 @@
       }
     },
     {
-      "src": "/workbox-[a-f0-9]+\\.js",
-      "dest": "/workbox-$1.js",
+      "src": "^/(workbox-[a-f0-9]+\\.js)$",
+      "dest": "/$1",
       "headers": {
         "content-type": "application/javascript",
         "cache-control": "public, max-age=31536000, immutable"
@@ -30,7 +30,14 @@
       "dest": "/manifest.json"
     },
     {
-      "src": "^/assets/(.*)",
+      "src": "^/(assets/.+-[A-Za-z0-9_-]{8,}\\.(?:js|css|woff2?|png|webp|svg))$",
+      "dest": "/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "^/assets/(.*)$",
       "dest": "/assets/$1"
     },
     {
@@ -62,12 +69,15 @@
       "dest": "/favicon-128.webp"
     },
     {
-      "src": "^/(.*)\\.(?:png|jpg|jpeg|gif|ico|svg|webp|json)$",
+      "src": "^/(.*\\.(?:png|jpg|jpeg|gif|ico|svg|webp|json|js|css|woff2?))$",
       "dest": "/$1"
     },
     {
       "src": ".*",
-      "dest": "/index.html"
+      "dest": "/index.html",
+      "headers": {
+        "cache-control": "public, max-age=0, must-revalidate"
+      }
     }
   ]
 }

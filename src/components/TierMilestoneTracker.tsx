@@ -1,7 +1,7 @@
 import { useMemo, memo } from 'react';
 import type { StakingTier, SectionVisibility } from '../lib/types';
 import { STAKING_TIERS } from '../lib/leaderboard';
-import { UserSelectContext } from '../index';
+import { UserSelectContext } from '../contexts/UserSelectContext';
 
 type MilestoneUser = {
   username: string;
@@ -15,7 +15,7 @@ type MilestoneUser = {
 const UsernameLink: React.FC<{ username: string }> = ({ username }) => (
   <UserSelectContext.Consumer>
     {(onSelect: (username: string) => void) => (
-      <button 
+      <button
         onClick={() => onSelect(username)}
         className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
       >
@@ -26,6 +26,8 @@ const UsernameLink: React.FC<{ username: string }> = ({ username }) => (
 );
 
 type TierMilestoneTrackerProps = {
+  loading?: boolean;
+  error?: unknown;
   stakersData: Array<{ username: string; total: number; staked: number }>;
   setSearchTerm: (term: string) => void;
   selectedTier: StakingTier | null;
@@ -39,13 +41,15 @@ type TierMilestoneTrackerProps = {
   }>;
 };
 
-export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({ 
-  stakersData, 
-  setSearchTerm, 
-  selectedTier, 
-  sectionVisibility, 
+export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
+  loading = false,
+  error,
+  stakersData,
+  setSearchTerm,
+  selectedTier,
+  sectionVisibility,
   setSectionVisibility,
-  SectionHeader 
+  SectionHeader
 }) => {
   const milestones = useMemo(() => {
     return stakersData
@@ -57,16 +61,16 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
             break;
           }
         }
-        
+
         const tierIndex = STAKING_TIERS.findIndex(t => t.name === currentTier.name);
         const nextTier = STAKING_TIERS[tierIndex - 1];
-        
+
         if (!nextTier) {
           return null;
         }
-        
+
         const remaining = nextTier.minimum - staker.staked;
-        const percentageComplete = ((staker.staked - currentTier.minimum) / 
+        const percentageComplete = ((staker.staked - currentTier.minimum) /
           (nextTier.minimum - currentTier.minimum)) * 100;
 
         return {
@@ -80,11 +84,11 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
       })
       .filter((milestone): milestone is MilestoneUser => {
         if (!milestone) return false;
-        
-        const isCloseToNextTier = 
-          milestone.remaining > 0 && 
+
+        const isCloseToNextTier =
+          milestone.remaining > 0 &&
           milestone.remaining < milestone.nextTier.minimum * 0.15;
-        
+
         if (selectedTier) {
           return milestone.currentTier.name === selectedTier.name && isCloseToNextTier;
         } else {
@@ -95,18 +99,18 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
         // First sort by tier level (higher tiers first)
         const aTierIndex = STAKING_TIERS.findIndex(t => t.name === a.currentTier.name);
         const bTierIndex = STAKING_TIERS.findIndex(t => t.name === b.currentTier.name);
-        
+
         if (aTierIndex !== bTierIndex) {
           return aTierIndex - bTierIndex; // Lower index (higher tier) comes first
         }
-        
+
         // If same tier, sort by how close they are to next tier (percentage)
         return b.percentageComplete - a.percentageComplete;
       })
       .slice(0, selectedTier ? 999 : 15);
   }, [stakersData, selectedTier]);
 
-  if (milestones.length === 0 || selectedTier?.name === 'No Stake') return null;
+  if (selectedTier?.name === 'No Stake') return null;
 
   return (
     <div className="mb-8">
@@ -121,7 +125,8 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
       />
 
       {sectionVisibility.tierMilestones && (
-        <div className="rounded-lg border-t shadow dark:shadow-purple-500 overflow-hidden">
+        <div className="rounded-lg border-t shadow dark:shadow-purple-500 h-[560px] md:h-[540px] overflow-y-auto" tabIndex={0} aria-label="Tier milestones" aria-busy={loading}>
+          {(loading || error || milestones.length === 0) && <p className="p-4 text-muted-foreground">{loading ? 'Loading milestones…' : error ? 'Milestones unavailable. Retry the snapshot above.' : 'No stakers close to the next tier.'}</p>}
           {/* Mobile view */}
           <div className="md:hidden">
             <div className="grid grid-cols-1 gap-4 p-4">
@@ -143,7 +148,7 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
                       <span>{milestone.percentageComplete.toFixed(1)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
+                      <div
                         className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
                         style={{ width: `${milestone.percentageComplete}%` }}
                       ></div>
@@ -211,7 +216,7 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
                       <span>{milestone.percentageComplete.toFixed(1)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
+                      <div
                         className="bg-purple-600 h-2.5 rounded-full transition-all duration-500"
                         style={{ width: `${milestone.percentageComplete}%` }}
                       ></div>

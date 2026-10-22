@@ -1,16 +1,16 @@
 import { useMemo, memo } from 'react';
-import useSWR from 'swr';
+import { useRecentActions } from '../hooks/useResources';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import type { StakingTier } from '../lib/types';
 import { STAKING_TIERS, getUserTier } from '../lib/leaderboard';
 import { fetchHistoryActions } from '../lib/api';
 import type { ActionResponse } from '../lib/types';
-import { UserSelectContext } from '../index';
+import { UserSelectContext } from '../contexts/UserSelectContext';
 
 const UsernameLink: React.FC<{ username: string }> = ({ username }) => (
   <UserSelectContext.Consumer>
     {(onSelect: (username: string) => void) => (
-      <button 
+      <button
         onClick={() => onSelect(username)}
         className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
       >
@@ -28,16 +28,7 @@ type RecentActionsDashboardProps = {
 };
 
 export const RecentActionsDashboard = memo<RecentActionsDashboardProps>(({ strxPrice, stakersData, setSearchTerm, selectedTier }) => {
-  const { data: actionsData } = useSWR<ActionResponse>(
-    ['recent_actions', selectedTier?.name],
-    () => fetchHistoryActions<ActionResponse>({
-      limit: selectedTier ? '100' : '30',
-      account: 'storexstake',
-      sort: 'desc',
-      'act.name': 'transfer'
-    }, 'storexstake'),
-    { refreshInterval: 30000 }  // 30 seconds
-  );
+  const { data: actionsData, isLoading, error, mutate } = useRecentActions(selectedTier?.name ?? null);
 
   // Update the formatTimestamp function
   const formatTimestamp = (timestamp: string) => {
@@ -49,7 +40,7 @@ export const RecentActionsDashboard = memo<RecentActionsDashboardProps>(({ strxP
         + 'Z';               // Add Z back to ensure UTC
 
       const date = new Date(cleanTimestamp);
-      
+
       // Check if date is valid
       if (isNaN(date.getTime())) {
         console.warn('Invalid date:', timestamp);
@@ -72,13 +63,13 @@ export const RecentActionsDashboard = memo<RecentActionsDashboardProps>(({ strxP
 
   const recentActions = useMemo(() => {
     if (!actionsData?.actions) return [];
-    
+
     return actionsData.actions
       .filter(action => {
         if (!selectedTier || !stakersData) return true;
 
-        const username = action.act.data.memo === "withdraw stake" 
-          ? action.act.data.to 
+        const username = action.act.data.memo === "withdraw stake"
+          ? action.act.data.to
           : action.act.data.from;
 
         const userStaked = stakersData[username]?.staked || 0;
@@ -88,26 +79,26 @@ export const RecentActionsDashboard = memo<RecentActionsDashboardProps>(({ strxP
         const nextTierUp = STAKING_TIERS[tierIndex - 1];
 
         // Check if user is within the selected tier's range
-        return userStaked >= selectedTier.minimum && 
+        return userStaked >= selectedTier.minimum &&
                (!nextTierUp || userStaked < nextTierUp.minimum);
       })
       .slice(0, 15)
       .map(action => ({
         time: formatTimestamp(action.timestamp),
-        username: action.act.data.memo === "withdraw stake" 
-          ? action.act.data.to 
+        username: action.act.data.memo === "withdraw stake"
+          ? action.act.data.to
           : action.act.data.from,
         amount: parseFloat(action.act.data.quantity.split(' ')[0]),
         type: action.act.data.memo,
         trxId: action.trx_id,
-        isNewStaker: stakersData && 
-                    action.act.data.memo === "add stake" && 
+        isNewStaker: stakersData &&
+                    action.act.data.memo === "add stake" &&
                     !stakersData[action.act.data.from]
       }));
   }, [actionsData, stakersData, selectedTier]);
 
   return (
-    <div className="bg-card rounded-lg shadow overflow-hidden">
+    <div className="bg-card rounded-lg shadow h-[560px] md:h-[540px] overflow-y-auto" tabIndex={0} aria-label="Recent staking activity" aria-busy={isLoading}>
       <div className="overflow-x-auto">
         <table className="table-custom">
           <thead>
@@ -121,6 +112,7 @@ export const RecentActionsDashboard = memo<RecentActionsDashboardProps>(({ strxP
             </tr>
           </thead>
           <tbody>
+            {recentActions.length === 0 && <tr><td colSpan={6} className="p-4">{isLoading ? 'Loading activity…' : error ? <><span>Unable to load activity.</span> <button onClick={() => { void mutate(); }}>Retry</button></> : 'No recent activity.'}</td></tr>}
             {recentActions.map((action, index) => (
               <tr key={index} className={action.isNewStaker ? 'bg-green-50 dark:bg-green-900/20' : ''}>
                 <td>{action.time}</td>
@@ -152,13 +144,13 @@ export const RecentActionsDashboard = memo<RecentActionsDashboardProps>(({ strxP
                   })}
                 </td>
                 <td>
-                  <a 
+                  <a
                     href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`inline-flex items-center gap-1 hover:underline ${
-                      action.type === 'add stake' 
-                        ? 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300' 
+                      action.type === 'add stake'
+                        ? 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300'
                         : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300'
                     }`}
                   >

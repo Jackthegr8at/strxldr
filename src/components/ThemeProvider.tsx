@@ -34,12 +34,13 @@ export function ThemeProvider({
     root.classList.remove("light", "dark");
     root.classList.add(theme);
     
-    // Set cookie options based on environment
+    // Share the production theme only on the owned domain; previews use a host cookie.
+    const sharedDomain = window.location.hostname === 'strxldr.app' || window.location.hostname.endsWith('.strxldr.app');
     const cookieOptions = {
       expires: 365,
-      secure: import.meta.env.PROD,
+      secure: window.location.protocol === 'https:',
       sameSite: 'lax' as 'lax' | 'strict' | 'none',
-      ...(import.meta.env.PROD && {
+      ...(import.meta.env.PROD && sharedDomain && {
         domain: 'strxldr.app'
       })
     }
@@ -63,4 +64,4 @@ export const useTheme = () => {
   const context = useContext(ThemeProviderContext);
   if (!context) throw new Error("useTheme must be used within a ThemeProvider");
   return context;
-}; 
+};

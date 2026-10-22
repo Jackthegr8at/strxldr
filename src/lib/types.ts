@@ -66,10 +66,12 @@ export type DailyDataPoint = {
 
 export type FetchResponse = {
   data: StakeData;
-  lastModified: string;
+  lastModified: string | null;
+  fetchedAt: number;
 };
 
 export type BridgeAction = {
+  global_sequence?: string | number;
   "@timestamp": string;
   timestamp: string;
   act: {

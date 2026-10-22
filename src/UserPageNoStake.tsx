@@ -1,11 +1,12 @@
-import { useState, useMemo, useEffect } from 'react';
-import useSWR from 'swr';
+import { useBridgeHistory } from './hooks/useBridgeHistory';
+import { LoadState } from './components/LoadState';
+import { useState, useMemo } from 'react';
+import { useConfig, useDexPairs, useUserActions, useUserBalance } from './hooks/useResources';
+import { ResourceState } from './components/ResourceState';
 import { ArrowLeftIcon, MagnifyingGlassIcon, CubeTransparentIcon } from '@heroicons/react/24/outline';
-import { ThemeProvider } from './components/ThemeProvider';
 import { Header } from './components/Header';
-import { fetchBlockchainConfig, fetchDexScreenerPairs, fetchHistoryActions, fetchUserBalance } from './lib/api';
 import { cleanMemo, formatTimestamp, getTransactionType } from './lib/leaderboard';
-import type { ActionResponse, BlockchainResponse, BridgeAction, DexScreenerPairsData } from './lib/types';
+import type { ActionResponse, BlockchainResponse, DexScreenerPairsData } from './lib/types';
 
 type UserPageNoStakeProps = {
   username: string;
@@ -15,26 +16,15 @@ type UserPageNoStakeProps = {
 export default function UserPageNoStake({ username, onBack }: UserPageNoStakeProps) {
   // Move all states and data fetching inside the component
   const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('7d');
-  const [allUserBridgeActions, setAllUserBridgeActions] = useState<BridgeAction[]>([]);
-  const [isLoadingBridge, setIsLoadingBridge] = useState(false);
-  const [hasMoreBridgeData, setHasMoreBridgeData] = useState(true);
-  const [skipBridge, setSkipBridge] = useState(0);
   const [showAllUsd, setShowAllUsd] = useState(false);
   const [showUsd, setShowUsd] = useState<{[key: string]: boolean}>({});
-  const FETCH_LIMIT = 300;
 
   // Move all SWR hooks inside
-  const { data: blockchainData } = useSWR<BlockchainResponse>(
-    'blockchain_data',
-    fetchBlockchainConfig,
-    { refreshInterval: 300000 }
-  );
+  const blockchainDataResource = useConfig();
+  const { data: blockchainData } = blockchainDataResource;
 
-  const { data: dexScreenerData } = useSWR<DexScreenerPairsData>(
-    'dexscreener_data',
-    fetchDexScreenerPairs,
-    { refreshInterval: 300000 }
-  );
+  const dexScreenerDataResource = useDexPairs();
+  const { data: dexScreenerData } = dexScreenerDataResource;
 
   const dexPriceUsd = useMemo(() => {
     const priceUsd = dexScreenerData?.pairs?.[0]?.priceUsd;
@@ -64,67 +54,12 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
     };
   }, [blockchainData, dexPriceUsd]);
 
-  // Fetch bridge actions
-  const { data: bridgeActions, mutate: refetchBridgeActions } = useSWR<ActionResponse>(
-    ['bridge_actions', skipBridge],
-    async () => {
-      setIsLoadingBridge(true);
-      const data = await fetchHistoryActions<ActionResponse>({
-        limit: FETCH_LIMIT,
-        'act.name': 'transfer',
-        skip: skipBridge,
-      }, 'bridge.strx');
-      setIsLoadingBridge(false);
-      return data;
-    },
-    { refreshInterval: 120000 }
-  );
-
-  // Effect to accumulate and filter user's bridge actions
-  useEffect(() => {
-    if (bridgeActions?.actions) {
-      setAllUserBridgeActions(prev => {
-        const existingIds = new Set(prev.map(a => a.trx_id));
-        
-        const newActions = bridgeActions.actions.filter(a => 
-          !existingIds.has(a.trx_id) && 
-          (a.act.data.from === username || a.act.data.to === username)
-        );
-        
-        if (newActions.length === 0) {
-          setHasMoreBridgeData(false);
-        }
-
-        return [...prev, ...newActions].sort(
-          (a, b) => new Date(b.timestamp + 'Z').getTime() - new Date(a.timestamp + 'Z').getTime()
-        );
-      });
-    }
-  }, [bridgeActions, username]);
-
-  // Process bridge actions
-  const processedBridgeActions = useMemo(() => {
-    return allUserBridgeActions
-      .filter(action => !action.act.data.memo.includes('Cross-chain wrap fee'))
-      .map(action => ({
-        time: formatTimestamp(action.timestamp),
-        from: action.act.data.from,
-        to: action.act.data.to,
-        amount: parseFloat(action.act.data.quantity.split(' ')[0]),
-        memo: cleanMemo(action.act.data.memo),
-        trxId: action.trx_id,
-        type: getTransactionType(action.act.data.memo)
-      }));
-  }, [allUserBridgeActions]);
-
-  // Pagination states
-  const [currentBridgePage, setCurrentBridgePage] = useState(1);
-  const ITEMS_PER_PAGE = 30;
-  const totalBridgePages = Math.ceil(processedBridgeActions.length / ITEMS_PER_PAGE);
-  const currentBridgePageData = processedBridgeActions.slice(
-    (currentBridgePage - 1) * ITEMS_PER_PAGE,
-    currentBridgePage * ITEMS_PER_PAGE
-  );
+  const history = useBridgeHistory(username);
+  const currentBridgePageData = history.actions.map(action => ({
+    time: formatTimestamp(action.timestamp), from: action.act.data.from, to: action.act.data.to,
+    amount: parseFloat(action.act.data.quantity.split(' ')[0]), memo: cleanMemo(action.act.data.memo),
+    trxId: action.trx_id, type: getTransactionType(action.act.data.memo)
+  }));
 
   const toggleAmountDisplay = (trxId: string) => {
     setShowUsd(prev => ({
@@ -134,15 +69,8 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
   };
 
   // Add this after other states
-  const { data: actionsData } = useSWR<ActionResponse>(
-    ['user_actions', username],
-    () => fetchHistoryActions<ActionResponse>({
-      limit: '50',
-      'act.account': 'storex',
-      'act.name': 'transfer',
-    }, username),
-    { refreshInterval: 60000 } // 1 minute
-  );
+  const actionsDataResource = useUserActions(username);
+  const { data: actionsData } = actionsDataResource;
 
   // Add this after other states
   const [transactionPage, setTransactionPage] = useState(1);
@@ -160,7 +88,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
       .map(action => {
         const amount = parseFloat(action.act.data.quantity.split(' ')[0]);
         // Properly handle UTC timestamp
-        const time = new Date(action.timestamp + 'Z'); // Add Z to ensure UTC parsing
+        const time = new Date(action.timestamp.replace(/Z$/, "") + "Z"); // Add Z to ensure UTC parsing
         return {
           time,
           amount,
@@ -180,22 +108,18 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
   }, [userActions, transactionPage]);
 
   // Add this SWR fetch near other data fetches
-  const { data: userBalance } = useSWR<any>(
-    ['user_balance', username],
-    () => fetchUserBalance(username),
-    { refreshInterval: 60000 }
-  );
+  const userBalanceResource = useUserBalance(username);
+  const { data: userBalance } = userBalanceResource;
 
   return (
-    <ThemeProvider>
+    <>
       <div className="min-h-screen bg-background text-foreground">
         <Header />
+
         <div className="container mx-auto px-4 md:px-20 md:py-12 py-8">
           <div className="mb-4 flex items-center justify-between">
             <button
-              onClick={() => {
-                window.location.href = '/';
-              }}
+              onClick={onBack}
               className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
             >
               <ArrowLeftIcon className="h-5 w-5" />
@@ -223,6 +147,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
             </p>
           </div>
 
+          <ResourceState resources={[blockchainDataResource, dexScreenerDataResource, userBalanceResource]}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <div className="bg-card rounded-lg shadow p-4">
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Staked</div>
@@ -237,10 +162,10 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
             <div className="bg-card rounded-lg shadow p-4">
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Unstaked</div>
               <div className="text-xl font-semibold text-purple-700 dark:text-purple-400">
-                {userBalance?.[0] ? parseFloat(userBalance[0]).toFixed(4) : '0'} STRX
+                {userBalance?.[0] ? parseFloat(userBalance[0]).toFixed(4) : userBalance ? '0' : 'N/A'} STRX
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                ${userBalance?.[0] ? (parseFloat(userBalance[0]) * dexPriceUsd).toFixed(2) : '0.00'}
+                ${userBalance?.[0] ? (parseFloat(userBalance[0]) * dexPriceUsd).toFixed(2) : userBalance && dexScreenerData ? '0.00' : 'N/A'}
               </div>
             </div>
           </div>
@@ -252,16 +177,16 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
                 <div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">Total Balance</div>
                   <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
-                    {userBalance?.[0] ? parseFloat(userBalance[0]).toFixed(4) : '0'} STRX
+                    {userBalance?.[0] ? parseFloat(userBalance[0]).toFixed(4) : userBalance ? '0' : 'N/A'} STRX
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    ≈ ${userBalance?.[0] ? (parseFloat(userBalance[0]) * dexPriceUsd).toFixed(2) : '0.00'}
+                    ≈ ${userBalance?.[0] ? (parseFloat(userBalance[0]) * dexPriceUsd).toFixed(2) : userBalance && dexScreenerData ? '0.00' : 'N/A'}
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">% of Total Supply</div>
                   <div className="text-lg font-semibold text-purple-700 dark:text-purple-400">
-                    {userBalance?.[0] ? ((parseFloat(userBalance[0]) / 2000000000) * 100).toFixed(4) : '0'}%
+                    {userBalance?.[0] ? ((parseFloat(userBalance[0]) / 2000000000) * 100).toFixed(4) : userBalance ? '0' : 'N/A'}%
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     of 2B STRX
@@ -271,6 +196,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
             </div>
           </div>
 
+          </ResourceState>
           {/* Transaction History Section */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
@@ -396,7 +322,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
                               ) : (
                                 <div className="flex items-center gap-1">
                                   <a
-                                    href={`/user/${action.from}`}
+                                    href={`/?user=${action.from}`}
                                     className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
                                   >
                                     {action.from}
@@ -426,7 +352,7 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
                               ) : (
                                 <div className="flex items-center gap-1">
                                   <a
-                                    href={`/user/${action.to}`}
+                                    href={`/?user=${action.to}`}
                                     className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 truncate max-w-[100px] md:max-w-full"
                                   >
                                     {action.to}
@@ -502,57 +428,17 @@ export default function UserPageNoStake({ username, onBack }: UserPageNoStakePro
             </div>
 
             {/* Pagination */}
-            <div className="mt-4 flex justify-end items-center gap-2">
-              <button
-                onClick={() => setCurrentBridgePage(1)}
-                disabled={currentBridgePage === 1}
-                className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-              >
-                First
-              </button>
-              <button
-                onClick={() => {
-                  if (currentBridgePage > 1) {
-                    setCurrentBridgePage(prev => prev - 1);
-                  }
-                }}
-                disabled={currentBridgePage === 1}
-                className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-600 px-2">
-                Page {currentBridgePage} of {totalBridgePages}
-              </span>
-              <button
-                onClick={async () => {
-                  const nextPage = currentBridgePage + 1;
-                  const maxCurrentPage = Math.ceil(processedBridgeActions.length / ITEMS_PER_PAGE);
-
-                  if (nextPage <= maxCurrentPage) {
-                    setCurrentBridgePage(nextPage);
-                  } else if (hasMoreBridgeData && !isLoadingBridge) {
-                    setSkipBridge(prev => prev + FETCH_LIMIT);
-                    await refetchBridgeActions();
-                    setCurrentBridgePage(nextPage);
-                  }
-                }}
-                disabled={isLoadingBridge || (!hasMoreBridgeData && currentBridgePage === totalBridgePages)}
-                className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-              >
-                {isLoadingBridge ? 'Loading...' : 'Next'}
-              </button>
-              <button
-                onClick={() => setCurrentBridgePage(totalBridgePages)}
-                disabled={currentBridgePage === totalBridgePages}
-                className="px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-200"
-              >
-                Last
-              </button>
+            <div className="mt-4 flex flex-wrap justify-end items-center gap-2" data-testid="bridge-pagination">
+              <LoadState loading={history.isPending} error={history.error} hasData={history.actions.length > 0} onRetry={history.retry} />
+              <button onClick={history.first} disabled={history.page === 1} className="px-4 py-2 rounded border disabled:opacity-50">First</button>
+              <button onClick={history.previous} disabled={history.page === 1} className="px-4 py-2 rounded border disabled:opacity-50">Previous</button>
+              <span>Page {history.page} of {history.pageCount}</span>
+              <button onClick={history.next} disabled={history.isPending || (!history.hasOlder && history.page === history.pageCount)} className="px-4 py-2 rounded border disabled:opacity-50">{history.isPending ? 'Loading...' : history.continueSearching ? 'Continue searching older activity' : 'Next'}</button>
+              <button onClick={history.lastLoaded} disabled={history.page === history.pageCount} className="px-4 py-2 rounded border disabled:opacity-50">{history.hasOlder ? 'Last loaded' : 'Last'}</button>
             </div>
           </div>
         </div>
       </div>
-    </ThemeProvider>
+    </>
   );
 } 

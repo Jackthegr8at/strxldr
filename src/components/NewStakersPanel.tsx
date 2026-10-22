@@ -1,5 +1,5 @@
 import type { NewStaker } from '../lib/types';
-import { UserSelectContext } from '../index';
+import { UserSelectContext } from '../contexts/UserSelectContext';
 import { memo } from 'react';
 
 type NewStakersPanelProps = {
@@ -10,7 +10,7 @@ type NewStakersPanelProps = {
 const UsernameLink: React.FC<{ username: string }> = ({ username }) => (
   <UserSelectContext.Consumer>
     {(onSelect: (username: string) => void) => (
-      <button 
+      <button
         onClick={() => onSelect(username)}
         className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
       >
@@ -48,11 +48,11 @@ export const NewStakersPanel = memo<NewStakersPanelProps>(({ newStakers, strxPri
                 const formattedDate = `${stakerDate.getFullYear()}-${String(stakerDate.getMonth() + 1).padStart(2, '0')}-${String(stakerDate.getDate()).padStart(2, '0')} ${String(stakerDate.getHours()).padStart(2, '0')} h ${String(stakerDate.getMinutes()).padStart(2, '0')}`;
 
                 return (
-                  <tr 
-                    key={staker.username} 
+                  <tr
+                    key={staker.username}
                     className={`${
-                      isLast24Hours 
-                        ? 'bg-green-50/50 dark:bg-green-800/20' 
+                      isLast24Hours
+                        ? 'bg-green-50/50 dark:bg-green-800/20'
                         : ''
                     }`}
                   >

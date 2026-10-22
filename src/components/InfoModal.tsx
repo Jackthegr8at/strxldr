@@ -2,40 +2,52 @@ import { useEffect, useRef, memo } from 'react';
 
 type InfoModalProps = {
   isOpen: boolean;
+  opener?: HTMLElement | null;
   onClose: () => void;
 };
 
-export const InfoModal = memo<InfoModalProps>(({ isOpen, onClose }) => {
+export const InfoModal = memo<InfoModalProps>(({ isOpen, onClose, opener }) => {
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  // Esc to close, prevent body scroll, and focus the close button when opened
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
     if (!isOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    const prevOverflow = document.body.style.overflow;
+    const restoreTarget = opener ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    const dialog = dialogRef.current;
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKeyDown);
-    // Defer focus so the button exists in DOM
-    window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+    dialog?.showModal();
+    closeButtonRef.current?.focus();
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = prevOverflow;
+      if (dialog?.open) dialog.close();
+      document.body.style.overflow = previousOverflow;
+      if (restoreTarget?.isConnected) restoreTarget.focus();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, opener]);
 
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto animate-fadeIn"
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
+      className="m-auto p-0 border-0 bg-transparent text-foreground w-[calc(100%_-_2rem)] max-w-lg max-h-[90vh] backdrop:bg-black/50"
       aria-labelledby="info-modal-title"
-      onClick={(e) => {
-        // Close when clicking backdrop (but not the modal body)
-        if (e.target === e.currentTarget) onClose();
+      onKeyDown={event => {
+        if (event.key !== 'Tab') return;
+        const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]')).filter(control => control.getClientRects().length > 0);
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }}
+      onCancel={event => { event.preventDefault(); onCloseRef.current(); }}
+      onClose={() => { if (dialogRef.current?.isConnected && dialogRef.current.open === false) onCloseRef.current(); }}
+      onClick={event => {
+        if (event.target !== event.currentTarget) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onCloseRef.current();
       }}
     >
       <div className="bg-card rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
@@ -97,6 +109,6 @@ export const InfoModal = memo<InfoModalProps>(({ isOpen, onClose }) => {
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 });
