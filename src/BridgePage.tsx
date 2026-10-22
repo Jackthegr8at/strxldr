@@ -76,7 +76,7 @@ export function BridgePage({ onBack }: { onBack: () => void }) {
           </button>
 
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-purple-700">STRX Bridge Dashboard</h1>
+            <h1 className="text-3xl font-bold text-purple-700 dark:text-purple-300">STRX Bridge Dashboard</h1>
           </div>
 
           {/* Statistics Dashboard */}

@@ -71,7 +71,7 @@ const ColumnSelector = ({
         <option value="usdValue">USD Value</option>
         <option value="rewards">Estimated Rewards</option>
       </select>
-      <p className="text-xs text-gray-500 mt-1">Rank and Username are always visible</p>
+      <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">Rank and Username are always visible</p>
     </div>
   );
 };
@@ -112,7 +112,7 @@ export const LeaderboardToolbar = ({
             type="button"
             aria-label="Clear search"
             onClick={() => onSearchTermChange('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 min-h-[36px] min-w-[36px] rounded text-gray-400 hover:text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 min-h-[36px] min-w-[36px] rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -128,7 +128,7 @@ export const LeaderboardToolbar = ({
           setSortField={setSortField}
         />
         <div className="hidden md:flex items-center gap-2">
-          <span className="text-gray-600">Sort by:</span>
+          <span className="text-gray-600 dark:text-gray-300">Sort by:</span>
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-200">

@@ -75,7 +75,7 @@ export const ColumnSelector = memo<ColumnSelectorProps>(({
         <option value="usdValue">USD Value</option>
         <option value="rewards">Estimated Rewards</option>
       </select>
-      <p className="text-xs text-gray-500 mt-1">
+      <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">
         Rank and Username are always visible
       </p>
     </div>
