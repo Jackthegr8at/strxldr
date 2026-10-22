@@ -85,6 +85,7 @@ export const RecentActionsDashboard = memo<RecentActionsDashboardProps>(({ strxP
       .slice(0, 15)
       .map(action => ({
         time: formatTimestamp(action.timestamp),
+        timestamp: action.timestamp,
         username: action.act.data.memo === "withdraw stake"
           ? action.act.data.to
           : action.act.data.from,
@@ -98,93 +99,59 @@ export const RecentActionsDashboard = memo<RecentActionsDashboardProps>(({ strxP
   }, [actionsData, stakersData, selectedTier]);
 
   return (
-    <div className="activity-panel" tabIndex={0} aria-label="Recent staking activity" aria-busy={isLoading}>
-      <div className="overflow-x-auto">
-        <table className="analytics-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Username</th>
-              <th>Amount</th>
-              <th>USD Value</th>
-              <th>Action</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentActions.length === 0 && <tr><td colSpan={6} className="p-4">{isLoading ? 'Loading activity…' : error ? <><span>Unable to load activity.</span> <button onClick={() => { void mutate(); }}>Retry</button></> : 'No recent activity.'}</td></tr>}
-            {recentActions.map((action, index) => (
-              <tr key={index} className={action.isNewStaker ? 'bg-green-50 dark:bg-green-900/20' : ''}>
-                <td>{action.time}</td>
-                <td>
-                  <div className="flex items-center gap-2">
-                    {stakersData && (
-                      <span title={getUserTier(stakersData[action.username]?.staked || 0).name}>
-                        {getUserTier(stakersData[action.username]?.staked || 0).emoji}
-                      </span>
-                    )}
-                    <UsernameLink username={action.username} />
-                    {action.isNewStaker && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">
-                        New Staker! 🎉
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td>
-                  {action.amount.toLocaleString(undefined, {
-                    minimumFractionDigits: 4,
-                    maximumFractionDigits: 4
-                  })} STRX
-                </td>
-                <td>
-                  ${(action.amount * strxPrice).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}
-                </td>
-                <td>
-                  <a
-                    href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-1 hover:underline ${
-                      action.type === 'add stake'
-                        ? 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300'
-                        : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300'
-                    }`}
-                  >
-                    {action.type === 'add stake' ? (
-                      <>
-                        <span>👍</span> Add Stake
-                      </>
-                    ) : (
-                      <>
-                        <span>👎</span> Withdraw
-                      </>
-                    )}
-                  </a>
-                </td>
-                <td>
-                  <button
-                    onClick={() => {
-                      setSearchTerm(action.username);
-                      const searchInput = document.querySelector('input[type="text"]');
-                      if (searchInput) {
-                        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }
-                    }}
-                    className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300"
-                    title="Search this user"
-                  >
-                    <MagnifyingGlassIcon className="h-5 w-5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="activity-panel recent-activity-panel" tabIndex={0} role="region" aria-label="Recent staking activity" aria-busy={isLoading}>
+      {recentActions.length === 0 ? (
+        <p className="p-4 text-muted-foreground">
+          {isLoading ? 'Loading activity…' : error ? <><span>Unable to load activity.</span> <button onClick={() => { void mutate(); }}>Retry</button></> : 'No recent activity.'}
+        </p>
+      ) : (
+        <ul className="recent-activity-list" aria-label="Recent staking transactions">
+          {recentActions.map((action, index) => (
+            <li key={index} className="recent-activity-item">
+              <div className="recent-activity-account">
+                <span className="recent-activity-label">Username</span>
+                <div className="recent-activity-identity">
+                  {stakersData && <span title={getUserTier(stakersData[action.username]?.staked || 0).name}>{getUserTier(stakersData[action.username]?.staked || 0).emoji}</span>}
+                  <UsernameLink username={action.username} />
+                  {action.isNewStaker && <span className="text-xs text-green-700 dark:text-green-300">New Staker! 🎉</span>}
+                </div>
+              </div>
+              <div className="recent-activity-time">
+                <span className="recent-activity-label">Time</span>
+                <time dateTime={action.timestamp}>{action.time}</time>
+              </div>
+              <div className="recent-activity-money">
+                <span className="recent-activity-label">Amount · USD Value</span>
+                <span>{action.amount.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} STRX</span>
+                <span className="text-muted-foreground">${(action.amount * strxPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div className="recent-activity-actions">
+                <a
+                  href={`https://explorer.xprnetwork.org/transaction/${action.trxId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={action.type === 'add stake' ? 'text-green-700 dark:text-green-400 hover:underline' : 'text-red-700 dark:text-red-400 hover:underline'}
+                >
+                  <span aria-hidden="true">{action.type === 'add stake' ? '👍' : '👎'}</span> {action.type === 'add stake' ? 'Add Stake' : 'Withdraw'}
+                </a>
+                <button
+                  onClick={() => {
+                    setSearchTerm(action.username);
+                    const searchInput = document.querySelector<HTMLInputElement>('#staker-search');
+                    searchInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    searchInput?.focus({ preventScroll: true });
+                  }}
+                  className="icon-control text-purple-600 dark:text-purple-400"
+                  title="Search this user"
+                  aria-label={`Search ${action.username} on the leaderboard`}
+                >
+                  <MagnifyingGlassIcon className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 });

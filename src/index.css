@@ -186,3 +186,25 @@
 }
 
 .primary-navigation a[aria-current="page"] { color: hsl(var(--accent-foreground)); background: hsl(var(--accent)); }
+
+/* Recent transactions recompose inside their actual panel width. */
+.recent-activity-panel { container: recent-activity / inline-size; }
+.recent-activity-list { margin: 0; padding: 0; list-style: none; }
+.recent-activity-item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 20px; padding: 16px; border-bottom: 1px solid hsl(var(--border)); font-size: .875rem; line-height: 1.5; }
+.recent-activity-item:last-child { border-bottom: 0; }
+.recent-activity-item > * { min-width: 0; }
+.recent-activity-label { display: block; margin-bottom: 4px; color: hsl(var(--muted-foreground)); font-size: .75rem; }
+.recent-activity-identity { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.recent-activity-identity button { overflow-wrap: anywhere; text-align: left; }
+.recent-activity-time time { display: block; }
+.recent-activity-money > span { display: block; }
+.recent-activity-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px; }
+.recent-activity-actions a { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; }
+@container recent-activity (max-width: 420px) {
+ .recent-activity-item { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+ .recent-activity-time { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+ .recent-activity-time .recent-activity-label { margin-bottom: 0; }
+}
+@container recent-activity (min-width: 800px) {
+ .recent-activity-item { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(0, 1fr); align-items: center; }
+}
