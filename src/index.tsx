@@ -779,7 +779,7 @@ export function LeaderboardPage({ onUserSelect: handleUserSelect, onBridgeSelect
 
           {/* Staking Tiers Dashboard */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Staking Tiers Distribution</h2>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Staking Tiers Distribution</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {tierStatistics?.map((tier) => (
                 <div

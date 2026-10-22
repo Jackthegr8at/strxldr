@@ -143,7 +143,7 @@ export const TierMilestoneTracker = memo<TierMilestoneTrackerProps>(({
                   </div>
 
                   <div className="mb-2">
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                    <div className="flex justify-between text-sm text-gray-600 dark:text-gray-200 mb-1">
                       <span>Progress to {milestone.nextTier.name}</span>
                       <span>{milestone.percentageComplete.toFixed(1)}%</span>
                     </div>
